@@ -1,10 +1,9 @@
 [project]
 name = "mcp-postgresql-ops"
 version = "0.0.0"
-description = "Add your description here"
+description = "MCP Server Template with logging and transport configuration"
 readme = "README.md"
 requires-python = ">=3.11"
-authors = [{ name = "JungJungIn", email = "call518@gmail.com" }]
 dependencies = [
     "fastmcp>=2.11.1"
 ]
@@ -15,15 +14,9 @@ dev = [
     "pytest-asyncio>=0.21.0"
 ]
 
-[project.scripts]
-mcp-postgresql-ops = "mcp_postgresql_ops.mcp_main:main"
-
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools.packages.find]
-where = ["src"]
-
-[tool.setuptools.package-dir]
-"" = "src"
+[project.scripts]
+mcp-server = "src.mcp_postgresql_ops.mcp_main:main"

@@ -25,7 +25,7 @@ Opinionated uv-based Python template to bootstrap an MCP server fast. One script
 
 This script:
 - Creates dist name (hyphen) and package name (underscore) automatically
-- Renames src/MCP_NAME -> src/<pkg_name> and replaces placeholders (MCP_NAME, MCP-NAME, your-server-name)
+- Renames src/mcp_postgresql_ops -> src/<pkg_name> and replaces placeholders (mcp_postgresql_ops, mcp-postgresql-ops, mcp-postgresql-ops)
 - Regenerates pyproject.toml (metadata, src layout, console script entrypoint)
 - Updates run scripts and workflow URLs
 - Optionally runs uv sync (omit with --no-sync)
@@ -57,14 +57,14 @@ cp .env.example .env
 ./scripts/run-mcp-inspector-local.sh
 
 # Direct execution for debugging
-python -m src.MCP_NAME.mcp_main --log-level DEBUG
+python -m src.mcp_postgresql_ops.mcp_main --log-level DEBUG
 
 # For Claude Desktop integration, add to config:
 # {
 #   "mcpServers": {
-#     "your-server-name": {
+#     "mcp-postgresql-ops": {
 #       "command": "uv",
-#       "args": ["run", "python", "-m", "src.MCP_NAME.mcp_main"]
+#       "args": ["run", "python", "-m", "src.mcp_postgresql_ops.mcp_main"]
 #     }
 #   }
 # }
@@ -75,7 +75,7 @@ python -m src.MCP_NAME.mcp_main --log-level DEBUG
 ### Command Line Options
 
 ```bash
-python -m src.MCP_NAME.mcp_main --help
+python -m src.mcp_postgresql_ops.mcp_main --help
 
 Options:
   --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
@@ -113,7 +113,7 @@ Options:
 │   ├── run-mcp-inspector-local.sh  # development & testing (recommended)
 │   └── run-mcp-inspector-pypi.sh   # test published package
 └── src/
-    └── MCP_NAME/                   # will be renamed to snake_case package
+    └── mcp_postgresql_ops/                   # will be renamed to snake_case package
         ├── __init__.py
         ├── functions.py            # utility/helper functions with logging
         ├── mcp_main.py             # FastMCP server with transport config
@@ -161,7 +161,7 @@ async def my_helper_function(data: dict) -> str:
 MCP_LOG_LEVEL=DEBUG ./scripts/run-mcp-inspector-local.sh
 
 # Direct execution for quick testing
-python -m src.MCP_NAME.mcp_main --log-level DEBUG
+python -m src.mcp_postgresql_ops.mcp_main --log-level DEBUG
 ```
 
 ### Claude Desktop Integration
@@ -170,9 +170,9 @@ Add to your Claude Desktop configuration file:
 ```json
 {
   "mcpServers": {
-    "your-server-name": {
+    "mcp-postgresql-ops": {
       "command": "uv",
-      "args": ["run", "python", "-m", "src.MCP_NAME.mcp_main"],
+      "args": ["run", "python", "-m", "src.mcp_postgresql_ops.mcp_main"],
       "cwd": "/path/to/your/project"
     }
   }
@@ -184,7 +184,7 @@ For special testing scenarios only:
 
 ```bash
 # Run HTTP server for testing
-python -m src.MCP_NAME.mcp_main \
+python -m src.mcp_postgresql_ops.mcp_main \
   --type streamable-http \
   --host 127.0.0.1 \
   --port 8080 \
@@ -198,7 +198,7 @@ python -m src.MCP_NAME.mcp_main \
 ./scripts/run-mcp-inspector-local.sh
 
 # Direct execution for debugging
-python -m src.MCP_NAME.mcp_main --log-level DEBUG
+python -m src.mcp_postgresql_ops.mcp_main --log-level DEBUG
 
 # Run tests (if you add any)
 uv run pytest
@@ -216,7 +216,7 @@ The server provides structured logging with configurable levels:
 
 ## Notes
 
-- The script replaces MCP_NAME (underscore), MCP-NAME (hyphen), and your-server-name (display name)
+- The script replaces mcp_postgresql_ops (underscore), mcp-postgresql-ops (hyphen), and mcp-postgresql-ops (display name)
 - Configuration validation ensures proper setup before server start
 - If you need to rename again, revert changes or re-clone and re-run
 - A backup `pyproject.toml.bak` is created when overwriting pyproject

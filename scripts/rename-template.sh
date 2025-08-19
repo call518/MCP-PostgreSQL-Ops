@@ -33,16 +33,16 @@ DIST_NAME=$(echo "$DIST_NAME" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]
 log "dist: $DIST_NAME  pkg: $PKG_NAME"
 
 [[ -d src ]] || die "src not found"
-[[ -d src/MCP_NAME || -d src/$PKG_NAME ]] || die "src/MCP_NAME not found"
-if [[ -d src/MCP_NAME && ! -d src/$PKG_NAME ]]; then mv src/MCP_NAME "src/$PKG_NAME"; fi
+[[ -d src/mcp_postgresql_ops || -d src/$PKG_NAME ]] || die "src/mcp_postgresql_ops not found"
+if [[ -d src/mcp_postgresql_ops && ! -d src/$PKG_NAME ]]; then mv src/mcp_postgresql_ops "src/$PKG_NAME"; fi
 
 # Replace placeholders across tracked files
 FILES=$(git ls-files 2>/dev/null || find . -type f)
 for f in $FILES; do
   [[ -f "$f" ]] || continue
   case "$f" in ./.git/*|./.venv/*|./dist/*|./build/*|./.ruff_cache/*|./.pytest_cache/*|./.mypy_cache/*|./uv.lock|./scripts/rename-template.sh) continue;; esac
-  grep -qE 'MCP_NAME|MCP-NAME|your-server-name' "$f" 2>/dev/null || continue
-  sed -i -e "s/MCP_NAME/${PKG_NAME}/g" -e "s/MCP-NAME/${DIST_NAME}/g" -e "s/your-server-name/${DIST_NAME}/g" "$f" || true
+  grep -qE 'mcp_postgresql_ops|mcp-postgresql-ops|mcp-postgresql-ops' "$f" 2>/dev/null || continue
+  sed -i -e "s/mcp_postgresql_ops/${PKG_NAME}/g" -e "s/mcp-postgresql-ops/${DIST_NAME}/g" -e "s/mcp-postgresql-ops/${DIST_NAME}/g" "$f" || true
 done
 
 # pyproject.toml

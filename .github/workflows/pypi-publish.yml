@@ -47,7 +47,7 @@ jobs:
       id-token: write
     environment:
       name: testpypi
-      url: https://test.pypi.org/project/MCP-NAME
+      url: https://test.pypi.org/project/mcp-postgresql-ops
     steps:
       - uses: actions/download-artifact@v5
         with:
@@ -68,7 +68,7 @@ jobs:
       id-token: write
     environment:
       name: pypi
-      url: https://pypi.org/project/MCP-NAME
+      url: https://pypi.org/project/mcp-postgresql-ops
     steps:
       - uses: actions/download-artifact@v5
         with:

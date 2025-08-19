@@ -20,4 +20,4 @@ echo "🚀 Launching MCP Inspector..."
 echo "   Log Level: $MCP_LOG_LEVEL"
 
 npx -y @modelcontextprotocol/inspector \
-  -- uv run python -m src.MCP_NAME.mcp_main
+  -- uv run python -m src.mcp_postgresql_ops.mcp_main
