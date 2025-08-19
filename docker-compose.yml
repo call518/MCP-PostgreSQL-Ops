@@ -1,0 +1,62 @@
+version: "3.8"
+
+services:
+  postgres:
+    container_name: postgresql-${PGSQL_VERSION}
+    image: percona/percona-distribution-postgresql:${PGSQL_VERSION}.5-2
+    environment:
+      POSTGRES_USER: "${POSTGRES_USER}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      POSTGRES_DB: "${POSTGRES_DB}"
+      LANG: en_US.utf8
+    ports:
+      - "15432:5432"
+    volumes:
+      - postgresql-data:/var/lib/postgresql/data
+      # - ./initdb:/docker-entrypoint-initdb.d:ro   # 초기화 SQL(최초 실행시에만 적용됨)
+    # shared_preload_libraries를 기동 인자로 전달하여 pg_stat_statements + pg_stat_monitor 활성화
+    command:
+      - "-c"
+      - "max_connections=200"
+      - "-c"
+      - "shared_preload_libraries=pg_stat_statements,pg_stat_monitor"
+      - "-c"
+      - "pg_stat_statements.track=all"
+      - "-c"
+      - "track_activity_query_size=2048"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}"]
+      start_period: 5s
+      interval: 10s
+      retries: 5
+    restart: unless-stopped
+
+  postgres-init-extensions:
+    image: "percona/percona-distribution-postgresql:${PGSQL_VERSION}.5-2"
+    depends_on:
+      - postgres
+    entrypoint: /bin/bash
+    command: 
+      - "-c"
+      - |
+        export PGPASSWORD="${POSTGRES_PASSWORD}"
+        for i in $(seq 1 120); do
+          psql -h postgres -U "${POSTGRES_USER}" -d postgres -c '\q' >/dev/null 2>&1 && break
+          echo "waiting for postgres (psql)..." && sleep 1
+        done
+        psql -h postgres -U "${POSTGRES_USER}" -d postgres -c "CREATE EXTENSION IF NOT EXISTS pg_stat_statements;"
+        psql -h postgres -U "${POSTGRES_USER}" -d postgres -c "CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;"
+        if [[ "${POSTGRES_DB}" != "postgres" ]]; then
+          psql -h postgres -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -c "CREATE EXTENSION IF NOT EXISTS pg_stat_statements;"
+          psql -h postgres -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -c "CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;"
+        fi
+    environment:
+      POSTGRES_USER: "${POSTGRES_USER}"
+      PGPASSWORD: "${POSTGRES_PASSWORD}"
+      POSTGRES_DB: "${POSTGRES_DB}"
+    restart: no
+
+
+volumes:
+  postgresql-data:
+    name: postgresql-data-mcp-postgresql-ops
