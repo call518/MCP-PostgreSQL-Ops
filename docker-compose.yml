@@ -3,7 +3,7 @@ services:
     image: ghcr.io/open-webui/open-webui:main
     container_name: mcp-postgresql-ops-open-webui
     ports:
-      - "3003:8080"
+      - "${DOCKER_EXTERNAL_PORT_OPENWEBUI}:8080"
     environment:
       - OLLAMA_BASE_URL=http://host.docker.internal:11434
     volumes:
@@ -16,7 +16,7 @@ services:
     image: call518/mcp-server-postgresql-ops:1.0.0
     container_name: mcp-postgresql-ops-mcp-server
     ports:
-      - "18003:8080" ### (WARNING) Must be same with port number of 'FASTMCP_PORT', 'mcp-config.json' and 'mcp-config.json.http'
+      - "${DOCKER_EXTERNAL_PORT_MCP_SERVER}:8080" ### (WARNING) Must be same with port number of 'FASTMCP_PORT', 'mcp-config.json' and 'mcp-config.json.http'
     environment:
       - PYTHONPATH=${PYTHONPATH}
       - FASTMCP_TYPE=${FASTMCP_TYPE}
@@ -37,28 +37,32 @@ services:
     depends_on:
       - mcp-server
     ports:
-      - "8003:8000"
+      - "${DOCKER_EXTERNAL_PORT_MCPO_PROXY}:8000"
     volumes:
       - ./mcp-config.json.http:/app/config/mcp-config.json
     restart: unless-stopped
 
+#------------------------------------------------------
+
   postgres:
     container_name: postgresql-${PGSQL_VERSION}
-    image: percona/percona-distribution-postgresql:${PGSQL_VERSION}.5-2
+    image: percona/percona-distribution-postgresql:${PGSQL_VERSION}
     environment:
       POSTGRES_USER: "${POSTGRES_USER}"
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
       POSTGRES_DB: "${POSTGRES_DB}"
       LANG: en_US.utf8
     ports:
-      - "15432:5432"
+      - "${DOCKER_EXTERNAL_PORT_POSTGRESQL}:${POSTGRES_PORT}"
     volumes:
       - postgresql-data:/var/lib/postgresql/data
       # - ./initdb:/docker-entrypoint-initdb.d:ro   # 초기화 SQL(최초 실행시에만 적용됨)
     # shared_preload_libraries를 기동 인자로 전달하여 pg_stat_statements + pg_stat_monitor 활성화
     command:
       - "-c"
-      - "max_connections=200"
+      - "port=${POSTGRES_PORT}"
+      - "-c"
+      - "max_connections=${POSTGRES_MAX_CONNECTIONS}"
       - "-c"
       - "shared_preload_libraries=pg_stat_statements,pg_stat_monitor"
       - "-c"
@@ -73,7 +77,7 @@ services:
     restart: unless-stopped
 
   postgres-init-extensions:
-    image: "percona/percona-distribution-postgresql:${PGSQL_VERSION}.5-2"
+    image: percona/percona-distribution-postgresql:${PGSQL_VERSION}
     depends_on:
       - postgres
     entrypoint: /bin/bash

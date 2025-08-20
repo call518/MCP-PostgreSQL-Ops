@@ -5,12 +5,10 @@
       "args": ["-m", "mcp_ambari_api.ambari_api"],
       "env": {
         "PYTHONPATH": "/app/src",
-        "AMBARI_HOST": "host.docker.internal",
-        "AMBARI_PORT": "7070",
-        "AMBARI_USER": "admin",
-        "AMBARI_PASS": "changeme!@34",
-        "AMBARI_CLUSTER_NAME": "TEST-AMBARI",
-        "AMBARI_LOG_LEVEL": "DEBUG"
+        "POSTGRES_HOST": "host.docker.internal",
+        "POSTGRES_PORT": "15432",
+        "POSTGRES_USER": "postgres",
+        "POSTGRES_PASSWORD": "changeme!@34"
       }
     }
   }
