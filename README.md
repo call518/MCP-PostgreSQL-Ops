@@ -169,6 +169,52 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 - "Find largest tables"
 - "Show tables that need VACUUM"
 
+## Example Queries
+
+This section provides comprehensive usage examples for all available tools with their parameters. 
+
+📖 **[View Complete Example Queries →](src/mcp_postgresql_ops/prompt_template.md#example-queries)**
+
+### Quick Examples
+
+**Server Status & Configuration**
+```bash
+# Check server info and extensions
+"Check PostgreSQL server version and connection status"
+
+# Find specific configuration
+"Show PostgreSQL configuration parameter for shared_buffers: get_postgresql_config(config_name='shared_buffers')"
+
+# Search configurations by keyword
+"Find all memory-related configuration settings: get_postgresql_config(filter_text='memory')"
+```
+
+**Performance Monitoring**
+```bash
+# Analyze slow queries
+"Show top 10 slowest queries: get_pg_stat_statements_top_queries(limit=10)"
+
+# Multi-database performance analysis
+"Analyze slow queries in specific database: get_pg_stat_statements_top_queries(limit=20, database_name='production')"
+
+# Index usage analysis
+"Check index efficiency in specific database: get_index_usage_stats(database_name='production')"
+```
+
+**Capacity & Structure Analysis**
+```bash
+# Multi-database table analysis
+"Check table sizes in specific database schema: get_table_size_info(schema_name='inventory', database_name='ecommerce')"
+
+# Cross-database comparison
+"List tables in specific database: get_table_list(database_name='testdb')"
+
+# Maintenance status check
+"Check maintenance status in specific database: get_vacuum_analyze_stats(database_name='production')"
+```
+
+**💡 Pro Tip**: All tools support multi-database operations using the `database_name` parameter. This allows PostgreSQL superusers to analyze and monitor multiple databases from a single MCP server instance.
+
 ## Troubleshooting
 
 ### Connection Issues
