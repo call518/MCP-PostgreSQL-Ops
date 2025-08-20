@@ -189,8 +189,8 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 - "Monitor current sessions and their running queries"
 
 **get_postgresql_config**
-- "Show PostgreSQL configuration parameter for shared_buffers: `get_postgresql_config(config_name='shared_buffers')`"
-- "Find all memory-related configuration settings: `get_postgresql_config(filter_text='memory')`"
+- "Show PostgreSQL configuration parameter for shared_buffers"
+- "Find all memory-related configuration settings"
 
 ### 🗄️ Structure Exploration Examples
 
@@ -199,8 +199,8 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 - "Show database encoding and connection limits"
 
 **get_table_list**
-- "List all tables in the default database: `get_table_list()`"
-- "Show tables in specific database: `get_table_list(database_name='testdb')`"
+- "List all tables in the default database:"
+- "Show tables in specific database"
 
 **get_user_list**
 - "Display all database users with their permissions"
@@ -209,16 +209,16 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 ### ⚡ Performance Monitoring Examples
 
 **get_pg_stat_statements_top_queries**
-- "Show top 10 slowest queries: `get_pg_stat_statements_top_queries(limit=10)`"
-- "Analyze slow queries in specific database: `get_pg_stat_statements_top_queries(limit=20, database_name='production')`"
+- "Show top 10 slowest queries"
+- "Analyze slow queries in specific database"
 
 **get_pg_stat_monitor_recent_queries**
-- "Monitor recent 15 queries with detailed stats: `get_pg_stat_monitor_recent_queries(limit=15)`"
-- "Track recent queries in testdb database: `get_pg_stat_monitor_recent_queries(limit=25, database_name='testdb')`"
+- "Monitor recent 15 queries with detailed stats"
+- "Track recent queries in testdb database"
 
 **get_index_usage_stats**
-- "Analyze index usage in default database: `get_index_usage_stats()`"
-- "Check index efficiency in specific database: `get_index_usage_stats(database_name='production')`"
+- "Analyze index usage in default database:"
+- "Check index efficiency in specific database"
 
 ### 💾 Capacity Management Examples
 
@@ -227,26 +227,26 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 - "Calculate total storage consumption across all databases"
 
 **get_table_size_info**
-- "Analyze table sizes in public schema: `get_table_size_info(schema_name='public')`"
-- "Check table sizes in specific database schema: `get_table_size_info(schema_name='inventory', database_name='ecommerce')`"
+- "Analyze table sizes in public schema"
+- "Check table sizes in specific database schema"
 
 **get_vacuum_analyze_stats**
-- "Review VACUUM and ANALYZE history for all tables: `get_vacuum_analyze_stats()`"
-- "Check maintenance status in specific database: `get_vacuum_analyze_stats(database_name='production')`"
+- "Review VACUUM and ANALYZE history for all tables"
+- "Check maintenance status in specific database"
 
 ### 🔧 Advanced Usage Examples
 
 **Multi-Database Analysis**
-- "Compare table sizes across databases: `get_table_size_info(database_name='db1')` then `get_table_size_info(database_name='db2')`"
+- "Compare table sizes across databases"
 - "Monitor performance across multiple databases using database_name parameter"
 
 **Configuration Troubleshooting**
-- "Search for connection-related settings: `get_postgresql_config(filter_text='connection')`"
-- "Find logging configuration: `get_postgresql_config(filter_text='log')`"
-- "Check specific parameter: `get_postgresql_config(config_name='max_connections')`"
+- "Search for connection-related settings"
+- "Find logging configuration"
+- "Check specific parameter"
 
 **Performance Deep Dive**
-- "Identify unused indexes with zero scans: `get_index_usage_stats()` (look for 'Never used' entries)"
-- "Find tables needing maintenance: `get_vacuum_analyze_stats()` (check last_vacuum dates)"
+- "Identify unused indexes with zero scans (look for 'Never used' entries)"
+- "Find tables needing maintenance (check last_vacuum dates)"
 
 This MCP server provides comprehensive PostgreSQL monitoring and management capabilities while maintaining read-only safety and providing detailed insights for database administration.

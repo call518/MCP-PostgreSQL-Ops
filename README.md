@@ -11,6 +11,10 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 - ✅ **Configuration Retrieval**: PostgreSQL configuration parameter verification
 - ✅ **Safe Read-Only**: All operations are read-only and safe
 
+# Example Usage
+
+![MCP-PostgreSQL-Ops Usage Screenshot](img/screenshot-000.png)
+
 ## Quick start
 
 1) Environment Setup
@@ -136,15 +140,21 @@ The `get_postgresql_config` tool supports flexible parameter searching:
 
 ### Required PostgreSQL Extensions
 
-For full functionality, your PostgreSQL instance should have these extensions installed:
+**⚠️ Important**: This MCP server requires `pg_stat_statements` for performance monitoring tools. Without it, several functions will not work properly.
 
 ```sql
--- Query performance statistics (required)
+-- Query performance statistics (required for get_pg_stat_statements_top_queries)
 CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
 
--- Advanced monitoring (optional)
+-- Advanced monitoring (optional for get_pg_stat_monitor_recent_queries)
 CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 ```
+
+**Quick Setup**: For new PostgreSQL installations, add to `postgresql.conf`:
+```
+shared_preload_libraries = 'pg_stat_statements'
+```
+Then restart PostgreSQL and run the CREATE EXTENSION commands above.
 
 ### Minimum Requirements
 - PostgreSQL 12+ (tested with PostgreSQL 16)
@@ -183,34 +193,34 @@ This section provides comprehensive usage examples for all available tools with 
 "Check PostgreSQL server version and connection status"
 
 # Find specific configuration
-"Show PostgreSQL configuration parameter for shared_buffers: get_postgresql_config(config_name='shared_buffers')"
+"Show PostgreSQL configuration parameter for shared_buffers"
 
 # Search configurations by keyword
-"Find all memory-related configuration settings: get_postgresql_config(filter_text='memory')"
+"Find all memory-related configuration settings"
 ```
 
 **Performance Monitoring**
 ```bash
 # Analyze slow queries
-"Show top 10 slowest queries: get_pg_stat_statements_top_queries(limit=10)"
+"Show top 10 slowest queries"
 
 # Multi-database performance analysis
-"Analyze slow queries in specific database: get_pg_stat_statements_top_queries(limit=20, database_name='production')"
+"Analyze slow queries in specific database"
 
 # Index usage analysis
-"Check index efficiency in specific database: get_index_usage_stats(database_name='production')"
+"Check index efficiency in specific database"
 ```
 
 **Capacity & Structure Analysis**
 ```bash
 # Multi-database table analysis
-"Check table sizes in specific database schema: get_table_size_info(schema_name='inventory', database_name='ecommerce')"
+"Check table sizes in specific database schema"
 
 # Cross-database comparison
-"List tables in specific database: get_table_list(database_name='testdb')"
+"List tables in specific database"
 
 # Maintenance status check
-"Check maintenance status in specific database: get_vacuum_analyze_stats(database_name='production')"
+"Check maintenance status in specific database"
 ```
 
 **💡 Pro Tip**: All tools support multi-database operations using the `database_name` parameter. This allows PostgreSQL superusers to analyze and monitor multiple databases from a single MCP server instance.

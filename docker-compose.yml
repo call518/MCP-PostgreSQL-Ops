@@ -87,21 +87,37 @@ services:
     command: 
       - "-c"
       - |
-        export PGPASSWORD="${POSTGRES_PASSWORD}"
+        # Wait for PostgreSQL to be ready
         for i in $(seq 1 120); do
           psql -h postgres -p ${POSTGRES_PORT} -U "${POSTGRES_USER}" -d postgres -c '\q' >/dev/null 2>&1 && break
           echo "waiting for postgres (psql)..." && sleep 1
         done
+        
+        echo "PostgreSQL is ready. Installing extensions..."
+        
+        # Install extensions in postgres database
         psql -h postgres -p ${POSTGRES_PORT} -U "${POSTGRES_USER}" -d postgres -c "CREATE EXTENSION IF NOT EXISTS pg_stat_statements;"
         psql -h postgres -p ${POSTGRES_PORT} -U "${POSTGRES_USER}" -d postgres -c "CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;"
+        
+        # Install extensions in custom database if different from postgres
         if [[ "${POSTGRES_DB}" != "postgres" ]]; then
           psql -h postgres -p ${POSTGRES_PORT} -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -c "CREATE EXTENSION IF NOT EXISTS pg_stat_statements;"
           psql -h postgres -p ${POSTGRES_PORT} -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -c "CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;"
         fi
+        
+        echo "Extensions installed successfully. Creating test data..."
+        
+        # Create comprehensive test data
+        psql -h postgres -p ${POSTGRES_PORT} -U "${POSTGRES_USER}" -d postgres -f /scripts/create-test-data.sql
+        
+        echo "Test data creation completed successfully!"
     environment:
       POSTGRES_USER: "${POSTGRES_USER}"
-      PGPASSWORD: "${POSTGRES_PASSWORD}"
+      PGPASSWORD: '${POSTGRES_PASSWORD}'
       POSTGRES_DB: "${POSTGRES_DB}"
+      POSTGRES_PORT: "${POSTGRES_PORT}"
+    volumes:
+      - ./scripts:/scripts:ro
     restart: no
 
 volumes:
