@@ -104,24 +104,6 @@ python -m src.mcp_postgresql_ops.mcp_main \
   --log-level DEBUG
 ```
 
-### Configuration Search Examples
-
-The `get_postgresql_config` tool supports flexible parameter searching:
-
-```bash
-# Search for specific parameter
-"Show the shared_buffers configuration"
-
-# Search by keyword for related parameters
-"Find all memory-related configuration settings"
-"Show logging configuration parameters" 
-"Display connection-related settings"
-"Find all timeout configurations"
-
-# Browse all configurations
-"Show all PostgreSQL configuration parameters"
-```
-
 ## Environment Variables
 
 | Variable | Description | Default | Project Default |
@@ -168,62 +150,44 @@ Then restart PostgreSQL and run the CREATE EXTENSION commands above.
 - Network access to PostgreSQL server
 - Read permissions on system catalogs
 
-## Sample Prompts
-
-### 🔍 Server Health Check
-- "Check PostgreSQL server status"
-- "Verify if extensions are installed"
-- "Show current active connection count"
-
-### 📊 Performance Analysis
-- "Show top 20 slowest queries"
-- "Find unused indexes"
-- "Analyze recent query activity"
-
-### 💾 Capacity Management
-- "Check database sizes"
-- "Find largest tables"
-- "Show tables that need VACUUM"
-
 ## Example Queries
 
-This section provides comprehensive usage examples for all available tools with their parameters. 
-
-### Quick Examples
-
-**Server Status & Configuration**
+**Server Status & Health Check**
 ```bash
-# Check server info and extensions
-"Check PostgreSQL server version and connection status"
-
-# Find specific configuration
-"Show PostgreSQL configuration parameter for shared_buffers"
-
-# Search configurations by keyword
-"Find all memory-related configuration settings"
+"Check PostgreSQL server status"
+"Check PostgreSQL server version and connection status" 
+"Verify if extensions are installed"
+"Show current active connection count"
 ```
 
-**Performance Monitoring**
+**Configuration Management**
 ```bash
-# Analyze slow queries
+"Show the shared_buffers configuration"
+"Show PostgreSQL configuration parameter for shared_buffers"
+"Find all memory-related configuration settings"
+"Show logging configuration parameters"
+"Display connection-related settings" 
+"Find all timeout configurations"
+"Show all PostgreSQL configuration parameters"
+```
+
+**Performance Analysis**
+```bash
 "Show top 10 slowest queries"
-
-# Multi-database performance analysis
+"Show top 20 slowest queries"
 "Analyze slow queries in specific database"
-
-# Index usage analysis
+"Find unused indexes"
+"Analyze recent query activity"
 "Check index efficiency in specific database"
 ```
 
-**Capacity & Structure Analysis**
+**Capacity & Structure Management**
 ```bash
-# Multi-database table analysis
+"Check database sizes"
+"Find largest tables"
+"Show tables that need VACUUM"
 "Check table sizes in specific database schema"
-
-# Cross-database comparison
 "List tables in specific database"
-
-# Maintenance status check
 "Check maintenance status in specific database"
 ```
 
