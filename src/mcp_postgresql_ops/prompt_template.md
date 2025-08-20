@@ -68,6 +68,9 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 - "Analyze index usage efficiency"
 - "Check VACUUM and ANALYZE history"
 - "Review PostgreSQL configuration settings"
+- "Find memory-related configuration parameters"
+- "Show all logging configuration options"
+- "Search for connection-related settings"
 - "Identify connection patterns"
 
 ## Usage Guidelines
@@ -77,7 +80,10 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 #### Server Information Tools
 - Use `get_server_info` first to verify connectivity and extensions
 - Use `get_active_connections` to check current load
-- Use `get_postgresql_config` for configuration analysis
+- Use `get_postgresql_config` for configuration analysis:
+  - Specific parameter: `get_postgresql_config(config_name="shared_buffers")`
+  - Keyword search: `get_postgresql_config(filter_text="memory")` for memory-related settings
+  - Browse all: `get_postgresql_config()` without parameters
 
 #### Structure Exploration Tools
 - Use `get_database_list` to overview all databases
@@ -112,7 +118,9 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 ### Database/Schema Parameters
 - `get_table_list(database_name)`: Specify target database
 - `get_table_size_info(schema_name)`: Specify target schema
-- `get_postgresql_config(config_name)`: Specify configuration parameter
+- `get_postgresql_config(config_name, filter_text)`: Specify configuration parameter or search by keyword
+  - `config_name`: Exact parameter name (optional)
+  - `filter_text`: Search for parameters containing specific keywords (optional)
 
 ## Prerequisites
 

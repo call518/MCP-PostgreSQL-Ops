@@ -224,16 +224,21 @@ async def get_user_list() -> str:
         Table-format information including username, superuser status, permissions, and account status
     """
     try:
+        # PostgreSQL 버전 호환성을 위해 pg_roles 사용
         query = """
         SELECT 
-            usename as username,
-            usesysid as user_id,
-            CASE WHEN usesuper THEN 'Yes' ELSE 'No' END as is_superuser,
-            CASE WHEN usecreatedb THEN 'Yes' ELSE 'No' END as can_create_db,
-            CASE WHEN usecatupd THEN 'Yes' ELSE 'No' END as can_update_catalog,
-            valuntil as valid_until
-        FROM pg_user
-        ORDER BY usename
+            rolname as username,
+            oid as user_id,
+            CASE WHEN rolsuper THEN 'Yes' ELSE 'No' END as is_superuser,
+            CASE WHEN rolcreatedb THEN 'Yes' ELSE 'No' END as can_create_db,
+            CASE WHEN rolcreaterole THEN 'Yes' ELSE 'No' END as can_create_role,
+            CASE WHEN rolcanlogin THEN 'Yes' ELSE 'No' END as can_login,
+            CASE WHEN rolreplication THEN 'Yes' ELSE 'No' END as replication,
+            rolconnlimit as connection_limit,
+            rolvaliduntil as valid_until
+        FROM pg_roles
+        WHERE rolcanlogin = true  -- 로그인 가능한 사용자만
+        ORDER BY rolname
         """
         
         users = await execute_query(query)
@@ -495,18 +500,20 @@ async def get_table_size_info(schema_name: str = "public") -> str:
 
 
 @mcp.tool()
-async def get_postgresql_config(config_name: str = None) -> str:
+async def get_postgresql_config(config_name: str = None, filter_text: str = None) -> str:
     """
     [Tool Purpose]: Retrieve and analyze PostgreSQL server configuration parameter values
     
     [Exact Functionality]:
     - Retrieve all PostgreSQL configuration parameters (when config_name is not specified)
     - Retrieve current value and description of specific configuration parameter
+    - Filter configurations by text pattern (when filter_text is specified)
     - Display whether configuration can be changed and if restart is required
     
     [Required Use Cases]:
     - When user requests "PostgreSQL config", "config", "parameters", etc.
     - When checking specific configuration values is needed
+    - When searching for configurations containing specific text
     - When configuration status identification is needed for performance tuning
     
     [Strictly Prohibited Use Cases]:
@@ -515,7 +522,8 @@ async def get_postgresql_config(config_name: str = None) -> str:
     - Requests for system-level configuration changes
     
     Args:
-        config_name: Specific configuration parameter name to retrieve (shows key configs if omitted)
+        config_name: Specific configuration parameter name to retrieve (shows all configs if omitted)
+        filter_text: Text to filter configuration names or descriptions (optional)
     
     Returns:
         Configuration information including parameter name, current value, unit, description, and changeability
@@ -546,33 +554,46 @@ async def get_postgresql_config(config_name: str = None) -> str:
                 return f"Configuration parameter '{config_name}' not found"
                 
             return format_table_data(config, f"Configuration: {config_name}")
-        else:
-            # Retrieve key configurations
+        
+        elif filter_text:
+            # Filter configurations by text pattern
             query = """
             SELECT 
                 name,
                 setting,
                 unit,
-                short_desc
+                category,
+                short_desc,
+                context,
+                source
             FROM pg_settings 
-            WHERE name IN (
-                'max_connections',
-                'shared_buffers',
-                'effective_cache_size',
-                'maintenance_work_mem',
-                'checkpoint_completion_target',
-                'wal_buffers',
-                'default_statistics_target',
-                'random_page_cost',
-                'effective_io_concurrency',
-                'work_mem',
-                'max_worker_processes',
-                'max_parallel_workers_per_gather'
-            )
-            ORDER BY name
+            WHERE name ILIKE $1 OR short_desc ILIKE $1
+            ORDER BY category, name
+            """
+            filter_pattern = f"%{filter_text}%"
+            configs = await execute_query(query, [filter_pattern])
+            
+            if not configs:
+                return f"No configuration parameters found matching '{filter_text}'"
+            
+            return format_table_data(configs, f"PostgreSQL Configurations containing '{filter_text}' ({len(configs)} found)")
+        
+        else:
+            # Retrieve all configurations
+            query = """
+            SELECT 
+                name,
+                setting,
+                unit,
+                category,
+                short_desc,
+                context,
+                source
+            FROM pg_settings 
+            ORDER BY category, name
             """
             configs = await execute_query(query)
-            return format_table_data(configs, "Key PostgreSQL Configuration Parameters")
+            return format_table_data(configs, "All PostgreSQL Configuration Parameters")
             
     except Exception as e:
         logger.error(f"Failed to get PostgreSQL config: {e}")
@@ -606,8 +627,8 @@ async def get_index_usage_stats() -> str:
         query = """
         SELECT 
             schemaname as schema_name,
-            tablename as table_name,
-            indexname as index_name,
+            relname as table_name,
+            indexrelname as index_name,
             idx_scan as scans,
             idx_tup_read as tuples_read,
             idx_tup_fetch as tuples_fetched,
@@ -618,7 +639,7 @@ async def get_index_usage_stats() -> str:
                 ELSE 'High usage'
             END as usage_level
         FROM pg_stat_user_indexes
-        ORDER BY idx_scan DESC, schemaname, tablename, indexname
+        ORDER BY idx_scan DESC, schemaname, relname, indexrelname
         """
         
         indexes = await execute_query(query)

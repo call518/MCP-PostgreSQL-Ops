@@ -48,7 +48,7 @@ python -m src.mcp_postgresql_ops.mcp_main --log-level DEBUG
 ### 📊 Server Information & Status
 - `get_server_info` - PostgreSQL server information and extension status
 - `get_active_connections` - Current active connections and session information
-- `get_postgresql_config` - PostgreSQL configuration parameters
+- `get_postgresql_config` - PostgreSQL configuration parameters with keyword search capability
 
 ### 🗄️ Structure Exploration
 - `get_database_list` - All database list and size information
@@ -98,6 +98,24 @@ python -m src.mcp_postgresql_ops.mcp_main \
   --host 127.0.0.1 \
   --port 8080 \
   --log-level DEBUG
+```
+
+### Configuration Search Examples
+
+The `get_postgresql_config` tool supports flexible parameter searching:
+
+```bash
+# Search for specific parameter
+"Show the shared_buffers configuration"
+
+# Search by keyword for related parameters
+"Find all memory-related configuration settings"
+"Show logging configuration parameters" 
+"Display connection-related settings"
+"Find all timeout configurations"
+
+# Browse all configurations
+"Show all PostgreSQL configuration parameters"
 ```
 
 ## Environment Variables
