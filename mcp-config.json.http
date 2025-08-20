@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "ambari-api": {
+      "type": "streamable-http",
+      "url": "http://host.docker.internal:18001/mcp"
+    }
+  }
+}

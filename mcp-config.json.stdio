@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "ambari-api": {
+      "command": "python",
+      "args": ["-m", "mcp_ambari_api.ambari_api"],
+      "env": {
+        "PYTHONPATH": "/app/src",
+        "AMBARI_HOST": "host.docker.internal",
+        "AMBARI_PORT": "7070",
+        "AMBARI_USER": "admin",
+        "AMBARI_PASS": "changeme!@34",
+        "AMBARI_CLUSTER_NAME": "TEST-AMBARI",
+        "AMBARI_LOG_LEVEL": "DEBUG"
+      }
+    }
+  }
+}
