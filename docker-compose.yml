@@ -1,6 +1,47 @@
-version: "3.8"
-
 services:
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: mcp-postgresql-ops-open-webui
+    ports:
+      - "3003:8080"
+    environment:
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+    volumes:
+      - open-webui-data:/app/backend/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  mcp-server:
+    image: call518/mcp-server-postgresql-ops:1.0.0
+    container_name: mcp-postgresql-ops-mcp-server
+    ports:
+      - "18003:8080" ### (WARNING) Must be same with port number of 'FASTMCP_PORT', 'mcp-config.json' and 'mcp-config.json.http'
+    environment:
+      - PYTHONPATH=${PYTHONPATH}
+      - FASTMCP_TYPE=${FASTMCP_TYPE}
+      - FASTMCP_HOST=${FASTMCP_HOST}
+      - FASTMCP_PORT=${FASTMCP_PORT}
+      - PGSQL_VERSION=${PGSQL_VERSION}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - ./src:/app/src
+      - ./scripts:/app/scripts
+    restart: unless-stopped
+
+  mcpo-proxy:
+    image: call518/mcpo-proxy-postgresql-ops:1.0.2
+    container_name: mcp-postgresql-ops-mcpo-proxy
+    depends_on:
+      - mcp-server
+    ports:
+      - "8003:8000"
+    volumes:
+      - ./mcp-config.json.http:/app/config/mcp-config.json
+    restart: unless-stopped
+
   postgres:
     container_name: postgresql-${PGSQL_VERSION}
     image: percona/percona-distribution-postgresql:${PGSQL_VERSION}.5-2
@@ -56,7 +97,8 @@ services:
       POSTGRES_DB: "${POSTGRES_DB}"
     restart: no
 
-
 volumes:
+  open-webui-data:
+    name: open-webui-data-mcp-postgresql-ops
   postgresql-data:
     name: postgresql-data-mcp-postgresql-ops
