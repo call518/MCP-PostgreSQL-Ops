@@ -29,7 +29,7 @@ cp .env.example .env
 2) Install Dependencies
 
 ```bash
-uv venv
+uv venv --python 3.11 --seed
 uv sync
 ```
 
@@ -148,7 +148,7 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 
 ### Minimum Requirements
 - PostgreSQL 12+ (tested with PostgreSQL 16)
-- Python 3.11+
+- Python 3.11
 - Network access to PostgreSQL server
 - Read permissions on system catalogs
 
@@ -213,27 +213,3 @@ uv run pytest
 - No direct SQL execution - only predefined queries
 - Follows principle of least privilege
 
-## Project structure
-
-```
-.
-├── main.py
-├── MANIFEST.in
-├── pyproject.toml
-├── README.md
-├── uv.lock
-├── .env.example                    # Environment configuration template
-├── docs/
-├── scripts/
-│   ├── rename-template.sh          # one-shot rename/customize
-│   ├── run-mcp-inspector-local.sh  # development & testing (recommended)
-│   └── run-mcp-inspector-pypi.sh   # test published package
-└── src/
-    └── mcp_postgresql_ops/         # PostgreSQL operations package
-        ├── __init__.py
-        ├── functions.py            # PostgreSQL utility functions
-        ├── mcp_main.py             # MCP server with PostgreSQL tools
-        └── prompt_template.md      # Usage guide and prompts
-```
-
-Now your PostgreSQL MCP server is ready for efficient database monitoring and management!
