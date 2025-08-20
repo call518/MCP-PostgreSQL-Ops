@@ -14,3 +14,5 @@ wheels/
 
 .vscode*
 .github/copilot-instructions.md
+
+.env
