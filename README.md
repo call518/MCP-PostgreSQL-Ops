@@ -124,23 +124,23 @@ The `get_postgresql_config` tool supports flexible parameter searching:
 
 ## Environment Variables
 
-| Variable | Description | Default | Example |
-|----------|-------------|---------|---------|
-| `PYTHONPATH` | Python module path | `/app/src` | `/app/src` |
-| `MCP_LOG_LEVEL` | Logging level | `INFO` | `DEBUG` |
-| `FASTMCP_TYPE` | Transport type | `stdio` | `streamable-http` |
-| `FASTMCP_HOST` | HTTP host address | `127.0.0.1` | `0.0.0.0` |
-| `FASTMCP_PORT` | HTTP port number | `8080` | `8080` |
-| `PGSQL_VERSION` | PostgreSQL version | `16` | `15` |
-| `POSTGRES_HOST` | PostgreSQL host | `localhost` | `127.0.0.1` |
-| `POSTGRES_PORT` | PostgreSQL port | `5432` | `15432` |
-| `POSTGRES_USER` | PostgreSQL user | `postgres` | `postgres` |
-| `POSTGRES_PASSWORD` | PostgreSQL password | `` | `changeme!@34` |
-| `POSTGRES_DB` | PostgreSQL database | `postgres` | `mcp_postgres_ops` |
-| `POSTGRES_MAX_CONNECTIONS` | Max connections | `100` | `200` |
-| `DOCKER_EXTERNAL_PORT_OPENWEBUI` | Open WebUI port | `8080` | `3003` |
-| `DOCKER_EXTERNAL_PORT_MCP_SERVER` | MCP server port | `8080` | `18003` |
-| `DOCKER_EXTERNAL_PORT_MCPO_PROXY` | MCPO proxy port | `8000` | `8003` |
+| Variable | Description | Default | Project Default |
+|----------|-------------|---------|-----------------|
+| `PYTHONPATH` | Python module search path for MCP server imports | `/app/src` | `/app/src` |
+| `MCP_LOG_LEVEL` | Server logging verbosity (DEBUG, INFO, WARNING, ERROR) | `INFO` | `INFO` |
+| `FASTMCP_TYPE` | MCP transport protocol (stdio for CLI, streamable-http for web) | `stdio` | `streamable-http` |
+| `FASTMCP_HOST` | HTTP server bind address (0.0.0.0 for all interfaces) | `127.0.0.1` | `0.0.0.0` |
+| `FASTMCP_PORT` | HTTP server port for MCP communication | `8080` | `8080` |
+| `PGSQL_VERSION` | PostgreSQL major version for Docker image selection | `16` | `15` |
+| `POSTGRES_HOST` | PostgreSQL server hostname or IP address | `localhost` | `127.0.0.1` |
+| `POSTGRES_PORT` | PostgreSQL server port number | `5432` | `15432` |
+| `POSTGRES_USER` | PostgreSQL connection username (needs read permissions) | `postgres` | `postgres` |
+| `POSTGRES_PASSWORD` | PostgreSQL user password (supports special characters) | `` | `changeme!@34` |
+| `POSTGRES_DB` | Default database name for connections | `postgres` | `mcp_postgres_ops` |
+| `POSTGRES_MAX_CONNECTIONS` | PostgreSQL max_connections configuration parameter | `100` | `200` |
+| `DOCKER_EXTERNAL_PORT_OPENWEBUI` | Host port mapping for Open WebUI container | `8080` | `3003` |
+| `DOCKER_EXTERNAL_PORT_MCP_SERVER` | Host port mapping for MCP server container | `8080` | `18003` |
+| `DOCKER_EXTERNAL_PORT_MCPO_PROXY` | Host port mapping for MCPO proxy container | `8000` | `8003` |
 
 ## Prerequisites
 
@@ -189,8 +189,6 @@ Then restart PostgreSQL and run the CREATE EXTENSION commands above.
 
 This section provides comprehensive usage examples for all available tools with their parameters. 
 
-📖 **[View Complete Example Queries →](src/mcp_postgresql_ops/prompt_template.md#example-queries)**
-
 ### Quick Examples
 
 **Server Status & Configuration**
@@ -230,6 +228,8 @@ This section provides comprehensive usage examples for all available tools with 
 ```
 
 **💡 Pro Tip**: All tools support multi-database operations using the `database_name` parameter. This allows PostgreSQL superusers to analyze and monitor multiple databases from a single MCP server instance.
+
+📖 **[More Useful Example Queries →](src/mcp_postgresql_ops/prompt_template.md#example-queries)**
 
 ## Troubleshooting
 
