@@ -4,15 +4,28 @@ ARG PYTHON_VERSION=3.11
 
 WORKDIR /app
 
+# Install system dependencies including PostgreSQL client libraries
 RUN dnf install -y epel-release \
         && dnf install -y python${PYTHON_VERSION} python${PYTHON_VERSION}-pip git procps-ng lsof telnet screen iputils \
+        postgresql-devel postgresql gcc python${PYTHON_VERSION}-devel libffi-devel openssl-devel \
         && dnf clean all \
         && update-alternatives --install /usr/bin/python python /usr/bin/python${PYTHON_VERSION} 1000 --slave /usr/bin/pip pip /usr/bin/pip${PYTHON_VERSION}
 
-RUN pip install \
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip \
+        && pip install --no-cache-dir \
         'uv>=0.8.5' \
         'mcpo>=0.0.17' \
         'fastmcp>=2.11.1' \
-        'aiohttp>=3.12.0'
+        'aiohttp>=3.12.0' \
+        'asyncpg>=0.29.0' \
+        'psycopg2-binary>=2.9.7'
+
+# Copy application files
+COPY . /app/
+
+# Set environment variables for PostgreSQL connections
+ENV PYTHONPATH=/app/src
+ENV PYTHONUNBUFFERED=1
 
 CMD ["/bin/bash", "/app/scripts/mcp-server-docker-cmd.sh"]

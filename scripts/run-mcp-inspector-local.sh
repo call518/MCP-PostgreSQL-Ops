@@ -4,7 +4,7 @@ set -euo pipefail
 # Run MCP Inspector with local source using uv
 cd "$(dirname "$0")/.."
 
-echo "🔍 Starting MCP Inspector with local server..."
+echo "🔍 Starting MCP Inspector with PostgreSQL Operations server..."
 echo "📁 Working directory: $(pwd)"
 
 # Load environment variables if .env exists
@@ -18,6 +18,7 @@ export MCP_LOG_LEVEL=${MCP_LOG_LEVEL:-INFO}
 
 echo "🚀 Launching MCP Inspector..."
 echo "   Log Level: $MCP_LOG_LEVEL"
+echo "   PostgreSQL Host: ${POSTGRES_HOST:-localhost}:${POSTGRES_PORT:-5432}"
 
-npx -y @modelcontextprotocol/inspector \
+npx -y @modelcontextprotocol/inspector 
   -- uv run python -m src.mcp_postgresql_ops.mcp_main

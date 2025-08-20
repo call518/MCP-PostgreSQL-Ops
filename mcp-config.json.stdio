@@ -1,8 +1,8 @@
 {
   "mcpServers": {
-    "ambari-api": {
+    "postgresql-ops": {
       "command": "python",
-      "args": ["-m", "mcp_ambari_api.ambari_api"],
+      "args": ["-m", "mcp_postgresql_ops.mcp_main"],
       "env": {
         "PYTHONPATH": "/app/src",
         "POSTGRES_HOST": "host.docker.internal",

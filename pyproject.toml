@@ -6,7 +6,9 @@ readme = "README.md"
 requires-python = ">=3.11"
 authors = [{ name = "JungJungIn", email = "call518@gmail.com" }]
 dependencies = [
-    "fastmcp>=2.11.1"
+    "fastmcp>=2.11.1",
+    "asyncpg>=0.29.0",
+    "psycopg2-binary>=2.9.7"
 ]
 
 [project.optional-dependencies]

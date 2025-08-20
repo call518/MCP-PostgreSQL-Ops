@@ -1,17 +1,14 @@
 """
-MCP Server Template
+MCP PostgreSQL Operations Server
 
-이 템플릿은 Model Context Protocol (MCP) 서버를 빠르게 개발하기 위한 기본 구조를 제공합니다.
+A professional MCP server for PostgreSQL database server operations, monitoring, and management.
 
-사용법:
-1. SERVER_NAME을 원하는 서버 이름으로 변경
-2. 필요한 상수들을 Constants 섹션에 추가
-3. 유틸리티 함수들을 Helper Functions 섹션에 구현
-4. @mcp.tool() 데코레이터를 사용해서 도구들을 추가
-
-예시:
-- 외부 데이터가 필요한 경우: fetch_external_data 함수 참고
-- 데이터 포맷팅이 필요한 경우: format_data 함수 참고
+Key Features:
+1. Query performance monitoring via pg_stat_statements and pg_stat_monitor
+2. Database, table, and user listing
+3. PostgreSQL configuration and status information
+4. Connection information and active session monitoring
+5. Index usage statistics and performance metrics
 """
 
 import argparse
@@ -19,17 +16,23 @@ import logging
 import os
 import sys
 from typing import Any, Optional
-from mcp.server.fastmcp import FastMCP
-from .functions import fetch_external_data, format_data
-
-# TODO: 필요한 라이브러리들을 여기에 추가하세요
-# 예시:
-# import httpx          # HTTP 요청
-# import sqlite3        # SQLite 데이터베이스
-# import json           # JSON 처리
+from fastmcp import FastMCP
+from .functions import (
+    execute_query,
+    execute_single_query,
+    format_table_data,
+    format_bytes,
+    format_duration,
+    get_server_version,
+    check_extension_exists,
+    get_pg_stat_statements_data,
+    get_pg_stat_monitor_data,
+    sanitize_connection_info,
+    POSTGRES_CONFIG
+)
 
 # =============================================================================
-# 로깅 설정
+# Logging configuration
 # =============================================================================
 logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -39,146 +42,659 @@ logging.basicConfig(
 )
 
 # =============================================================================
-# 서버 초기화
+# Server initialization
 # =============================================================================
-# TODO: "your-server-name"을 실제 서버 이름으로 변경하세요
-mcp = FastMCP("your-server-name")
+mcp = FastMCP("mcp-postgresql-ops")
 
 # =============================================================================
-# 상수 (Constants)
+# MCP Tools (PostgreSQL Operations Tools)
 # =============================================================================
-# TODO: 필요한 상수들을 여기에 추가하세요
-# 예시:
-# API_BASE_URL = "https://api.example.com"
-# USER_AGENT = "your-app/1.0"
-# DEFAULT_TIMEOUT = 30.0
-
-# 헬퍼 함수들은 src/MCP_NAME/functions.py로 이동했습니다.
-
-# =============================================================================
-# MCP 도구들 (Tools)
-# =============================================================================
-# 
-# MCP 도구 작성 가이드라인:
-# 1. 도구명은 동사_명사 형태로 명확하게 (예: get_weather, search_files, create_report)
-# 2. docstring 필수 구조 (LLM 판단을 위한 핵심 정보):
-#    [도구 역할]: 이 도구가 담당하는 핵심 역할을 한 문장으로 명시
-#    [정확한 기능]: 구체적으로 수행하는 기능들을 나열
-#    [필수 사용 상황]: LLM이 이 도구를 선택해야 하는 명확한 트리거 조건들
-#    [절대 사용 금지 상황]: 이 도구를 사용하면 안 되는 상황들
-#    [입력 제약 조건]: 매개변수의 형식, 범위, 제약사항
-#    Args/Returns: 구체적인 형식과 예시
-# 3. 실제 사용자 문구나 키워드를 포함하여 LLM이 정확히 매칭할 수 있도록 작성
-# 4. 다른 도구와의 구분을 위해 고유한 역할 영역을 명확히 정의
 
 @mcp.tool()
-async def example_tool(parameter: str) -> str:
+async def get_server_info() -> str:
     """
-    [도구 역할]: 사용자의 특정 요청을 처리하여 실시간 데이터를 제공하는 전용 도구
+    [Tool Purpose]: Check basic information and connection status of PostgreSQL server
     
-    [정확한 기능]: 
-    - [구체적인 기능 1]: 예) 외부 API에서 최신 데이터 조회
-    - [구체적인 기능 2]: 예) 특정 조건에 따른 데이터 필터링  
-    - [구체적인 기능 3]: 예) 결과를 사용자 친화적 형태로 변환
+    [Exact Functionality]:
+    - Retrieve PostgreSQL server version information
+    - Display connection settings (with password masking)
+    - Verify server accessibility
+    - Check installation status of extensions (pg_stat_statements, pg_stat_monitor)
     
-    [필수 사용 상황]:
-    - 사용자가 "[구체적인 키워드/문구]"를 언급할 때
-    - "[특정 데이터 유형]"에 대한 정보 요청 시
-    - "[특정 작업]"을 수행해야 할 때
-    - 실시간/최신 정보가 반드시 필요한 경우
+    [Required Use Cases]:
+    - When user requests "server info", "PostgreSQL status", "connection check", etc.
+    - When basic database server information is needed
+    - When preliminary check is needed before using monitoring tools
     
-    [절대 사용 금지 상황]:
-    - 일반적인 지식 질문 (위키백과 수준의 정보)
-    - 단순 계산이나 변환 작업
-    - 이미 알려진 정적 정보에 대한 질문
-    - 다른 도구의 영역에 속하는 요청
-    
-    [입력 제약 조건]:
-    - parameter는 반드시 [특정 형식]이어야 함
-    - 빈 문자열이나 None 값 불허
-    - 최대 길이: [구체적 숫자] 문자
-    
-    Args:
-        parameter: [역할 설명] - 처리할 대상을 명시하는 문자열
-                  형식: "[구체적 형식 설명]"
-                  예시: "파일명.확장자", "YYYY-MM-DD", "사용자ID:12345"
+    [Strictly Prohibited Use Cases]:
+    - Requests for specific data or table information
+    - Requests for performance statistics or monitoring data
+    - Requests for configuration changes or administrative tasks
     
     Returns:
-        [반환값 역할]: 처리 결과를 구조화된 형태로 제공
-        성공 시: "[구체적 성공 형식]"
-        실패 시: "오류: [구체적 오류 메시지]"
-        데이터 없음: "결과 없음: [구체적 상황 설명]"
-    
-    TODO: 
-    1. [도구 역할] 섹션을 실제 도구의 핵심 역할로 교체
-    2. [정확한 기능] 섹션에 구체적인 기능 나열
-    3. [필수 사용 상황]을 실제 트리거 조건들로 교체
-    4. 실제 비즈니스 로직으로 구현 교체
+        Comprehensive information including server version, connection info, and extension status
     """
-    # TODO: 실제 로직 구현
-    result = f"Processed: {parameter}"
-    return result
+    try:
+        # Retrieve server version
+        version = await get_server_version()
+        
+        # Connection information (with password masking)
+        conn_info = sanitize_connection_info()
+        
+        # Check extension status
+        pg_stat_statements_exists = await check_extension_exists("pg_stat_statements")
+        pg_stat_monitor_exists = await check_extension_exists("pg_stat_monitor")
+        
+        result = []
+        result.append("=== PostgreSQL Server Information ===\n")
+        result.append(f"Version: {version}")
+        result.append(f"Host: {conn_info['host']}")
+        result.append(f"Port: {conn_info['port']}")
+        result.append(f"Database: {conn_info['database']}")
+        result.append(f"User: {conn_info['user']}")
+        result.append("")
+        result.append("=== Extension Status ===")
+        result.append(f"pg_stat_statements: {'✓ Installed' if pg_stat_statements_exists else '✗ Not installed'}")
+        result.append(f"pg_stat_monitor: {'✓ Installed' if pg_stat_monitor_exists else '✗ Not installed'}")
+        
+        return "\n".join(result)
+        
+    except Exception as e:
+        logger.error(f"Failed to get server info: {e}")
+        return f"Error retrieving server information: {str(e)}"
 
-# TODO: 추가 도구들을 여기에 구현하세요
-#
-# @mcp.tool()
-# async def search_database(query: str, category: str = "all") -> str:
-#     """
-#     [도구 역할]: 내부 데이터베이스에서 특정 정보를 검색하여 실시간 결과를 제공하는 전용 검색 도구
-#     
-#     [정확한 기능]:
-#     - 키워드 기반 데이터베이스 전문 검색
-#     - 카테고리별 필터링 및 정렬
-#     - 검색 결과 관련도 순 정렬 및 요약 제공
-#     
-#     [필수 사용 상황]:
-#     - 사용자가 "검색해줘", "찾아줘", "데이터베이스에서" 등을 언급할 때
-#     - "최신", "업데이트된", "현재" 정보 요청 시
-#     - 특정 레코드나 데이터 조회가 필요할 때
-#     - 리스트나 목록 형태의 결과가 필요할 때
-#     
-#     [절대 사용 금지 상황]:
-#     - 일반적인 지식이나 상식 질문
-#     - 계산, 변환, 분석 요청
-#     - 파일 시스템 관련 작업
-#     - 외부 API 호출이 필요한 작업
-#     
-#     [입력 제약 조건]:
-#     - query는 최소 2글자 이상, 최대 100글자
-#     - 특수문자는 %, _, - 만 허용
-#     - category는 "all", "users", "products", "orders" 중 하나
-#     
-#     Args:
-#         query: [역할: 검색 키워드] 찾고자 하는 정보의 키워드나 문구
-#               형식: "문자열 (2-100자)"
-#               예시: "Python 튜토리얼", "사용자 관리", "주문 내역"
-#         category: [역할: 검색 범위 제한] 검색할 데이터 카테고리
-#                  기본값: "all", 허용값: ["all", "users", "products", "orders"]
-#     
-#     Returns:
-#         [반환값 역할]: 검색 결과를 구조화된 리스트 형태로 제공
-#         성공 시: "검색 결과 N개:\n1. [제목] - [요약]\n2. ..."
-#         결과 없음: "검색 결과가 없습니다: [검색 조건 정리]"
-#         오류 시: "검색 오류: [구체적 오류 원인]"
-#     """
-#     # 여기에 실제 검색 로직 구현
-#     return f"검색 결과: {query} (카테고리: {category})"
+
+@mcp.tool()
+async def get_database_list() -> str:
+    """
+    [Tool Purpose]: Retrieve list of all databases and their basic information on PostgreSQL server
+    
+    [Exact Functionality]:
+    - Retrieve list of all databases on the server
+    - Display owner, encoding, and size information for each database
+    - Include database connection limit information
+    
+    [Required Use Cases]:
+    - When user requests "database list", "DB list", "database info", etc.
+    - When need to check what databases exist on the server
+    - When database size or owner information is needed
+    
+    [Strictly Prohibited Use Cases]:
+    - Requests for tables or schemas inside specific databases
+    - Requests for database creation or deletion
+    - Requests related to user permissions or security
+    
+    Returns:
+        Table-format information including database name, owner, encoding, size, and connection limit
+    """
+    try:
+        query = """
+        SELECT 
+            d.datname as database_name,
+            u.usename as owner,
+            d.encoding,
+            pg_encoding_to_char(d.encoding) as encoding_name,
+            CASE WHEN d.datconnlimit = -1 THEN 'unlimited' 
+                 ELSE d.datconnlimit::text END as connection_limit,
+            pg_size_pretty(pg_database_size(d.datname)) as size
+        FROM pg_database d
+        JOIN pg_user u ON d.datdba = u.usesysid
+        ORDER BY d.datname
+        """
+        
+        databases = await execute_query(query)
+        return format_table_data(databases, "Database List")
+        
+    except Exception as e:
+        logger.error(f"Failed to get database list: {e}")
+        return f"Error retrieving database list: {str(e)}"
+
+
+@mcp.tool()
+async def get_table_list(database_name: str = None) -> str:
+    """
+    [Tool Purpose]: Retrieve list of all tables and their information from specified database (or current DB)
+    
+    [Exact Functionality]:
+    - Retrieve list of all tables in specified database
+    - Display schema, owner, and size information for each table
+    - Distinguish table types (regular tables, views, etc.)
+    
+    [Required Use Cases]:
+    - When user requests "table list", "table listing", "schema info", etc.
+    - When need to understand structure of specific database
+    - When table size or owner information is needed
+    
+    [Strictly Prohibited Use Cases]:
+    - Requests for data inside tables
+    - Requests for table structure changes or creation/deletion
+    - Requests for detailed column information of specific tables
+    
+    Args:
+        database_name: Database name to query (uses currently connected database if omitted)
+    
+    Returns:
+        Table-format information including table name, schema, owner, type, and size
+    """
+    try:
+        query = """
+        SELECT 
+            schemaname as schema_name,
+            tablename as table_name,
+            tableowner as owner,
+            pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size
+        FROM pg_tables 
+        WHERE schemaname NOT IN ('information_schema', 'pg_catalog')
+        ORDER BY schemaname, tablename
+        """
+        
+        tables = await execute_query(query)
+        title = f"Table List"
+        if database_name:
+            title += f" (Database: {database_name})"
+            
+        return format_table_data(tables, title)
+        
+    except Exception as e:
+        logger.error(f"Failed to get table list: {e}")
+        return f"Error retrieving table list: {str(e)}"
+
+
+@mcp.tool()
+async def get_user_list() -> str:
+    """
+    [Tool Purpose]: Retrieve list of all user accounts and permission information on PostgreSQL server
+    
+    [Exact Functionality]:
+    - Retrieve list of all database user accounts
+    - Display permission information for each user (superuser, database creation rights, etc.)
+    - Include account creation date and expiration date information
+    
+    [Required Use Cases]:
+    - When user requests "user list", "account info", "permission check", etc.
+    - When user permission management or security inspection is needed
+    - When account status overview is needed
+    
+    [Strictly Prohibited Use Cases]:
+    - Requests for user password information
+    - Requests for user creation, deletion, or permission changes
+    - Requests for specific user sessions or activity history
+    
+    Returns:
+        Table-format information including username, superuser status, permissions, and account status
+    """
+    try:
+        query = """
+        SELECT 
+            usename as username,
+            usesysid as user_id,
+            CASE WHEN usesuper THEN 'Yes' ELSE 'No' END as is_superuser,
+            CASE WHEN usecreatedb THEN 'Yes' ELSE 'No' END as can_create_db,
+            CASE WHEN usecatupd THEN 'Yes' ELSE 'No' END as can_update_catalog,
+            valuntil as valid_until
+        FROM pg_user
+        ORDER BY usename
+        """
+        
+        users = await execute_query(query)
+        return format_table_data(users, "Database Users")
+        
+    except Exception as e:
+        logger.error(f"Failed to get user list: {e}")
+        return f"Error retrieving user list: {str(e)}"
+
+
+@mcp.tool()
+async def get_active_connections() -> str:
+    """
+    [Tool Purpose]: Retrieve all active connections and session information on current PostgreSQL server
+    
+    [Exact Functionality]:
+    - Retrieve list of all currently active connected sessions
+    - Display user, database, and client address for each connection
+    - Include session status and currently executing query information
+    
+    [Required Use Cases]:
+    - When user requests "active connections", "current sessions", "connection status", etc.
+    - When server load or performance problem diagnosis is needed
+    - When checking connection status of specific users or applications
+    
+    [Strictly Prohibited Use Cases]:
+    - Requests for forceful connection termination or session management
+    - Requests for detailed query history of specific sessions
+    - Requests for connection security or authentication-related changes
+    
+    Returns:
+        Information including PID, username, database name, client address, status, and current query
+    """
+    try:
+        query = """
+        SELECT 
+            pid,
+            usename as username,
+            datname as database_name,
+            client_addr,
+            client_port,
+            state,
+            query_start,
+            LEFT(query, 100) as current_query
+        FROM pg_stat_activity 
+        WHERE pid <> pg_backend_pid()
+        ORDER BY query_start DESC
+        """
+        
+        connections = await execute_query(query)
+        return format_table_data(connections, "Active Connections")
+        
+    except Exception as e:
+        logger.error(f"Failed to get active connections: {e}")
+        return f"Error retrieving active connections: {str(e)}"
+
+
+@mcp.tool()
+async def get_pg_stat_statements_top_queries(limit: int = 20) -> str:
+    """
+    [Tool Purpose]: Analyze top queries that consumed the most time using pg_stat_statements extension
+    
+    [Exact Functionality]:
+    - Retrieve top query list based on total execution time
+    - Display call count, average execution time, and cache hit rate for each query
+    - Support identification of queries requiring performance optimization
+    
+    [Required Use Cases]:
+    - When user requests "slow queries", "performance analysis", "top queries", etc.
+    - When database performance optimization is needed
+    - When query performance monitoring or tuning is required
+    
+    [Strictly Prohibited Use Cases]:
+    - When pg_stat_statements extension is not installed
+    - Requests for query execution or data modification
+    - Requests for statistics data reset or configuration changes
+    
+    Args:
+        limit: Number of top queries to retrieve (default: 20, max: 100)
+    
+    Returns:
+        Performance statistics including query text, call count, total execution time, average execution time, and cache hit rate
+    """
+    try:
+        # Check extension exists
+        if not await check_extension_exists("pg_stat_statements"):
+            return "Error: pg_stat_statements extension is not installed or enabled"
+        
+        # Limit range constraint
+        limit = max(1, min(limit, 100))
+        
+        data = await get_pg_stat_statements_data(limit)
+        return format_table_data(data, f"Top {limit} Queries by Total Execution Time (pg_stat_statements)")
+        
+    except Exception as e:
+        logger.error(f"Failed to get pg_stat_statements data: {e}")
+        return f"Error retrieving pg_stat_statements data: {str(e)}"
+
+
+@mcp.tool()
+async def get_pg_stat_monitor_recent_queries(limit: int = 20) -> str:
+    """
+    [Tool Purpose]: Analyze recently executed queries and detailed monitoring information using pg_stat_monitor extension
+    
+    [Exact Functionality]:
+    - Retrieve detailed performance information of recently executed queries
+    - Display client IP and time bucket information by execution period
+    - Provide more detailed monitoring data than pg_stat_statements
+    
+    [Required Use Cases]:
+    - When user requests "recent queries", "detailed monitoring", "pg_stat_monitor", etc.
+    - When real-time query performance monitoring is needed
+    - When client-specific or time-based query analysis is required
+    
+    [Strictly Prohibited Use Cases]:
+    - When pg_stat_monitor extension is not installed
+    - Requests for query execution or data modification
+    - Requests for monitoring configuration changes or data reset
+    
+    Args:
+        limit: Number of recent queries to retrieve (default: 20, max: 100)
+    
+    Returns:
+        Detailed monitoring information including query text, execution statistics, client info, and bucket time
+    """
+    try:
+        # Check extension exists
+        if not await check_extension_exists("pg_stat_monitor"):
+            return "Error: pg_stat_monitor extension is not installed or enabled"
+        
+        # Limit range constraint
+        limit = max(1, min(limit, 100))
+        
+        data = await get_pg_stat_monitor_data(limit)
+        return format_table_data(data, f"Recent {limit} Queries (pg_stat_monitor)")
+        
+    except Exception as e:
+        logger.error(f"Failed to get pg_stat_monitor data: {e}")
+        return f"Error retrieving pg_stat_monitor data: {str(e)}"
+
+
+@mcp.tool()
+async def get_database_size_info() -> str:
+    """
+    [Tool Purpose]: Analyze size information and storage usage status of all databases in PostgreSQL server
+    
+    [Exact Functionality]:
+    - Retrieve disk usage for each database
+    - Analyze overall server storage usage status
+    - Provide database list sorted by size
+    
+    [Required Use Cases]:
+    - When user requests "database size", "disk usage", "storage space", etc.
+    - When capacity management or cleanup is needed
+    - When resource usage status by database needs to be identified
+    
+    [Strictly Prohibited Use Cases]:
+    - Requests for data deletion or cleanup operations
+    - Requests for storage configuration changes
+    - Requests related to backup or restore
+    
+    Returns:
+        Table-format information with database names and size information sorted by size
+    """
+    try:
+        query = """
+        SELECT 
+            datname as database_name,
+            pg_size_pretty(pg_database_size(datname)) as size,
+            pg_database_size(datname) as size_bytes
+        FROM pg_database 
+        WHERE datistemplate = false
+        ORDER BY pg_database_size(datname) DESC
+        """
+        
+        sizes = await execute_query(query)
+        
+        # Calculate total size
+        total_size = sum(row['size_bytes'] for row in sizes)
+        
+        result = []
+        result.append(f"Total size of all databases: {format_bytes(total_size)}\n")
+        
+        # Remove size_bytes column (not for display)
+        for row in sizes:
+            del row['size_bytes']
+            
+        result.append(format_table_data(sizes, "Database Sizes"))
+        
+        return "\n".join(result)
+        
+    except Exception as e:
+        logger.error(f"Failed to get database size info: {e}")
+        return f"Error retrieving database size information: {str(e)}"
+
+
+@mcp.tool()
+async def get_table_size_info(schema_name: str = "public") -> str:
+    """
+    [Tool Purpose]: Analyze size information and index usage of all tables in specified schema
+    
+    [Exact Functionality]:
+    - Retrieve size information of all tables within schema
+    - Analyze index size and total size per table
+    - Provide table list sorted by size
+    
+    [Required Use Cases]:
+    - When user requests "table size", "schema capacity", "index usage", etc.
+    - When storage analysis of specific schema is needed
+    - When resource usage status per table needs to be identified
+    
+    [Strictly Prohibited Use Cases]:
+    - Requests for table data deletion or cleanup operations
+    - Requests for index creation or deletion
+    - Requests for table structure changes
+    
+    Args:
+        schema_name: Schema name to analyze (default: "public")
+    
+    Returns:
+        Information sorted by size including table name, table size, index size, and total size
+    """
+    try:
+        query = """
+        SELECT 
+            schemaname as schema_name,
+            tablename as table_name,
+            pg_size_pretty(pg_relation_size(schemaname||'.'||tablename)) as table_size,
+            pg_size_pretty(pg_indexes_size(schemaname||'.'||tablename)) as index_size,
+            pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as total_size,
+            pg_total_relation_size(schemaname||'.'||tablename) as total_size_bytes
+        FROM pg_tables 
+        WHERE schemaname = $1
+        ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC
+        """
+        
+        tables = await execute_query(query, [schema_name])
+        
+        if not tables:
+            return f"No tables found in schema '{schema_name}'"
+        
+        # Calculate total size
+        total_size = sum(row['total_size_bytes'] for row in tables)
+        
+        result = []
+        result.append(f"Total size of tables in schema '{schema_name}': {format_bytes(total_size)}\n")
+        
+        # Remove total_size_bytes column
+        for row in tables:
+            del row['total_size_bytes']
+            
+        result.append(format_table_data(tables, f"Table Sizes in Schema '{schema_name}'"))
+        
+        return "\n".join(result)
+        
+    except Exception as e:
+        logger.error(f"Failed to get table size info: {e}")
+        return f"Error retrieving table size information: {str(e)}"
+
+
+@mcp.tool()
+async def get_postgresql_config(config_name: str = None) -> str:
+    """
+    [Tool Purpose]: Retrieve and analyze PostgreSQL server configuration parameter values
+    
+    [Exact Functionality]:
+    - Retrieve all PostgreSQL configuration parameters (when config_name is not specified)
+    - Retrieve current value and description of specific configuration parameter
+    - Display whether configuration can be changed and if restart is required
+    
+    [Required Use Cases]:
+    - When user requests "PostgreSQL config", "config", "parameters", etc.
+    - When checking specific configuration values is needed
+    - When configuration status identification is needed for performance tuning
+    
+    [Strictly Prohibited Use Cases]:
+    - Requests for configuration value changes or modifications
+    - Requests for PostgreSQL restart or reload
+    - Requests for system-level configuration changes
+    
+    Args:
+        config_name: Specific configuration parameter name to retrieve (shows key configs if omitted)
+    
+    Returns:
+        Configuration information including parameter name, current value, unit, description, and changeability
+    """
+    try:
+        if config_name:
+            # Retrieve specific configuration
+            query = """
+            SELECT 
+                name,
+                setting,
+                unit,
+                category,
+                short_desc,
+                context,
+                vartype,
+                source,
+                min_val,
+                max_val,
+                boot_val,
+                reset_val
+            FROM pg_settings 
+            WHERE name = $1
+            """
+            config = await execute_query(query, [config_name])
+            
+            if not config:
+                return f"Configuration parameter '{config_name}' not found"
+                
+            return format_table_data(config, f"Configuration: {config_name}")
+        else:
+            # Retrieve key configurations
+            query = """
+            SELECT 
+                name,
+                setting,
+                unit,
+                short_desc
+            FROM pg_settings 
+            WHERE name IN (
+                'max_connections',
+                'shared_buffers',
+                'effective_cache_size',
+                'maintenance_work_mem',
+                'checkpoint_completion_target',
+                'wal_buffers',
+                'default_statistics_target',
+                'random_page_cost',
+                'effective_io_concurrency',
+                'work_mem',
+                'max_worker_processes',
+                'max_parallel_workers_per_gather'
+            )
+            ORDER BY name
+            """
+            configs = await execute_query(query)
+            return format_table_data(configs, "Key PostgreSQL Configuration Parameters")
+            
+    except Exception as e:
+        logger.error(f"Failed to get PostgreSQL config: {e}")
+        return f"Error retrieving PostgreSQL configuration: {str(e)}"
+
+
+@mcp.tool()
+async def get_index_usage_stats() -> str:
+    """
+    [Tool Purpose]: Analyze usage rate and performance statistics of all indexes in database
+    
+    [Exact Functionality]:
+    - Analyze usage frequency and efficiency of all indexes
+    - Identify unused indexes
+    - Provide scan count and tuple return statistics per index
+    
+    [Required Use Cases]:
+    - When user requests "index usage rate", "index performance", "unnecessary indexes", etc.
+    - When database performance optimization is needed
+    - When index cleanup or reorganization is required
+    
+    [Strictly Prohibited Use Cases]:
+    - Requests for index creation or deletion
+    - Requests for index reorganization or REINDEX execution
+    - Requests for statistics reset
+    
+    Returns:
+        Index usage statistics including schema, table, index name, scans, and tuples read
+    """
+    try:
+        query = """
+        SELECT 
+            schemaname as schema_name,
+            tablename as table_name,
+            indexname as index_name,
+            idx_scan as scans,
+            idx_tup_read as tuples_read,
+            idx_tup_fetch as tuples_fetched,
+            CASE 
+                WHEN idx_scan = 0 THEN 'Never used'
+                WHEN idx_scan < 100 THEN 'Low usage'
+                WHEN idx_scan < 1000 THEN 'Medium usage'
+                ELSE 'High usage'
+            END as usage_level
+        FROM pg_stat_user_indexes
+        ORDER BY idx_scan DESC, schemaname, tablename, indexname
+        """
+        
+        indexes = await execute_query(query)
+        return format_table_data(indexes, "Index Usage Statistics")
+        
+    except Exception as e:
+        logger.error(f"Failed to get index usage stats: {e}")
+        return f"Error retrieving index usage statistics: {str(e)}"
+
+
+@mcp.tool()
+async def get_vacuum_analyze_stats() -> str:
+    """
+    [Tool Purpose]: Analyze VACUUM and ANALYZE execution history and statistics per table
+    
+    [Exact Functionality]:
+    - Retrieve last VACUUM/ANALYZE execution time for each table
+    - Provide Auto VACUUM/ANALYZE execution count statistics
+    - Analyze table activity with tuple insert/update/delete statistics
+    
+    [Required Use Cases]:
+    - When user requests "VACUUM status", "ANALYZE history", "table statistics", etc.
+    - When database maintenance status overview is needed
+    - When performance issues or statistics update status verification is required
+    
+    [Strictly Prohibited Use Cases]:
+    - Requests for VACUUM or ANALYZE execution
+    - Requests for Auto VACUUM configuration changes
+    - Requests for forced statistics update
+    
+    Returns:
+        Schema name, table name, last VACUUM time, last ANALYZE time, and execution count statistics
+    """
+    try:
+        query = """
+        SELECT 
+            schemaname as schema_name,
+            relname as table_name,
+            last_vacuum,
+            last_autovacuum,
+            last_analyze,
+            last_autoanalyze,
+            vacuum_count,
+            autovacuum_count,
+            analyze_count,
+            autoanalyze_count,
+            n_tup_ins as inserts,
+            n_tup_upd as updates,
+            n_tup_del as deletes
+        FROM pg_stat_user_tables
+        ORDER BY schemaname, relname
+        """
+        
+        stats = await execute_query(query)
+        return format_table_data(stats, "VACUUM/ANALYZE Statistics")
+        
+    except Exception as e:
+        logger.error(f"Failed to get vacuum/analyze stats: {e}")
+        return f"Error retrieving VACUUM/ANALYZE statistics: {str(e)}"
+
 
 # =============================================================================
-# 서버 실행
+# Server execution
 # =============================================================================
 
 def validate_config(transport_type: str, host: str, port: int) -> None:
-    """서버 설정 검증"""
+    """Validate server configuration"""
     if transport_type not in ["stdio", "streamable-http"]:
         raise ValueError(f"Invalid transport type: {transport_type}")
     
     if transport_type == "streamable-http":
-        # Host 검증
+        # Host validation
         if not host:
             raise ValueError("Host is required for streamable-http transport")
         
-        # Port 검증
+        # Port validation
         if not (1 <= port <= 65535):
             raise ValueError(f"Port must be between 1 and 65535, got: {port}")
         
@@ -188,10 +704,10 @@ def validate_config(transport_type: str, host: str, port: int) -> None:
 
 
 def main(argv: Optional[list] = None) -> None:
-    """메인 실행 함수"""
+    """Main execution function"""
     parser = argparse.ArgumentParser(
-        prog="mcp-server", 
-        description="MCP Server with configurable transport"
+        prog="mcp-postgresql-ops", 
+        description="MCP PostgreSQL Operations Server"
     )
     parser.add_argument(
         "--log-level",
@@ -245,20 +761,27 @@ def main(argv: Optional[list] = None) -> None:
         else:
             logger.info("Using default log level: %s", log_level)
 
-        # 우선순위: CLI 인수 > 환경변수 > 기본값
+        # Priority: CLI arguments > environment variables > defaults
         transport_type = args.transport_type or os.getenv("FASTMCP_TYPE", "stdio")
         host = args.host or os.getenv("FASTMCP_HOST", "127.0.0.1") 
         port = args.port if args.port != 8080 else int(os.getenv("FASTMCP_PORT", "8080"))
         
-        # 설정 검증
+        # PostgreSQL connection information logging
+        logger.info(f"PostgreSQL connection: {POSTGRES_CONFIG['host']}:{POSTGRES_CONFIG['port']}")
+        
+        # Configuration validation
         validate_config(transport_type, host, port)
         
-        # Transport 모드에 따른 실행
+        # Execute based on transport mode
         if transport_type == "streamable-http":
-            logger.info(f"Starting MCP server with streamable-http transport on {host}:{port}")
+            logger.info(f"Starting MCP PostgreSQL server with streamable-http transport on {host}:{port}")
+            # os.environ["HOST"] = host
+            # os.environ["PORT"] = str(port)
+            # mcp.run(transport="streamable-http")
             mcp.run(transport="streamable-http", host=host, port=port)
         else:
-            logger.info("Starting MCP server with stdio transport")
+            logger.info("Starting MCP PostgreSQL server with stdio transport")
+            # mcp.run()
             mcp.run(transport='stdio')
             
     except KeyboardInterrupt:
@@ -270,7 +793,7 @@ def main(argv: Optional[list] = None) -> None:
 
 
 if __name__ == "__main__":
-    """Entrypoint for MCP server.
+    """Entrypoint for MCP PostgreSQL Operations server.
 
     Supports optional CLI arguments while remaining backward-compatible 
     with stdio launcher expectations.
