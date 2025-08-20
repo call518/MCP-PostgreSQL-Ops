@@ -13,6 +13,6 @@ wheels/
 **/.pytest_cache/
 
 .vscode*
-.github/copilot-instructions.md
+#.github/copilot-instructions.md
 
 .env
