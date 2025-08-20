@@ -188,7 +188,8 @@ async def get_table_list(database_name: str = None) -> str:
         ORDER BY schemaname, tablename
         """
         
-        tables = await execute_query(query)
+        # Execute query on specified database or default
+        tables = await execute_query(query, database=database_name)
         title = f"Table List"
         if database_name:
             title += f" (Database: {database_name})"
@@ -297,7 +298,7 @@ async def get_active_connections() -> str:
 
 
 @mcp.tool()
-async def get_pg_stat_statements_top_queries(limit: int = 20) -> str:
+async def get_pg_stat_statements_top_queries(limit: int = 20, database_name: str = None) -> str:
     """
     [Tool Purpose]: Analyze top queries that consumed the most time using pg_stat_statements extension
     
@@ -318,6 +319,7 @@ async def get_pg_stat_statements_top_queries(limit: int = 20) -> str:
     
     Args:
         limit: Number of top queries to retrieve (default: 20, max: 100)
+        database_name: Database name to analyze (uses default database if omitted)
     
     Returns:
         Performance statistics including query text, call count, total execution time, average execution time, and cache hit rate
@@ -330,8 +332,13 @@ async def get_pg_stat_statements_top_queries(limit: int = 20) -> str:
         # Limit range constraint
         limit = max(1, min(limit, 100))
         
-        data = await get_pg_stat_statements_data(limit)
-        return format_table_data(data, f"Top {limit} Queries by Total Execution Time (pg_stat_statements)")
+        data = await get_pg_stat_statements_data(limit, database=database_name)
+        
+        title = f"Top {limit} Queries by Total Execution Time (pg_stat_statements)"
+        if database_name:
+            title += f" (Database: {database_name})"
+            
+        return format_table_data(data, title)
         
     except Exception as e:
         logger.error(f"Failed to get pg_stat_statements data: {e}")
@@ -339,7 +346,7 @@ async def get_pg_stat_statements_top_queries(limit: int = 20) -> str:
 
 
 @mcp.tool()
-async def get_pg_stat_monitor_recent_queries(limit: int = 20) -> str:
+async def get_pg_stat_monitor_recent_queries(limit: int = 20, database_name: str = None) -> str:
     """
     [Tool Purpose]: Analyze recently executed queries and detailed monitoring information using pg_stat_monitor extension
     
@@ -360,6 +367,7 @@ async def get_pg_stat_monitor_recent_queries(limit: int = 20) -> str:
     
     Args:
         limit: Number of recent queries to retrieve (default: 20, max: 100)
+        database_name: Database name to analyze (uses default database if omitted)
     
     Returns:
         Detailed monitoring information including query text, execution statistics, client info, and bucket time
@@ -372,8 +380,13 @@ async def get_pg_stat_monitor_recent_queries(limit: int = 20) -> str:
         # Limit range constraint
         limit = max(1, min(limit, 100))
         
-        data = await get_pg_stat_monitor_data(limit)
-        return format_table_data(data, f"Recent {limit} Queries (pg_stat_monitor)")
+        data = await get_pg_stat_monitor_data(limit, database=database_name)
+        
+        title = f"Recent {limit} Queries (pg_stat_monitor)"
+        if database_name:
+            title += f" (Database: {database_name})"
+            
+        return format_table_data(data, title)
         
     except Exception as e:
         logger.error(f"Failed to get pg_stat_monitor data: {e}")
@@ -436,7 +449,7 @@ async def get_database_size_info() -> str:
 
 
 @mcp.tool()
-async def get_table_size_info(schema_name: str = "public") -> str:
+async def get_table_size_info(schema_name: str = "public", database_name: str = None) -> str:
     """
     [Tool Purpose]: Analyze size information and index usage of all tables in specified schema
     
@@ -457,6 +470,7 @@ async def get_table_size_info(schema_name: str = "public") -> str:
     
     Args:
         schema_name: Schema name to analyze (default: "public")
+        database_name: Database name to analyze (uses default database if omitted)
     
     Returns:
         Information sorted by size including table name, table size, index size, and total size
@@ -475,22 +489,27 @@ async def get_table_size_info(schema_name: str = "public") -> str:
         ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC
         """
         
-        tables = await execute_query(query, [schema_name])
+        tables = await execute_query(query, [schema_name], database=database_name)
         
         if not tables:
-            return f"No tables found in schema '{schema_name}'"
+            db_info = f" in database '{database_name}'" if database_name else ""
+            return f"No tables found in schema '{schema_name}'{db_info}"
         
         # Calculate total size
         total_size = sum(row['total_size_bytes'] for row in tables)
         
         result = []
-        result.append(f"Total size of tables in schema '{schema_name}': {format_bytes(total_size)}\n")
+        db_info = f" in database '{database_name}'" if database_name else ""
+        result.append(f"Total size of tables in schema '{schema_name}'{db_info}: {format_bytes(total_size)}\n")
         
         # Remove total_size_bytes column
         for row in tables:
             del row['total_size_bytes']
             
-        result.append(format_table_data(tables, f"Table Sizes in Schema '{schema_name}'"))
+        title = f"Table Sizes in Schema '{schema_name}'"
+        if database_name:
+            title += f" (Database: {database_name})"
+        result.append(format_table_data(tables, title))
         
         return "\n".join(result)
         
@@ -601,7 +620,7 @@ async def get_postgresql_config(config_name: str = None, filter_text: str = None
 
 
 @mcp.tool()
-async def get_index_usage_stats() -> str:
+async def get_index_usage_stats(database_name: str = None) -> str:
     """
     [Tool Purpose]: Analyze usage rate and performance statistics of all indexes in database
     
@@ -619,6 +638,9 @@ async def get_index_usage_stats() -> str:
     - Requests for index creation or deletion
     - Requests for index reorganization or REINDEX execution
     - Requests for statistics reset
+    
+    Args:
+        database_name: Database name to analyze (uses default database if omitted)
     
     Returns:
         Index usage statistics including schema, table, index name, scans, and tuples read
@@ -642,8 +664,13 @@ async def get_index_usage_stats() -> str:
         ORDER BY idx_scan DESC, schemaname, relname, indexrelname
         """
         
-        indexes = await execute_query(query)
-        return format_table_data(indexes, "Index Usage Statistics")
+        indexes = await execute_query(query, database=database_name)
+        
+        title = "Index Usage Statistics"
+        if database_name:
+            title += f" (Database: {database_name})"
+            
+        return format_table_data(indexes, title)
         
     except Exception as e:
         logger.error(f"Failed to get index usage stats: {e}")
@@ -651,7 +678,7 @@ async def get_index_usage_stats() -> str:
 
 
 @mcp.tool()
-async def get_vacuum_analyze_stats() -> str:
+async def get_vacuum_analyze_stats(database_name: str = None) -> str:
     """
     [Tool Purpose]: Analyze VACUUM and ANALYZE execution history and statistics per table
     
@@ -669,6 +696,9 @@ async def get_vacuum_analyze_stats() -> str:
     - Requests for VACUUM or ANALYZE execution
     - Requests for Auto VACUUM configuration changes
     - Requests for forced statistics update
+    
+    Args:
+        database_name: Database name to analyze (uses default database if omitted)
     
     Returns:
         Schema name, table name, last VACUUM time, last ANALYZE time, and execution count statistics
@@ -693,8 +723,13 @@ async def get_vacuum_analyze_stats() -> str:
         ORDER BY schemaname, relname
         """
         
-        stats = await execute_query(query)
-        return format_table_data(stats, "VACUUM/ANALYZE Statistics")
+        stats = await execute_query(query, database=database_name)
+        
+        title = "VACUUM/ANALYZE Statistics"
+        if database_name:
+            title += f" (Database: {database_name})"
+            
+        return format_table_data(stats, title)
         
     except Exception as e:
         logger.error(f"Failed to get vacuum/analyze stats: {e}")

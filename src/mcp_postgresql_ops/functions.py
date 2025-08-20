@@ -18,22 +18,36 @@ POSTGRES_CONFIG = {
 }
 
 
-async def get_db_connection() -> asyncpg.Connection:
-    """Create PostgreSQL database connection."""
+async def get_db_connection(database: str = None) -> asyncpg.Connection:
+    """Create PostgreSQL database connection.
+    
+    Args:
+        database: Database name to connect to. If None, uses default from config.
+    """
     try:
-        conn = await asyncpg.connect(**POSTGRES_CONFIG)
-        logger.debug(f"Connected to PostgreSQL at {POSTGRES_CONFIG['host']}:{POSTGRES_CONFIG['port']}")
+        config = POSTGRES_CONFIG.copy()
+        if database:
+            config["database"] = database
+            
+        conn = await asyncpg.connect(**config)
+        logger.debug(f"Connected to PostgreSQL at {config['host']}:{config['port']}/{config['database']}")
         return conn
     except Exception as e:
         logger.error(f"Failed to connect to PostgreSQL: {e}")
         raise
 
 
-async def execute_query(query: str, params: Optional[List] = None) -> List[Dict[str, Any]]:
-    """Execute query and return results."""
+async def execute_query(query: str, params: Optional[List] = None, database: str = None) -> List[Dict[str, Any]]:
+    """Execute query and return results.
+    
+    Args:
+        query: SQL query to execute
+        params: Query parameters
+        database: Database name to connect to. If None, uses default from config.
+    """
     conn = None
     try:
-        conn = await get_db_connection()
+        conn = await get_db_connection(database)
         if params:
             rows = await conn.fetch(query, *params)
         else:
@@ -56,9 +70,15 @@ async def execute_query(query: str, params: Optional[List] = None) -> List[Dict[
             await conn.close()
 
 
-async def execute_single_query(query: str, params: Optional[List] = None) -> Optional[Dict[str, Any]]:
-    """Execute query that returns a single result."""
-    results = await execute_query(query, params)
+async def execute_single_query(query: str, params: Optional[List] = None, database: str = None) -> Optional[Dict[str, Any]]:
+    """Execute query that returns a single result.
+    
+    Args:
+        query: SQL query to execute
+        params: Query parameters  
+        database: Database name to connect to. If None, uses default from config.
+    """
+    results = await execute_query(query, params, database)
     return results[0] if results else None
 
 
@@ -151,8 +171,13 @@ async def check_extension_exists(extension_name: str) -> bool:
 
 
 # pg_stat_statements related functions
-async def get_pg_stat_statements_data(limit: int = 20) -> List[Dict[str, Any]]:
-    """Get query statistics from pg_stat_statements."""
+async def get_pg_stat_statements_data(limit: int = 20, database: str = None) -> List[Dict[str, Any]]:
+    """Get query statistics from pg_stat_statements.
+    
+    Args:
+        limit: Maximum number of results to return
+        database: Database name to query (uses default if omitted)
+    """
     query = """
     SELECT 
         query,
@@ -165,12 +190,17 @@ async def get_pg_stat_statements_data(limit: int = 20) -> List[Dict[str, Any]]:
     ORDER BY total_exec_time DESC 
     LIMIT $1
     """
-    return await execute_query(query, [limit])
+    return await execute_query(query, [limit], database=database)
 
 
 # pg_stat_monitor related functions
-async def get_pg_stat_monitor_data(limit: int = 20) -> List[Dict[str, Any]]:
-    """Get query statistics from pg_stat_monitor."""
+async def get_pg_stat_monitor_data(limit: int = 20, database: str = None) -> List[Dict[str, Any]]:
+    """Get query statistics from pg_stat_monitor.
+    
+    Args:
+        limit: Maximum number of results to return
+        database: Database name to query (uses default if omitted)
+    """
     query = """
     SELECT 
         query,
@@ -186,7 +216,7 @@ async def get_pg_stat_monitor_data(limit: int = 20) -> List[Dict[str, Any]]:
     ORDER BY total_exec_time DESC 
     LIMIT $1
     """
-    return await execute_query(query, [limit])
+    return await execute_query(query, [limit], database=database)
 
 
 def sanitize_connection_info() -> Dict[str, Any]:
