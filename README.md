@@ -126,15 +126,21 @@ The `get_postgresql_config` tool supports flexible parameter searching:
 
 | Variable | Description | Default | Example |
 |----------|-------------|---------|---------|
+| `PYTHONPATH` | Python module path | `/app/src` | `/app/src` |
 | `MCP_LOG_LEVEL` | Logging level | `INFO` | `DEBUG` |
 | `FASTMCP_TYPE` | Transport type | `stdio` | `streamable-http` |
 | `FASTMCP_HOST` | HTTP host address | `127.0.0.1` | `0.0.0.0` |
-| `FASTMCP_PORT` | HTTP port number | `8080` | `9090` |
-| `POSTGRES_HOST` | PostgreSQL host | `localhost` | `host.docker.internal` |
-| `POSTGRES_PORT` | PostgreSQL port | `5432` | `5432` |
-| `POSTGRES_USER` | PostgreSQL user | `postgres` | `your-user` |
-| `POSTGRES_PASSWORD` | PostgreSQL password | `` | `your-password` |
-| `POSTGRES_DB` | PostgreSQL database | `postgres` | `your-db` |
+| `FASTMCP_PORT` | HTTP port number | `8080` | `8080` |
+| `PGSQL_VERSION` | PostgreSQL version | `16` | `15` |
+| `POSTGRES_HOST` | PostgreSQL host | `localhost` | `127.0.0.1` |
+| `POSTGRES_PORT` | PostgreSQL port | `5432` | `15432` |
+| `POSTGRES_USER` | PostgreSQL user | `postgres` | `postgres` |
+| `POSTGRES_PASSWORD` | PostgreSQL password | `` | `changeme!@34` |
+| `POSTGRES_DB` | PostgreSQL database | `postgres` | `mcp_postgres_ops` |
+| `POSTGRES_MAX_CONNECTIONS` | Max connections | `100` | `200` |
+| `DOCKER_EXTERNAL_PORT_OPENWEBUI` | Open WebUI port | `8080` | `3003` |
+| `DOCKER_EXTERNAL_PORT_MCP_SERVER` | MCP server port | `8080` | `18003` |
+| `DOCKER_EXTERNAL_PORT_MCPO_PROXY` | MCPO proxy port | `8000` | `8003` |
 
 ## Prerequisites
 
