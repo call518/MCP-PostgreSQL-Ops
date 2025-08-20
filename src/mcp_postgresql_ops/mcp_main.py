@@ -28,6 +28,8 @@ from .functions import (
     get_pg_stat_statements_data,
     get_pg_stat_monitor_data,
     sanitize_connection_info,
+    read_prompt_template,
+    parse_prompt_sections,
     POSTGRES_CONFIG
 )
 
@@ -45,6 +47,9 @@ logging.basicConfig(
 # Server initialization
 # =============================================================================
 mcp = FastMCP("mcp-postgresql-ops")
+
+# Prompt template path
+PROMPT_TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "prompt_template.md")
 
 # =============================================================================
 # MCP Tools (PostgreSQL Operations Tools)
@@ -734,6 +739,101 @@ async def get_vacuum_analyze_stats(database_name: str = None) -> str:
     except Exception as e:
         logger.error(f"Failed to get vacuum/analyze stats: {e}")
         return f"Error retrieving VACUUM/ANALYZE statistics: {str(e)}"
+
+
+# =============================================================================
+# Prompt Template Tools
+# =============================================================================
+
+@mcp.tool()
+async def get_prompt_template(section: Optional[str] = None, mode: Optional[str] = None) -> str:
+    """
+    Returns the MCP prompt template (full, headings, or specific section).
+    Args:
+        section: Section number or keyword (optional)
+        mode: 'full', 'headings', or None (optional)
+    """
+    template = read_prompt_template(PROMPT_TEMPLATE_PATH)
+    
+    if mode == "headings":
+        headings, _ = parse_prompt_sections(template)
+        lines = ["Section Headings:"]
+        for title in headings:
+            lines.append(title)
+        return "\n".join(lines)
+    
+    if section:
+        headings, sections = parse_prompt_sections(template)
+        # Try by number
+        try:
+            idx = int(section) - 1
+            # Skip the first section (title section) and adjust index
+            if 0 <= idx < len(headings):
+                return sections[idx + 1]  # +1 to skip the title section
+        except Exception:
+            pass
+        # Try by keyword
+        section_lower = section.strip().lower()
+        for i, heading in enumerate(headings):
+            if section_lower in heading.lower():
+                return sections[i + 1]  # +1 to skip the title section
+        return f"Section '{section}' not found."
+    
+    return template
+
+
+# =============================================================================
+# MCP Prompts (for prompts/list exposure)
+# =============================================================================
+
+@mcp.prompt("prompt_template_full")
+def prompt_template_full_prompt() -> str:
+    """Return the full canonical prompt template."""
+    return read_prompt_template(PROMPT_TEMPLATE_PATH)
+
+@mcp.prompt("prompt_template_headings")
+def prompt_template_headings_prompt() -> str:
+    """Return compact list of section headings."""
+    template = read_prompt_template(PROMPT_TEMPLATE_PATH)
+    headings, _ = parse_prompt_sections(template)
+    lines = ["Section Headings:"]
+    for idx, title in enumerate(headings, 1):
+        lines.append(f"{idx}. {title}")
+    return "\n".join(lines)
+
+@mcp.prompt("prompt_template_section")
+def prompt_template_section_prompt(section: Optional[str] = None) -> str:
+    """Return a specific prompt template section by number or keyword."""
+    if not section:
+        template = read_prompt_template(PROMPT_TEMPLATE_PATH)
+        headings, _ = parse_prompt_sections(template)
+        lines = ["[HELP] Missing 'section' argument."]
+        lines.append("Specify a section number or keyword.")
+        lines.append("Examples: 1 | overview | tool map | usage")
+        lines.append("")
+        lines.append("Available sections:")
+        for idx, title in enumerate(headings, 1):
+            lines.append(f"{idx}. {title}")
+        return "\n".join(lines)
+    
+    template = read_prompt_template(PROMPT_TEMPLATE_PATH)
+    headings, sections = parse_prompt_sections(template)
+    
+    # Try by number
+    try:
+        idx = int(section) - 1
+        if 0 <= idx < len(headings):
+            return sections[idx + 1]  # +1 to skip the title section
+    except Exception:
+        pass
+    
+    # Try by keyword
+    section_lower = section.strip().lower()
+    for i, heading in enumerate(headings):
+        if section_lower in heading.lower():
+            return sections[i + 1]  # +1 to skip the title section
+    
+    return f"Section '{section}' not found."
 
 
 # =============================================================================
