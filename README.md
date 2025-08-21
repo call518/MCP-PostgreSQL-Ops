@@ -157,7 +157,7 @@ uvx --python 3.11 mcp-postgresql-ops
 | `POSTGRES_HOST` | PostgreSQL server hostname or IP address | `127.0.0.1` | `host.docker.internal` |
 | `POSTGRES_PORT` | PostgreSQL server port number | `5432` | `15432` |
 | `POSTGRES_USER` | PostgreSQL connection username (needs read permissions) | `postgres` | `postgres` |
-| `POSTGRES_PASSWORD` | PostgreSQL user password (supports special characters) | - | `changeme!@34` |
+| `POSTGRES_PASSWORD` | PostgreSQL user password (supports special characters) | `changeme!@34` | `changeme!@34` |
 | `POSTGRES_DB` | Default database name for connections | `testdb` | `testdb` |
 | `POSTGRES_MAX_CONNECTIONS` | PostgreSQL max_connections configuration parameter | `200` | `200` |
 | `DOCKER_EXTERNAL_PORT_OPENWEBUI` | Host port mapping for Open WebUI container | `8080` | `3003` |
