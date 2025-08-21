@@ -27,12 +27,12 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 ### Check and modify .env file
 cp .env.example .env
 
-### Configure PostgreSQL connection information:
-# POSTGRES_HOST=host.docker.internal
-# POSTGRES_PORT=5432
-# POSTGRES_USER=postgres
+### If you use other postgresql server, configure connection information:
+# POSTGRES_HOST=your-address
+# POSTGRES_PORT=your-listen-port
+# POSTGRES_USER=your-username
 # POSTGRES_PASSWORD=your-password
-# POSTGRES_DB=postgres
+# POSTGRES_DB=your-database
 ```
 
 ### 2. Install Dependencies
