@@ -1,3 +1,5 @@
+[![MSeeP.ai Security Assessment Badge](https://mseep.net/pr/call518-mcp-postgresql-ops-badge.png)](https://mseep.ai/app/call518-mcp-postgresql-ops)
+
 # MCP PostgreSQL Operations Server
 
 A professional MCP server for PostgreSQL database server operations, monitoring, and management. Most features work independently, but advanced performance analysis capabilities are available when the `pg_stat_statements` and (optionally) `pg_stat_monitor` extensions are installed.
