@@ -61,6 +61,7 @@ http://localhost:3003/
 1. logging in to OpenWebUI with an admin account
 1. go to "Settings" → "Tools" from the top menu.
 1. Enter the `postgresql-ops` Tool address (e.g., `http://localhost:8003/postgresql-ops`) to connect MCP Tools.
+1. Setup Ollama or OpenAI.
 
 ---
 
