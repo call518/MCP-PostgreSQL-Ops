@@ -24,9 +24,10 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 ### 1. Environment Setup
 
 ```bash
-# Check and modify .env file
+### Check and modify .env file
 cp .env.example .env
-# Configure PostgreSQL connection information:
+
+### Configure PostgreSQL connection information:
 # POSTGRES_HOST=host.docker.internal
 # POSTGRES_PORT=5432
 # POSTGRES_USER=postgres
