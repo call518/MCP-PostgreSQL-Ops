@@ -149,7 +149,7 @@ uvx --python 3.11 mcp-postgresql-ops
 | Variable | Description | Default | Project Default |
 |----------|-------------|---------|-----------------|
 | `PYTHONPATH` | Python module search path for MCP server imports | - | `/app/src` |
-| `MCP_LOG_LEVEL` | Server logging verbosity (DEBUG, INFO, WARNING, ERROR) | - | `INFO` |
+| `MCP_LOG_LEVEL` | Server logging verbosity (DEBUG, INFO, WARNING, ERROR) | `INFO` | `INFO` |
 | `FASTMCP_TYPE` | MCP transport protocol (stdio for CLI, streamable-http for web) | `stdio` | `streamable-http` |
 | `FASTMCP_HOST` | HTTP server bind address (0.0.0.0 for all interfaces) | `127.0.0.1` | `0.0.0.0` |
 | `FASTMCP_PORT` | HTTP server port for MCP communication | `8080` | `8080` |
