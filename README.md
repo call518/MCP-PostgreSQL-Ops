@@ -73,8 +73,28 @@ python -m src.mcp_postgresql_ops.mcp_main --log-level DEBUG
 
 ## Usage Examples
 
-### Claude Desktop Integration
+### Claude Desktop Integration (Examples)
 Add to your Claude Desktop configuration file:
+
+```json
+{
+  "mcpServers": {
+    "postgresql-ops": {
+      "command": "uvx",
+      "args": ["--python", "3.11", "mcp-postgresql-ops"],
+      "env": {
+        "POSTGRES_HOST": "127.0.0.1",
+        "POSTGRES_PORT": "5432",
+        "POSTGRES_USER": "postgres",
+        "POSTGRES_PASSWORD": "passwd",
+        "POSTGRES_DB": "testdb"
+      }
+    }
+  }
+}
+```
+
+### Options: Run with Local Source
 
 ```json
 {
@@ -84,11 +104,11 @@ Add to your Claude Desktop configuration file:
       "args": ["run", "python", "-m", "src.mcp_postgresql_ops.mcp_main"],
       "cwd": "/path/to/MCP-PostgreSQL-Ops",
       "env": {
-        "POSTGRES_HOST": "host.docker.internal",
+        "POSTGRES_HOST": "127.0.0.1",
         "POSTGRES_PORT": "5432",
         "POSTGRES_USER": "postgres",
-        "POSTGRES_PASSWORD": "your-password",
-        "POSTGRES_DB": "postgres"
+        "POSTGRES_PASSWORD": "passwd",
+        "POSTGRES_DB": "testdb"
       }
     }
   }
