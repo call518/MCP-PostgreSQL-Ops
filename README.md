@@ -94,7 +94,7 @@ Add to your Claude Desktop configuration file:
 }
 ```
 
-### Options: Run with Local Source
+Options: Run with Local Source:
 
 ```json
 {
