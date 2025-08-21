@@ -25,6 +25,10 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 
 > **Note:** The `postgresql` container included in `docker-compose.yml` is intended for quickstart testing purposes only. You can connect to your own PostgreSQL instance by adjusting the environment variables as needed.
 
+> **If you want to use your own PostgreSQL instance instead of the built-in test container:**
+> - Update the target PostgreSQL connection information in your `.env` file (see POSTGRES_HOST, POSTGRES_PORT, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB).
+> - In `docker-compose.yml`, comment out (disable) the `postgres` and `postgres-init-extensions` containers to avoid starting the built-in test database.
+
 ### 1. Environment Setup
 
 ```bash
