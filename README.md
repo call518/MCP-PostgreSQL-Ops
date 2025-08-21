@@ -42,6 +42,15 @@ docker-compose up -d
 
 http://localhost:3003/
 
+- The list of MCP tool features provided by `swagger` can be found in the MCPO API Docs URL.
+  - e.g: `http://localhost:8003/docs`
+
+### 4. Registering the Tool in OpenWebUI
+
+1. logging in to OpenWebUI with an admin account
+1. go to "Settings" → "Tools" from the top menu.
+1. Enter the `postgresql-ops` Tool address (e.g., `http://localhost:8003/ambari-api`) to connect MCP Tools with your Ambari cluster.
+
 ---
 
 ## Available Tools
