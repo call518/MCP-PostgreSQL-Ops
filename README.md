@@ -1,6 +1,6 @@
 # MCP PostgreSQL Operations Server
 
-A professional MCP server for PostgreSQL database server operations, monitoring, and management. Provides advanced performance analysis capabilities using `pg_stat_statements` and `pg_stat_monitor` extensions.
+A professional MCP server for PostgreSQL database server operations, monitoring, and management. Most features work independently, but advanced performance analysis capabilities are available when the `pg_stat_statements` and (optionally) `pg_stat_monitor` extensions are installed.
 
 ## Features
 
@@ -56,27 +56,28 @@ http://localhost:3003/
 
 ---
 
+
 ## Available Tools
 
-### 📊 Server Information & Status
-- `get_server_info` - PostgreSQL server information and extension status
-- `get_active_connections` - Current active connections and session information
-- `get_postgresql_config` - PostgreSQL configuration parameters with keyword search capability
+### 🟡 Extension-Independent Tools (Always Available)
 
-### 🗄️ Structure Exploration
-- `get_database_list` - All database list and size information
-- `get_table_list` - Table list and size information
-- `get_user_list` - Database user list and permissions
+- `get_server_info` — PostgreSQL server information and extension status
+- `get_active_connections` — Current active connections and session information
+- `get_postgresql_config` — PostgreSQL configuration parameters with keyword search capability
+- `get_database_list` — All database list and size information
+- `get_table_list` — Table list and size information
+- `get_user_list` — Database user list and permissions
+- `get_index_usage_stats` — Index usage rate and efficiency analysis (uses system catalogs only)
+- `get_database_size_info` — Database capacity analysis
+- `get_table_size_info` — Table and index size analysis
+- `get_vacuum_analyze_stats` — VACUUM/ANALYZE status and history
 
-### ⚡ Performance Monitoring
-- `get_pg_stat_statements_top_queries` - Slow query analysis based on performance statistics
-- `get_pg_stat_monitor_recent_queries` - Real-time query monitoring
-- `get_index_usage_stats` - Index usage rate and efficiency analysis
+### 🟡 Extension-Dependent Tools
 
-### 💾 Capacity Management
-- `get_database_size_info` - Database capacity analysis
-- `get_table_size_info` - Table and index size analysis
-- `get_vacuum_analyze_stats` - VACUUM/ANALYZE status and history
+- `get_pg_stat_statements_top_queries` — Slow query analysis based on performance statistics  
+  (Requires `pg_stat_statements` extension)
+- `get_pg_stat_monitor_recent_queries` — Real-time query monitoring  
+  (Optional, uses `pg_stat_monitor` extension if available)
 
 ---
 
@@ -167,13 +168,15 @@ python -m src.mcp_postgresql_ops.mcp_main \
 
 ### Required PostgreSQL Extensions
 
-**⚠️ Important**: This MCP server requires `pg_stat_statements` for performance monitoring tools. Without it, several functions will not work properly.
+**⚠️ Note**:
+Most MCP tools work without any PostgreSQL extensions.
+However, advanced performance analysis tools require the following extensions:
 
 ```sql
--- Query performance statistics (required for get_pg_stat_statements_top_queries)
+-- Query performance statistics (required only for get_pg_stat_statements_top_queries)
 CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
 
--- Advanced monitoring (optional for get_pg_stat_monitor_recent_queries)
+-- Advanced monitoring (optional, used by get_pg_stat_monitor_recent_queries)
 CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 ```
 
@@ -182,6 +185,10 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 shared_preload_libraries = 'pg_stat_statements'
 ```
 Then restart PostgreSQL and run the CREATE EXTENSION commands above.
+
+- `pg_stat_statements` is required only for slow query analysis tools.
+- `pg_stat_monitor` is optional and used for real-time query monitoring.
+- All other tools work without these extensions.
 
 ### Minimum Requirements
 - PostgreSQL 12+ (tested with PostgreSQL 16)
