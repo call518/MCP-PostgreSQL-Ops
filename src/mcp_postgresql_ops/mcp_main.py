@@ -191,6 +191,201 @@ async def get_lock_monitoring(
     except Exception as e:
         logger.error(f"Failed to get lock monitoring info: {e}")
         return f"Error retrieving lock monitoring information: {str(e)}"
+
+
+@mcp.tool()
+async def get_wal_status() -> str:
+    """
+    [Tool Purpose]: Monitor WAL (Write Ahead Log) status and statistics
+    
+    [Exact Functionality]:
+    - Show current WAL location and LSN information
+    - Display WAL file generation rate and size statistics
+    - Monitor WAL archiving status and lag
+    - Provide WAL-related configuration and activity metrics
+    
+    [Required Use Cases]:
+    - When user requests "WAL status", "WAL monitoring", "log shipping status", etc.
+    - When diagnosing replication lag or WAL archiving issues
+    - When monitoring database write activity and WAL generation
+    
+    [Strictly Prohibited Use Cases]:
+    - Requests for WAL configuration changes
+    - Requests for manual WAL switching or archiving
+    - Requests for WAL file manipulation or cleanup
+    
+    Returns:
+        WAL status information including current LSN, WAL files, archiving status, and statistics
+    """
+    try:
+        # Get WAL status and statistics
+        wal_query = """
+        SELECT 
+            pg_current_wal_lsn() as current_wal_lsn,
+            pg_wal_lsn_diff(pg_current_wal_lsn(), '0/0') / 1024 / 1024 as wal_mb_generated,
+            CASE WHEN pg_is_in_recovery() THEN 'Recovery (Standby)' ELSE 'Primary' END as server_role,
+            pg_is_in_recovery() as in_recovery
+        """
+        
+        wal_info = await execute_query(wal_query)
+        
+        # Get WAL archiving statistics (if available)
+        archiver_query = """
+        SELECT 
+            archived_count,
+            last_archived_wal,
+            last_archived_time,
+            failed_count,
+            last_failed_wal,
+            last_failed_time,
+            stats_reset
+        FROM pg_stat_archiver
+        """
+        
+        archiver_stats = await execute_query(archiver_query)
+        
+        # Get WAL settings
+        config_query = """
+        SELECT name, setting, unit
+        FROM pg_settings 
+        WHERE name IN (
+            'wal_level', 'archive_mode', 'archive_command',
+            'max_wal_size', 'min_wal_size', 'checkpoint_segments',
+            'checkpoint_completion_target', 'wal_buffers'
+        )
+        ORDER BY name
+        """
+        
+        wal_config = await execute_query(config_query)
+        
+        result = []
+        result.append("=== WAL Status Information ===\n")
+        result.append(format_table_data(wal_info, "Current WAL Status"))
+        result.append("\n" + format_table_data(archiver_stats, "WAL Archiver Statistics"))
+        result.append("\n" + format_table_data(wal_config, "WAL Configuration Settings"))
+        
+        return "\n".join(result)
+        
+    except Exception as e:
+        logger.error(f"Failed to get WAL status: {e}")
+        return f"Error retrieving WAL status information: {str(e)}"
+
+
+@mcp.tool()
+async def get_replication_status() -> str:
+    """
+    [Tool Purpose]: Monitor PostgreSQL replication status and statistics
+    
+    [Exact Functionality]:
+    - Show current replication connections and their status
+    - Display replication lag information for standbys
+    - Monitor WAL sender and receiver processes
+    - Provide replication slot information and statistics
+    
+    [Required Use Cases]:
+    - When user requests "replication status", "standby lag", "replication monitoring", etc.
+    - When diagnosing replication issues or performance problems
+    - When checking replication slot usage and lag
+    
+    [Strictly Prohibited Use Cases]:
+    - Requests for replication configuration changes
+    - Requests for replication slot creation or deletion
+    - Requests for failover or switchover operations
+    
+    Returns:
+        Replication status including connections, lag information, slots, and statistics
+    """
+    try:
+        # Get replication connections (from primary)
+        repl_query = """
+        SELECT 
+            client_addr,
+            client_hostname,
+            client_port,
+            usename,
+            application_name,
+            state,
+            sent_lsn,
+            write_lsn,
+            flush_lsn,
+            replay_lsn,
+            write_lag,
+            flush_lag,
+            replay_lag,
+            sync_priority,
+            sync_state,
+            backend_start
+        FROM pg_stat_replication
+        ORDER BY client_addr
+        """
+        
+        repl_connections = await execute_query(repl_query)
+        
+        # Get replication slots
+        slots_query = """
+        SELECT 
+            slot_name,
+            plugin,
+            slot_type,
+            datoid,
+            temporary,
+            active,
+            active_pid,
+            restart_lsn,
+            confirmed_flush_lsn,
+            wal_status,
+            safe_wal_size / 1024 / 1024 as safe_wal_size_mb
+        FROM pg_replication_slots
+        ORDER BY slot_name
+        """
+        
+        repl_slots = await execute_query(slots_query)
+        
+        # Get WAL receiver status (from standby)
+        receiver_query = """
+        SELECT 
+            pid,
+            status,
+            receive_start_lsn,
+            receive_start_tli,
+            received_lsn,
+            received_tli,
+            last_msg_send_time,
+            last_msg_receipt_time,
+            latest_end_lsn,
+            latest_end_time,
+            slot_name,
+            sender_host,
+            sender_port,
+            conninfo
+        FROM pg_stat_wal_receiver
+        """
+        
+        wal_receiver = await execute_query(receiver_query)
+        
+        result = []
+        result.append("=== Replication Status Information ===\n")
+        
+        if repl_connections:
+            result.append(format_table_data(repl_connections, "Replication Connections (Primary Side)"))
+        else:
+            result.append("No active replication connections found (this may be a standby server)\n")
+        
+        if repl_slots:
+            result.append("\n" + format_table_data(repl_slots, "Replication Slots"))
+        else:
+            result.append("\nNo replication slots found")
+        
+        if wal_receiver:
+            result.append("\n" + format_table_data(wal_receiver, "WAL Receiver Status (Standby Side)"))
+        else:
+            result.append("\nNo WAL receiver process found (this may be a primary server)")
+        
+        return "\n".join(result)
+        
+    except Exception as e:
+        logger.error(f"Failed to get replication status: {e}")
+        return f"Error retrieving replication status information: {str(e)}"
 # =============================================================================
 
 @mcp.tool()

@@ -241,6 +241,12 @@ Then restart PostgreSQL and run the CREATE EXTENSION commands above.
   - "Show only blocked sessions with granted=false filter"
   - "Monitor locks by specific user with username filter"
   - "Check exclusive locks with mode filter"
+- **get_wal_status**
+  - "Show WAL status and archiving information"
+  - "Monitor WAL generation and current LSN position"
+- **get_replication_status**
+  - "Check replication connections and lag status"
+  - "Monitor replication slots and WAL receiver status"
 
 ### 🟡 Extension-Dependent Tools
 
