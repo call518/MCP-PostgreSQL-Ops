@@ -35,6 +35,9 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 11. **get_table_size_info**: Table and index size analysis
 12. **get_vacuum_analyze_stats**: VACUUM/ANALYZE status and history
 
+### 🔒 Lock & Deadlock Monitoring
+13. **get_lock_monitoring**: Current locks and blocked sessions analysis
+
 ## Sample Prompts
 
 ### 🔍 Server Health Check
@@ -233,6 +236,12 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 **get_vacuum_analyze_stats**
 - "Review VACUUM and ANALYZE history for all tables"
 - "Check maintenance status in specific database"
+
+**get_lock_monitoring**
+- "Show all current locks and blocked sessions"
+- "Show only blocked sessions with granted=false filter"
+- "Monitor locks by specific user with username filter"
+- "Check exclusive locks with mode filter"
 
 ### 🔧 Advanced Usage Examples
 

@@ -53,6 +53,144 @@ PROMPT_TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "prompt_template.
 
 # =============================================================================
 # MCP Tools (PostgreSQL Operations Tools)
+
+@mcp.tool()
+async def get_lock_monitoring(
+    database_name: str = None,
+    granted: str = None, 
+    state: str = None,
+    mode: str = None,
+    locktype: str = None,
+    username: str = None
+) -> str:
+    """
+    [Tool Purpose]: Monitor current locks and potential deadlocks in PostgreSQL
+    
+    [Exact Functionality]:
+    - List all current locks held and waited for by sessions
+    - Show blocked and blocking sessions, lock types, and wait status
+    - Help diagnose lock contention and deadlock risk
+    - Filter results by granted status, state, mode, lock type, or username
+    
+    [Required Use Cases]:
+    - When user requests "lock monitoring", "deadlock check", "blocked sessions", etc.
+    - When diagnosing performance issues due to locking
+    - When checking for blocked or waiting queries
+    - When filtering specific types of locks or users
+    
+    [Strictly Prohibited Use Cases]:
+    - Requests for killing sessions or force-unlocking
+    - Requests for lock configuration changes
+    - Requests for historical lock data (only current state is shown)
+    
+    Args:
+        database_name: Database name to analyze (uses default database if omitted)
+        granted: Filter by granted status ("true" or "false")
+        state: Filter by session state ("active", "idle", "idle in transaction", etc.)
+        mode: Filter by lock mode ("AccessShareLock", "ExclusiveLock", etc.)
+        locktype: Filter by lock type ("relation", "transactionid", "virtualxid", etc.)
+        username: Filter by specific username
+    
+    Returns:
+        Table-format information showing PID, user, database, lock type, relation, mode, granted, waiting, and blocked-by info
+    """
+    try:
+        # Build WHERE conditions based on filters
+        where_conditions = []
+        params = []
+        param_count = 0
+        
+        if granted is not None:
+            param_count += 1
+            where_conditions.append(f"l.granted = ${param_count}")
+            params.append(granted.lower() == "true")
+            
+        if state:
+            param_count += 1
+            where_conditions.append(f"a.state ILIKE ${param_count}")
+            params.append(f"%{state}%")
+            
+        if mode:
+            param_count += 1
+            where_conditions.append(f"l.mode ILIKE ${param_count}")
+            params.append(f"%{mode}%")
+            
+        if locktype:
+            param_count += 1
+            where_conditions.append(f"l.locktype ILIKE ${param_count}")
+            params.append(f"%{locktype}%")
+            
+        if username:
+            param_count += 1
+            where_conditions.append(f"a.usename ILIKE ${param_count}")
+            params.append(f"%{username}%")
+        
+        # Build WHERE clause
+        where_clause = ""
+        if where_conditions:
+            where_clause = "WHERE " + " AND ".join(where_conditions)
+        
+        query = f'''
+        SELECT
+            a.pid,
+            a.usename AS username,
+            a.datname AS database,
+            l.locktype,
+            l.mode,
+            l.granted,
+            l.relation::regclass AS relation,
+            a.state,
+            a.query_start,
+            LEFT(a.query, 80) AS query,
+            l.virtualtransaction,
+            l.virtualxid,
+            l.transactionid,
+            l.fastpath,
+            a.wait_event_type,
+            a.wait_event,
+            bl.pid AS blocked_by
+        FROM pg_locks l
+        JOIN pg_stat_activity a ON l.pid = a.pid
+        LEFT JOIN pg_locks bl_l
+            ON l.locktype = bl_l.locktype
+            AND l.database IS NOT DISTINCT FROM bl_l.database
+            AND l.relation IS NOT DISTINCT FROM bl_l.relation
+            AND l.page IS NOT DISTINCT FROM bl_l.page
+            AND l.tuple IS NOT DISTINCT FROM bl_l.tuple
+            AND l.transactionid IS NOT DISTINCT FROM bl_l.transactionid
+            AND l.pid <> bl_l.pid
+            AND NOT l.granted AND bl_l.granted
+        LEFT JOIN pg_stat_activity bl ON bl_l.pid = bl.pid
+        {where_clause}
+        ORDER BY a.datname, a.pid, l.locktype, l.mode
+        '''
+        
+        locks = await execute_query(query, params, database=database_name)
+        
+        # Build title with filter information
+        title = "Current Locks and Blocked Sessions"
+        if database_name:
+            title += f" (Database: {database_name})"
+            
+        filters = []
+        if granted is not None:
+            filters.append(f"granted={granted}")
+        if state:
+            filters.append(f"state='{state}'")
+        if mode:
+            filters.append(f"mode='{mode}'")
+        if locktype:
+            filters.append(f"locktype='{locktype}'")
+        if username:
+            filters.append(f"username='{username}'")
+            
+        if filters:
+            title += f" [Filters: {', '.join(filters)}]"
+            
+        return format_table_data(locks, title)
+    except Exception as e:
+        logger.error(f"Failed to get lock monitoring info: {e}")
+        return f"Error retrieving lock monitoring information: {str(e)}"
 # =============================================================================
 
 @mcp.tool()

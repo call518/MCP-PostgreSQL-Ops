@@ -236,6 +236,11 @@ Then restart PostgreSQL and run the CREATE EXTENSION commands above.
 - **get_vacuum_analyze_stats**
   - "Show recent VACUUM and ANALYZE operations"
   - "List tables needing VACUUM"
+- **get_lock_monitoring**
+  - "Show all current locks and blocked sessions"
+  - "Show only blocked sessions with granted=false filter"
+  - "Monitor locks by specific user with username filter"
+  - "Check exclusive locks with mode filter"
 
 ### 🟡 Extension-Dependent Tools
 
