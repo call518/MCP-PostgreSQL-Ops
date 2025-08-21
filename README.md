@@ -36,11 +36,11 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 cp .env.example .env
 
 ### If you use other postgresql server, configure connection information:
-# POSTGRES_HOST=your-address
-# POSTGRES_PORT=your-listen-port
-# POSTGRES_USER=your-username
-# POSTGRES_PASSWORD=your-password
-# POSTGRES_DB=your-database
+POSTGRES_HOST=your-address
+POSTGRES_PORT=your-listen-port
+POSTGRES_USER=your-username
+POSTGRES_PASSWORD=your-password
+POSTGRES_DB=your-database # Default connection DB. Superusers can access all DBs.
 ```
 
 ### 2. Install Dependencies
