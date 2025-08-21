@@ -318,3 +318,25 @@ uv run pytest
 
 - [MCP-Ambari-API](https://github.com/call518/MCP-Ambari-API)
 - [MCP-Airflow-API](https://github.com/call518/MCP-Airflow-API)
+
+---
+
+## Contributing
+
+🤝 **Got ideas? Found bugs? Want to add cool features?**
+
+We're always excited to welcome new contributors! Whether you're fixing a typo, adding a new monitoring tool, or improving documentation - every contribution makes this project better.
+
+**Ways to contribute:**
+- 🐛 Report issues or bugs
+- 💡 Suggest new PostgreSQL monitoring features
+- 📝 Improve documentation 
+- 🚀 Submit pull requests
+- ⭐ Star the repo if you find it useful!
+
+**Pro tip:** The codebase is designed to be super friendly for adding new tools. Check out the existing `@mcp.tool()` functions in `mcp_main.py`.
+
+---
+
+## License
+Freely use, modify, and distribute under the **MIT License**.
