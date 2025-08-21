@@ -94,6 +94,8 @@ Add to your Claude Desktop configuration file:
 }
 ```
 
+![Claude Desktop Integration](img/screenshot-003.png)
+
 Options: Run with Local Source:
 
 ```json
