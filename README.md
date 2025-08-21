@@ -131,9 +131,30 @@ Options: Run with Local Source:
 
 ### Command Line Usage
 
+#### /w Local Source
+
 ```bash
-# HTTP mode for testing
+# Stdio mode
 python -m src.mcp_postgresql_ops.mcp_main \
+  --type stdio
+
+# HTTP mode
+python -m src.mcp_postgresql_ops.mcp_main \
+  --type streamable-http \
+  --host 127.0.0.1 \
+  --port 8080 \
+  --log-level DEBUG
+```
+
+#### /w Pypi and uvx
+
+```bash
+# Stdio mode
+uvx --python 3.11 mcp-postgresql-ops \
+  --type stdio
+
+# HTTP mode
+uvx --python 3.11 mcp-postgresql-ops
   --type streamable-http \
   --host 127.0.0.1 \
   --port 8080 \
