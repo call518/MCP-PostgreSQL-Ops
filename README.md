@@ -314,11 +314,6 @@ uv run pytest
 - No direct SQL execution - only predefined queries
 - Follows principle of least privilege
 
-### Other MCP Servers
-
-- [MCP-Ambari-API](https://github.com/call518/MCP-Ambari-API)
-- [MCP-Airflow-API](https://github.com/call518/MCP-Airflow-API)
-
 ---
 
 ## Contributing
@@ -335,6 +330,15 @@ We're always excited to welcome new contributors! Whether you're fixing a typo, 
 - ⭐ Star the repo if you find it useful!
 
 **Pro tip:** The codebase is designed to be super friendly for adding new tools. Check out the existing `@mcp.tool()` functions in `mcp_main.py`.
+
+---
+
+## Related Projects
+
+**Other MCP servers by the same author:**
+
+- [MCP-Ambari-API](https://github.com/call518/MCP-Ambari-API)
+- [MCP-Airflow-API](https://github.com/call518/MCP-Airflow-API)
 
 ---
 
