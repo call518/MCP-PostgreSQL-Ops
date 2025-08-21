@@ -11,6 +11,8 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 - ✅ **Configuration Retrieval**: PostgreSQL configuration parameter verification
 - ✅ **Safe Read-Only**: All operations are read-only and safe
 
+- 🛠️ **Easy Customization**: Simple and clean codebase makes it very easy to add new tools or customize existing ones
+
 # Example Usage
 
 ![MCP-PostgreSQL-Ops Usage Screenshot](img/screenshot-000.png)
