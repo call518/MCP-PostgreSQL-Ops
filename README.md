@@ -60,31 +60,6 @@ http://localhost:3003/
 
 ---
 
-
-## Available Tools
-
-### 🟡 Extension-Independent Tools (Always Available)
-
-- `get_server_info` — PostgreSQL server information and extension status
-- `get_active_connections` — Current active connections and session information
-- `get_postgresql_config` — PostgreSQL configuration parameters with keyword search capability
-- `get_database_list` — All database list and size information
-- `get_table_list` — Table list and size information
-- `get_user_list` — Database user list and permissions
-- `get_index_usage_stats` — Index usage rate and efficiency analysis (uses system catalogs only)
-- `get_database_size_info` — Database capacity analysis
-- `get_table_size_info` — Table and index size analysis
-- `get_vacuum_analyze_stats` — VACUUM/ANALYZE status and history
-
-### 🟡 Extension-Dependent Tools
-
-- `get_pg_stat_statements_top_queries` — Slow query analysis based on performance statistics  
-  (Requires `pg_stat_statements` extension)
-- `get_pg_stat_monitor_recent_queries` — Real-time query monitoring  
-  (Optional, uses `pg_stat_monitor` extension if available)
-
----
-
 ## Usage Examples
 
 ### Claude Desktop Integration (Examples)
@@ -225,44 +200,47 @@ Then restart PostgreSQL and run the CREATE EXTENSION commands above.
 
 ## Example Queries
 
-**Server Status & Health Check**
-```bash
-"Check PostgreSQL server status"
-"Check PostgreSQL server version and connection status" 
-"Verify if extensions are installed"
-"Show current active connection count"
-```
+### 🟢 Extension-Independent Tools (Always Available)
 
-**Configuration Management**
-```bash
-"Show the shared_buffers configuration"
-"Show PostgreSQL configuration parameter for shared_buffers"
-"Find all memory-related configuration settings"
-"Show logging configuration parameters"
-"Display connection-related settings" 
-"Find all timeout configurations"
-"Show all PostgreSQL configuration parameters"
-```
+- **get_server_info**
+  - "Show PostgreSQL server version and extension status"
+  - "Check if pg_stat_statements is installed"
+- **get_active_connections**
+  - "Show all active connections"
+  - "List current sessions with database and user"
+- **get_postgresql_config**
+  - "Show all PostgreSQL configuration parameters"
+  - "Find all memory-related configuration settings"
+- **get_database_list**
+  - "List all databases and their sizes"
+  - "Show database list with owner information"
+- **get_table_list**
+  - "List all tables in the current database"
+  - "Show table sizes in the public schema"
+- **get_user_list**
+  - "List all database users and their roles"
+  - "Show user permissions for a specific database"
+- **get_index_usage_stats**
+  - "Analyze index usage efficiency"
+  - "Find unused indexes in the current database"
+- **get_database_size_info**
+  - "Show database capacity analysis"
+  - "Find the largest databases by size"
+- **get_table_size_info**
+  - "Show table and index size analysis"
+  - "Find largest tables in a specific schema"
+- **get_vacuum_analyze_stats**
+  - "Show recent VACUUM and ANALYZE operations"
+  - "List tables needing VACUUM"
 
-**Performance Analysis**
-```bash
-"Show top 10 slowest queries"
-"Show top 20 slowest queries"
-"Analyze slow queries in specific database"
-"Find unused indexes"
-"Analyze recent query activity"
-"Check index efficiency in specific database"
-```
+### 🟡 Extension-Dependent Tools
 
-**Capacity & Structure Management**
-```bash
-"Check database sizes"
-"Find largest tables"
-"Show tables that need VACUUM"
-"Check table sizes in specific database schema"
-"List tables in specific database"
-"Check maintenance status in specific database"
-```
+- **get_pg_stat_statements_top_queries** (Requires `pg_stat_statements`)
+  - "Show top 10 slowest queries"
+  - "Analyze slow queries in the sales database"
+- **get_pg_stat_monitor_recent_queries** (Optional, uses `pg_stat_monitor`)
+  - "Show recent queries in real time"
+  - "Monitor query activity for the last 5 minutes"
 
 **💡 Pro Tip**: All tools support multi-database operations using the `database_name` parameter. This allows PostgreSQL superusers to analyze and monitor multiple databases from a single MCP server instance.
 
