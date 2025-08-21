@@ -148,18 +148,18 @@ uvx --python 3.11 mcp-postgresql-ops
 
 | Variable | Description | Default | Project Default |
 |----------|-------------|---------|-----------------|
-| `PYTHONPATH` | Python module search path for MCP server imports | `/app/src` | `/app/src` |
-| `MCP_LOG_LEVEL` | Server logging verbosity (DEBUG, INFO, WARNING, ERROR) | `INFO` | `INFO` |
+| `PYTHONPATH` | Python module search path for MCP server imports | - | `/app/src` |
+| `MCP_LOG_LEVEL` | Server logging verbosity (DEBUG, INFO, WARNING, ERROR) | - | `INFO` |
 | `FASTMCP_TYPE` | MCP transport protocol (stdio for CLI, streamable-http for web) | `stdio` | `streamable-http` |
 | `FASTMCP_HOST` | HTTP server bind address (0.0.0.0 for all interfaces) | `127.0.0.1` | `0.0.0.0` |
 | `FASTMCP_PORT` | HTTP server port for MCP communication | `8080` | `8080` |
-| `PGSQL_VERSION` | PostgreSQL major version for Docker image selection | `16` | `15` |
-| `POSTGRES_HOST` | PostgreSQL server hostname or IP address | `localhost` | `127.0.0.1` |
+| `PGSQL_VERSION` | PostgreSQL major version for Docker image selection | `16` | `16` |
+| `POSTGRES_HOST` | PostgreSQL server hostname or IP address | `127.0.0.1` | `host.docker.internal` |
 | `POSTGRES_PORT` | PostgreSQL server port number | `5432` | `15432` |
 | `POSTGRES_USER` | PostgreSQL connection username (needs read permissions) | `postgres` | `postgres` |
-| `POSTGRES_PASSWORD` | PostgreSQL user password (supports special characters) | `` | `changeme!@34` |
-| `POSTGRES_DB` | Default database name for connections | `postgres` | `mcp_postgres_ops` |
-| `POSTGRES_MAX_CONNECTIONS` | PostgreSQL max_connections configuration parameter | `100` | `200` |
+| `POSTGRES_PASSWORD` | PostgreSQL user password (supports special characters) | - | `changeme!@34` |
+| `POSTGRES_DB` | Default database name for connections | `testdb` | `testdb` |
+| `POSTGRES_MAX_CONNECTIONS` | PostgreSQL max_connections configuration parameter | `200` | `200` |
 | `DOCKER_EXTERNAL_PORT_OPENWEBUI` | Host port mapping for Open WebUI container | `8080` | `3003` |
 | `DOCKER_EXTERNAL_PORT_MCP_SERVER` | Host port mapping for MCP server container | `8080` | `18003` |
 | `DOCKER_EXTERNAL_PORT_MCPO_PROXY` | Host port mapping for MCPO proxy container | `8000` | `8003` |
