@@ -19,7 +19,7 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 
 ## Quick start
 
-1) Environment Setup
+### 1. Environment Setup
 
 ```bash
 # Check and modify .env file
@@ -32,22 +32,17 @@ cp .env.example .env
 # POSTGRES_DB=postgres
 ```
 
-2) Install Dependencies
+### 2. Install Dependencies
 
 ```bash
-uv venv --python 3.11 --seed
-uv sync
+docker-compose up -d
 ```
 
-3) Run Server
+### 3. Access to OpenWebUI
 
-```bash
-# Development & Testing (recommended)
-./scripts/run-mcp-inspector-local.sh
+http://localhost:3003/
 
-# Direct execution for debugging
-python -m src.mcp_postgresql_ops.mcp_main --log-level DEBUG
-```
+---
 
 ## Available Tools
 
@@ -70,6 +65,8 @@ python -m src.mcp_postgresql_ops.mcp_main --log-level DEBUG
 - `get_database_size_info` - Database capacity analysis
 - `get_table_size_info` - Table and index size analysis
 - `get_vacuum_analyze_stats` - VACUUM/ANALYZE status and history
+
+---
 
 ## Usage Examples
 
@@ -128,6 +125,8 @@ python -m src.mcp_postgresql_ops.mcp_main \
   --log-level DEBUG
 ```
 
+---
+
 ## Environment Variables
 
 | Variable | Description | Default | Project Default |
@@ -149,6 +148,8 @@ python -m src.mcp_postgresql_ops.mcp_main \
 | `DOCKER_EXTERNAL_PORT_MCPO_PROXY` | Host port mapping for MCPO proxy container | `8000` | `8003` |
 
 **Note**: `POSTGRES_DB` serves as the default target database for operations when no specific database is specified. In Docker environments, if set to a non-default name, this database will be automatically created during initial PostgreSQL startup.
+
+---
 
 ## Prerequisites
 
@@ -175,6 +176,8 @@ Then restart PostgreSQL and run the CREATE EXTENSION commands above.
 - Python 3.11
 - Network access to PostgreSQL server
 - Read permissions on system catalogs
+
+---
 
 ## Example Queries
 
@@ -221,6 +224,8 @@ Then restart PostgreSQL and run the CREATE EXTENSION commands above.
 
 📖 **[More Useful Example Queries →](src/mcp_postgresql_ops/prompt_template.md#example-queries)**
 
+---
+
 ## Troubleshooting
 
 ### Connection Issues
@@ -243,6 +248,8 @@ Then restart PostgreSQL and run the CREATE EXTENSION commands above.
 2. Run monitoring during off-peak hours
 3. Check database load before running analysis
 
+---
+
 ## Development
 
 ### Testing & Development
@@ -257,6 +264,8 @@ python -m src.mcp_postgresql_ops.mcp_main --log-level DEBUG
 # Run tests (if you add any)
 uv run pytest
 ```
+
+---
 
 ## Security Notes
 
