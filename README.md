@@ -312,3 +312,7 @@ uv run pytest
 - No direct SQL execution - only predefined queries
 - Follows principle of least privilege
 
+### Other MCP Servers
+
+- [MCP-Ambari-API](https://github.com/call518/MCP-Ambari-API)
+- [MCP-Airflow-API](https://github.com/call518/MCP-Airflow-API)
