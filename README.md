@@ -31,6 +31,8 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 
 ### 1. Environment Setup
 
+> **Note**: While superuser privileges provide access to all databases and system information, the MCP server also works with regular user permissions for basic monitoring tasks.
+
 ```bash
 ### Check and modify .env file
 cp .env.example .env
