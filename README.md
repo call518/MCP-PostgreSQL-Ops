@@ -21,7 +21,7 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 
 - 🛠️ **Easy Customization**: Simple and clean codebase makes it very easy to add new tools or customize existing ones
 
-# Example Usage
+# Tool Usage Examples
 
 ![MCP-PostgreSQL-Ops Usage Screenshot](img/screenshot-000.png)
 
@@ -30,6 +30,8 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 ![MCP-PostgreSQL-Ops Usage Screenshot](img/screenshot-004.png)
 
 ---
+
+📸 **[More Examples with Screenshots →](https://github.com/call518/MCP-PostgreSQL-Ops/wiki/Tool-Usage-Example)**
 
 ## Quick start
 
@@ -341,7 +343,7 @@ SET track_io_timing = 'on';
   - "List all databases and their sizes"
   - "Show database list with owner information"
 - **get_table_list**
-  - "List all tables in the current database"
+  - "List all tables in the ecommerce database"
   - "Show table sizes in the public schema"
 - **get_user_list**
   - "List all database users and their roles"
@@ -435,8 +437,6 @@ SET track_io_timing = 'on';
   - "Monitor query activity for the last 5 minutes"
 
 **💡 Pro Tip**: All tools support multi-database operations using the `database_name` parameter. This allows PostgreSQL superusers to analyze and monitor multiple databases from a single MCP server instance.
-
-📖 **[More Useful Example Queries →](src/mcp_postgresql_ops/prompt_template.md#example-queries)**
 
 ---
 

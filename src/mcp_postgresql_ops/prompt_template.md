@@ -240,7 +240,7 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 - "Show database encoding and connection limits"
 
 **get_table_list**
-- "List all tables in the current database"
+- "List all tables in the ecommerce database"
 - "Show table sizes in the public schema"
 - "List all tables in the default database"
 - "Show tables in specific database"
