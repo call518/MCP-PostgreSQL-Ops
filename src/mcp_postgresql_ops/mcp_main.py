@@ -342,13 +342,27 @@ async def get_replication_status() -> str:
         repl_slots = await execute_query(slots_query)
         
         # Get WAL receiver status (from standby)
+        # PostgreSQL 16+ uses written_lsn/flushed_lsn, older versions use received_lsn
         receiver_query = """
         SELECT 
             pid,
             status,
             receive_start_lsn,
             receive_start_tli,
-            received_lsn,
+            CASE 
+                WHEN EXISTS (SELECT 1 FROM information_schema.columns 
+                           WHERE table_name = 'pg_stat_wal_receiver' 
+                           AND column_name = 'written_lsn')
+                THEN written_lsn::text
+                ELSE NULL::text
+            END AS written_lsn,
+            CASE 
+                WHEN EXISTS (SELECT 1 FROM information_schema.columns 
+                           WHERE table_name = 'pg_stat_wal_receiver' 
+                           AND column_name = 'flushed_lsn')
+                THEN flushed_lsn::text
+                ELSE NULL::text
+            END AS flushed_lsn,
             received_tli,
             last_msg_send_time,
             last_msg_receipt_time,

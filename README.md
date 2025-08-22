@@ -28,6 +28,8 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 
 ## Quick start
 
+> **Notice:** This MCP server has been tested with PostgreSQL 16 and above, providing full support for the latest PostgreSQL features and statistical views.
+
 > **Note:** The `postgresql` container included in `docker-compose.yml` is intended for quickstart testing purposes only. You can connect to your own PostgreSQL instance by adjusting the environment variables as needed.
 
 > **If you want to use your own PostgreSQL instance instead of the built-in test container:**
