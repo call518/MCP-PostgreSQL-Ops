@@ -229,8 +229,15 @@ Some MCP tools require specific PostgreSQL configuration parameters to collect s
 **Verification**:
 After applying any method, verify the settings:
 ```sql
-SHOW track_functions;  -- Should be 'pl' or 'all'
-SHOW track_io_timing;  -- Should be 'on'
+SELECT name, setting, context FROM pg_settings WHERE name IN ('track_activities', 'track_counts', 'track_io_timing', 'track_functions') ORDER BY name;
+
+       name       | setting |  context  
+------------------+---------+-----------
+ track_activities | on      | superuser
+ track_counts     | on      | superuser
+ track_functions  | pl      | superuser
+ track_io_timing  | on      | superuser
+(4 rows)
 ```
 
 #### Method 1: postgresql.conf (Recommended for Self-Managed PostgreSQL)
