@@ -73,7 +73,7 @@ services:
       - "-c"
       - "track_activity_query_size=2048"
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}"]
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-p", "${POSTGRES_PORT}"]
       start_period: 5s
       interval: 10s
       retries: 5
