@@ -23,6 +23,8 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 
 # Tool Usage Examples
 
+### 📸 **[More Examples with Screenshots →](https://github.com/call518/MCP-PostgreSQL-Ops/wiki/Tool-Usage-Example)**
+
 ![MCP-PostgreSQL-Ops Usage Screenshot](img/screenshot-000.png)
 
 ---
@@ -30,8 +32,6 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 ![MCP-PostgreSQL-Ops Usage Screenshot](img/screenshot-004.png)
 
 ---
-
-📸 **[More Examples with Screenshots →](https://github.com/call518/MCP-PostgreSQL-Ops/wiki/Tool-Usage-Example)**
 
 ## Quick start
 
