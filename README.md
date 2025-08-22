@@ -219,16 +219,22 @@ Then restart PostgreSQL and run the CREATE EXTENSION commands above.
 ### Required PostgreSQL Configuration
 
 **⚠️ Statistics Collection Settings**:
-Some MCP tools require specific PostgreSQL configuration parameters to collect statistics. Add the following to your `postgresql.conf`:
+Some MCP tools require specific PostgreSQL configuration parameters to collect statistics. Choose one of the following configuration methods:
 
 **Tools affected by these settings**:
 - **get_user_functions_stats**: Requires `track_functions = pl` or `track_functions = all`
 - **get_table_io_stats** & **get_index_io_stats**: More accurate timing with `track_io_timing = on`
 - **get_database_stats**: Enhanced I/O timing with `track_io_timing = on`
 
-**After modifying postgresql.conf**:
-1. Restart PostgreSQL server
-2. Verify settings: `SHOW track_functions;` and `SHOW track_io_timing;`
+**Verification**:
+After applying any method, verify the settings:
+```sql
+SHOW track_functions;  -- Should be 'pl' or 'all'
+SHOW track_io_timing;  -- Should be 'on'
+```
+
+#### Method 1: postgresql.conf (Recommended for Self-Managed PostgreSQL)
+Add the following to your `postgresql.conf`:
 
 ```ini
 # Basic statistics collection (usually enabled by default)
@@ -241,6 +247,48 @@ track_functions = pl    # Enables PL/pgSQL function statistics collection
 # Optional but recommended for accurate I/O timing
 track_io_timing = on    # Enables I/O timing statistics collection
 ```
+
+Then restart PostgreSQL server.
+
+#### Method 2: PostgreSQL Startup Parameters
+For Docker or command-line PostgreSQL startup:
+
+```bash
+# Docker example
+docker run -d \
+  -e POSTGRES_PASSWORD=mypassword \
+  postgres:16 \
+  -c track_functions=pl \
+  -c track_io_timing=on
+
+# Direct postgres command
+postgres -D /data \
+  -c track_functions=pl \
+  -c track_io_timing=on
+```
+
+#### Method 3: Dynamic Configuration (AWS RDS, Azure, GCP, Managed Services)
+For managed PostgreSQL services where you cannot modify `postgresql.conf`, use SQL commands to change settings dynamically:
+
+```sql
+-- Enable function statistics collection (requires superuser privileges)
+ALTER SYSTEM SET track_functions = 'pl';
+
+-- Enable I/O timing statistics (optional but recommended)
+ALTER SYSTEM SET track_io_timing = 'on';
+
+-- Reload configuration without restart (run separately)
+SELECT pg_reload_conf();
+```
+
+**Alternative for session-level testing**:
+```sql
+-- Set for current session only (temporary)
+SET track_functions = 'pl';
+SET track_io_timing = 'on';
+```
+
+**Note**: When using command-line tools, run each SQL statement separately to avoid transaction block errors.
 
 ---
 
@@ -362,13 +410,28 @@ track_io_timing = on    # Enables I/O timing statistics collection
    ```sql
    SHOW track_functions;  -- Should be 'pl' or 'all'
    ```
+   
+   **Quick fix for managed services (AWS RDS, etc.)**:
+   ```sql
+   ALTER SYSTEM SET track_functions = 'pl';
+   SELECT pg_reload_conf();
+   ```
+
 2. **Missing I/O timing data**: Enable timing collection
    ```sql
    SHOW track_io_timing;  -- Should be 'on'
    ```
+   
+   **Quick fix**:
+   ```sql
+   ALTER SYSTEM SET track_io_timing = 'on';
+   SELECT pg_reload_conf();
+   ```
+
 3. **Apply configuration changes**:
-   - Add settings to `postgresql.conf`
-   - Restart PostgreSQL server
+   - **Self-managed**: Add settings to `postgresql.conf` and restart server
+   - **Managed services**: Use `ALTER SYSTEM SET` + `SELECT pg_reload_conf()`
+   - **Temporary testing**: Use `SET parameter = value` for current session
    - Generate some database activity to populate statistics
 
 ### Performance Issues
