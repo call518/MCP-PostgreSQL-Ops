@@ -25,7 +25,8 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 4. **get_database_list**: All database list and size information
 5. **get_table_list**: Table list and size information  
 6. **get_table_schema_info**: Detailed table schema with columns, constraints, indexes, and relationships
-7. **get_user_list**: Database user list and permissions
+7. **get_database_schema_info**: Database schema (namespace) information with objects, permissions, and statistics
+8. **get_user_list**: Database user list and permissions
 
 ### ⚡ Performance Monitoring
 8. **get_pg_stat_statements_top_queries**: Slow query analysis based on performance statistics
@@ -153,6 +154,7 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 ### Database/Schema Parameters
 - `get_table_list(database_name)`: Specify target database
 - `get_table_schema_info(database_name, table_name, schema_name)`: **database_name is REQUIRED** - analyze specific table or all tables in schema
+- `get_database_schema_info(database_name, schema_name)`: **database_name is REQUIRED** - analyze specific schema or all schemas in database
 - `get_table_size_info(schema_name)`: Specify target schema
 - `get_postgresql_config(config_name, filter_text)`: Specify configuration parameter or search by keyword
   - `config_name`: Exact parameter name (optional)
@@ -256,6 +258,14 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 - "Show schema overview for all tables in public schema of inventory database"
 - "Get complete table structure including constraints and indexes for employees table in hr_system database"
 - "Display column information with data types and constraints for inventory_items table in inventory database"
+
+**get_database_schema_info**
+- "Show all schemas in ecommerce database with their contents"
+- "Get detailed information about sales schema in ecommerce database"
+- "Analyze schema structure and permissions for inventory database"
+- "Show schema overview with table counts and sizes for hr_system database"
+- "Display schema owners and access privileges for all schemas in ecommerce database"
+- "Get comprehensive schema statistics including object counts and sizes"
 
 **get_user_list**
 - "List all database users and their roles"

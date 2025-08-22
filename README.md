@@ -348,12 +348,19 @@ SET track_io_timing = 'on';
 - **get_table_list**
   - "List all tables in the ecommerce database"
   - "Show table sizes in the public schema"
-- **get_table_schema_info** (New!)
+- **get_table_schema_info**
   - "Show detailed schema information for the customers table in ecommerce database"
   - "Get column details and constraints for products table in ecommerce database"
   - "Analyze table structure with indexes and foreign keys for orders table in sales schema of ecommerce database"
   - "Show schema overview for all tables in public schema of inventory database"
   - 📋 **Features**: Column types, constraints, indexes, foreign keys, table metadata
+  - ⚠️ **Required**: `database_name` parameter must be specified
+- **get_database_schema_info**
+  - "Show all schemas in ecommerce database with their contents"
+  - "Get detailed information about sales schema in ecommerce database"
+  - "Analyze schema structure and permissions for inventory database"
+  - "Show schema overview with table counts and sizes for hr_system database"
+  - 📋 **Features**: Schema owners, permissions, object counts, sizes, contents
   - ⚠️ **Required**: `database_name` parameter must be specified
 - **get_user_list**
   - "List all database users and their roles"

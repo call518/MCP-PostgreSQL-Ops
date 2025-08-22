@@ -897,6 +897,213 @@ async def get_table_schema_info(database_name: str, table_name: str = None, sche
 
 
 @mcp.tool()
+async def get_database_schema_info(database_name: str, schema_name: str = None) -> str:
+    """
+    [Tool Purpose]: Retrieve detailed information about database schemas (namespaces) and their contents
+    
+    [Exact Functionality]:
+    - Show all schemas in a database with their owners and permissions
+    - Display schema-level statistics including table count and total size
+    - List all objects (tables, views, functions) within specific schema
+    - Show schema access privileges and usage patterns
+    
+    [Required Use Cases]:
+    - When user requests "database schema info", "schema overview", "namespace structure", etc.
+    - When analyzing database organization and schema-level permissions
+    - When exploring multi-schema database architecture
+    
+    [Strictly Prohibited Use Cases]:
+    - Requests for actual data inside tables
+    - Requests for schema structure changes or DDL operations
+    - Requests for individual table details (use get_table_schema_info for that)
+    
+    Args:
+        database_name: Database name to query (REQUIRED - specify which database to analyze)
+        schema_name: Specific schema name to analyze (if None, shows all schemas)
+    
+    Returns:
+        Detailed database schema information including objects, sizes, and permissions
+    """
+    try:
+        if schema_name:
+            # Specific schema detailed information
+            query = """
+            WITH schema_objects AS (
+                SELECT 
+                    n.nspname as schema_name,
+                    n.nspowner::regrole::text as schema_owner,
+                    obj_description(n.oid, 'pg_namespace') as schema_comment,
+                    array_to_string(n.nspacl, ', ') as access_privileges
+                FROM pg_namespace n
+                WHERE n.nspname = $1
+                  AND n.nspname NOT IN ('information_schema')
+                  AND n.nspname NOT LIKE 'pg_%'
+            ),
+            schema_tables AS (
+                SELECT 
+                    schemaname,
+                    COUNT(*) as table_count,
+                    pg_size_pretty(SUM(pg_total_relation_size(schemaname||'.'||tablename))) as total_size
+                FROM pg_tables 
+                WHERE schemaname = $1
+                GROUP BY schemaname
+            ),
+            schema_views AS (
+                SELECT 
+                    schemaname,
+                    COUNT(*) as view_count
+                FROM pg_views 
+                WHERE schemaname = $1
+                GROUP BY schemaname
+            ),
+            schema_functions AS (
+                SELECT 
+                    n.nspname as schemaname,
+                    COUNT(*) as function_count
+                FROM pg_proc p
+                JOIN pg_namespace n ON p.pronamespace = n.oid
+                WHERE n.nspname = $1
+                GROUP BY n.nspname
+            ),
+            table_details AS (
+                SELECT 
+                    'TABLE' as object_type,
+                    schemaname || '.' || tablename as object_name,
+                    tableowner::text as object_owner,
+                    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as object_size,
+                    'Base table' as object_description
+                FROM pg_tables 
+                WHERE schemaname = $1
+                
+                UNION ALL
+                
+                SELECT 
+                    'VIEW' as object_type,
+                    schemaname || '.' || viewname as object_name,
+                    viewowner::text as object_owner,
+                    'N/A' as object_size,
+                    'View definition' as object_description
+                FROM pg_views 
+                WHERE schemaname = $1
+                
+                UNION ALL
+                
+                SELECT 
+                    'FUNCTION' as object_type,
+                    n.nspname || '.' || p.proname as object_name,
+                    p.proowner::regrole::text as object_owner,
+                    'N/A' as object_size,
+                    'Function/Procedure' as object_description
+                FROM pg_proc p
+                JOIN pg_namespace n ON p.pronamespace = n.oid
+                WHERE n.nspname = $1
+                ORDER BY object_type, object_name
+            )
+            SELECT * FROM (
+                SELECT 
+                    'SCHEMA_INFO' as section,
+                    'Schema: ' || so.schema_name as name,
+                    'Owner: ' || so.schema_owner as type,
+                    'Tables: ' || COALESCE(st.table_count::text, '0') as size,
+                    'Views: ' || COALESCE(sv.view_count::text, '0') as rows,
+                    'Functions: ' || COALESCE(sf.function_count::text, '0') as writes,
+                    'Total Size: ' || COALESCE(st.total_size, '0 bytes') as extra1,
+                    'Comment: ' || COALESCE(so.schema_comment, 'No comment') as extra2,
+                    'Privileges: ' || COALESCE(so.access_privileges, 'Default') as extra3,
+                    1 as sort_order
+                FROM schema_objects so
+                LEFT JOIN schema_tables st ON so.schema_name = st.schemaname
+                LEFT JOIN schema_views sv ON so.schema_name = sv.schemaname
+                LEFT JOIN schema_functions sf ON so.schema_name = sf.schemaname
+                
+                UNION ALL
+                
+                SELECT 
+                    'OBJECT' as section,
+                    td.object_name as name,
+                    td.object_type as type,
+                    td.object_size as size,
+                    td.object_owner as rows,
+                    '' as writes,
+                    td.object_description as extra1,
+                    '' as extra2,
+                    '' as extra3,
+                    2 as sort_order
+                FROM table_details td
+            ) combined_results
+            ORDER BY sort_order, name
+            """
+            
+            params = [schema_name]  # Only 1 parameter needed - schema_name is reused in all WHERE clauses
+            results = await execute_query(query, params, database=database_name)
+            title = f"Schema Details for '{schema_name}'"
+            if database_name:
+                title += f" (Database: {database_name})"
+        else:
+            # All schemas overview
+            query = """
+            WITH schema_stats AS (
+                SELECT 
+                    n.nspname as schema_name,
+                    n.nspowner::regrole::text as schema_owner,
+                    obj_description(n.oid, 'pg_namespace') as schema_comment,
+                    COALESCE(t.table_count, 0) as table_count,
+                    COALESCE(v.view_count, 0) as view_count,
+                    COALESCE(f.function_count, 0) as function_count,
+                    COALESCE(t.total_size_bytes, 0) as total_size_bytes,
+                    pg_size_pretty(COALESCE(t.total_size_bytes, 0)) as total_size
+                FROM pg_namespace n
+                LEFT JOIN (
+                    SELECT 
+                        schemaname,
+                        COUNT(*) as table_count,
+                        SUM(pg_total_relation_size(schemaname||'.'||tablename)) as total_size_bytes
+                    FROM pg_tables 
+                    GROUP BY schemaname
+                ) t ON n.nspname = t.schemaname
+                LEFT JOIN (
+                    SELECT 
+                        schemaname,
+                        COUNT(*) as view_count
+                    FROM pg_views 
+                    GROUP BY schemaname
+                ) v ON n.nspname = v.schemaname
+                LEFT JOIN (
+                    SELECT 
+                        n2.nspname as schemaname,
+                        COUNT(*) as function_count
+                    FROM pg_proc p
+                    JOIN pg_namespace n2 ON p.pronamespace = n2.oid
+                    GROUP BY n2.nspname
+                ) f ON n.nspname = f.schemaname
+                WHERE n.nspname NOT IN ('information_schema')
+                  AND n.nspname NOT LIKE 'pg_%'
+                ORDER BY total_size_bytes DESC, schema_name
+            )
+            SELECT 
+                schema_name,
+                schema_owner,
+                table_count,
+                view_count,
+                function_count,
+                total_size,
+                COALESCE(schema_comment, 'No description') as description
+            FROM schema_stats
+            """
+            
+            results = await execute_query(query, [], database=database_name)
+            title = f"Database Schema Overview"
+            if database_name:
+                title += f" (Database: {database_name})"
+            
+        return format_table_data(results, title)
+        
+    except Exception as e:
+        logger.error(f"Failed to get database schema info: {e}")
+        return f"Error retrieving database schema information: {str(e)}"
+
+
+@mcp.tool()
 async def get_active_connections() -> str:
     """
     [Tool Purpose]: Retrieve all active connections and session information on current PostgreSQL server
