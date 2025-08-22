@@ -1130,8 +1130,8 @@ async def get_database_stats() -> str:
                     checksum_last_failure::text
                 ELSE 'None'
             END as last_checksum_failure,
-            COALESCE(ROUND(blk_read_time, 2), 0) as disk_read_time_ms,
-            COALESCE(ROUND(blk_write_time, 2), 0) as disk_write_time_ms,
+            COALESCE(ROUND(blk_read_time::numeric, 2), 0) as disk_read_time_ms,
+            COALESCE(ROUND(blk_write_time::numeric, 2), 0) as disk_write_time_ms,
             stats_reset
         FROM pg_stat_database 
         WHERE datname IS NOT NULL
@@ -1182,9 +1182,9 @@ async def get_bgwriter_stats() -> str:
                     ROUND((checkpoints_timed::numeric / (checkpoints_timed + checkpoints_req)) * 100, 2)
                 ELSE 0
             END as scheduled_checkpoint_ratio_percent,
-            ROUND(checkpoint_write_time, 2) as checkpoint_write_time_ms,
-            ROUND(checkpoint_sync_time, 2) as checkpoint_sync_time_ms,
-            ROUND(checkpoint_write_time + checkpoint_sync_time, 2) as total_checkpoint_time_ms,
+            ROUND(checkpoint_write_time::numeric, 2) as checkpoint_write_time_ms,
+            ROUND(checkpoint_sync_time::numeric, 2) as checkpoint_sync_time_ms,
+            ROUND((checkpoint_write_time + checkpoint_sync_time)::numeric, 2) as total_checkpoint_time_ms,
             buffers_checkpoint as buffers_written_by_checkpoints,
             buffers_clean as buffers_written_by_bgwriter,
             buffers_backend as buffers_written_by_backend,
@@ -1482,21 +1482,21 @@ async def get_user_functions_stats(database_name: str = None) -> str:
             schemaname as schema_name,
             funcname as function_name,
             calls as total_calls,
-            ROUND(total_time, 2) as total_time_ms,
-            ROUND(self_time, 2) as self_time_ms,
+            ROUND(total_time::numeric, 2) as total_time_ms,
+            ROUND(self_time::numeric, 2) as self_time_ms,
             CASE 
                 WHEN calls > 0 THEN
-                    ROUND(total_time / calls, 4)
+                    ROUND((total_time / calls)::numeric, 4)
                 ELSE 0
             END as avg_total_time_per_call_ms,
             CASE 
                 WHEN calls > 0 THEN
-                    ROUND(self_time / calls, 4)
+                    ROUND((self_time / calls)::numeric, 4)
                 ELSE 0
             END as avg_self_time_per_call_ms,
             CASE 
                 WHEN total_time > 0 THEN
-                    ROUND((self_time / total_time) * 100, 2)
+                    ROUND((self_time::numeric / total_time) * 100, 2)
                 ELSE 0
             END as self_time_ratio_percent,
             CASE 
