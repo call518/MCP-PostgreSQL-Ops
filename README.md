@@ -362,6 +362,15 @@ SET track_io_timing = 'on';
   - "Show schema overview with table counts and sizes for hr_system database"
   - 📋 **Features**: Schema owners, permissions, object counts, sizes, contents
   - ⚠️ **Required**: `database_name` parameter must be specified
+- **get_table_relationships**
+  - "Show all relationships for customers table in ecommerce database"
+  - "Analyze foreign key relationships for orders table in sales schema of ecommerce database"
+  - "Get database-wide relationship overview for ecommerce database"
+  - "Find all tables that reference products table in ecommerce database"
+  - "Show cross-schema relationships in inventory database"
+  - 📋 **Features**: Foreign key relationships (inbound/outbound), cross-schema dependencies, constraint details
+  - ⚠️ **Required**: `database_name` parameter must be specified
+  - 💡 **Usage**: Leave `table_name` empty for database-wide relationship analysis
 - **get_user_list**
   - "List all database users and their roles"
   - "Show user permissions for a specific database"

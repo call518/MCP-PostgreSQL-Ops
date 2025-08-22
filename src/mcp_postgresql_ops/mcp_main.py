@@ -1104,6 +1104,338 @@ async def get_database_schema_info(database_name: str, schema_name: str = None) 
 
 
 @mcp.tool()
+async def get_table_relationships(database_name: str, table_name: str = None, schema_name: str = "public", relationship_type: str = "all") -> str:
+    """
+    [Tool Purpose]: Analyze table relationships including foreign keys, dependencies, and inheritance
+    
+    [Exact Functionality]:
+    - Show foreign key relationships (inbound and outbound)
+    - Display view dependencies and table references
+    - Analyze inheritance and partition relationships
+    - Identify orphaned tables and relationship patterns
+    
+    [Required Use Cases]:
+    - When user requests "table relationships", "foreign keys", "dependencies", etc.
+    - When analyzing database schema design and data model
+    - When planning data migration or schema changes
+    
+    [Strictly Prohibited Use Cases]:
+    - Requests for actual data inside tables
+    - Requests for relationship modifications or DDL operations
+    - Requests for performance statistics (use other tools for that)
+    
+    Args:
+        database_name: Database name to query (REQUIRED - specify which database to analyze)
+        table_name: Specific table name to analyze (if None, shows database-wide relationship overview)
+        schema_name: Schema name to search in (default: "public")
+        relationship_type: Type of relationships to show ("all", "foreign_keys", "dependencies", "inheritance")
+    
+    Returns:
+        Detailed relationship information including foreign keys, dependencies, and metadata
+    """
+    try:
+        if table_name:
+            # Specific table relationship analysis
+            query = """
+            WITH table_info AS (
+                SELECT 
+                    t.table_schema,
+                    t.table_name,
+                    t.table_type
+                FROM information_schema.tables t
+                WHERE t.table_name = $1 AND t.table_schema = $2
+                  AND t.table_type IN ('BASE TABLE', 'VIEW')
+            ),
+            foreign_keys_out AS (
+                SELECT 
+                    tc.constraint_name,
+                    tc.table_schema || '.' || tc.table_name as source_table,
+                    kcu.column_name as source_column,
+                    ccu.table_schema || '.' || ccu.table_name AS target_table,
+                    ccu.column_name AS target_column,
+                    rc.match_option,
+                    rc.update_rule,
+                    rc.delete_rule,
+                    'OUTBOUND' as direction
+                FROM information_schema.table_constraints AS tc 
+                JOIN information_schema.key_column_usage AS kcu
+                    ON tc.constraint_name = kcu.constraint_name
+                JOIN information_schema.constraint_column_usage AS ccu
+                    ON ccu.constraint_name = tc.constraint_name
+                JOIN information_schema.referential_constraints AS rc
+                    ON tc.constraint_name = rc.constraint_name
+                WHERE tc.constraint_type = 'FOREIGN KEY'
+                  AND tc.table_name = $1 AND tc.table_schema = $2
+                ORDER BY tc.constraint_name, kcu.ordinal_position
+            ),
+            foreign_keys_in AS (
+                SELECT 
+                    tc.constraint_name,
+                    tc.table_schema || '.' || tc.table_name as source_table,
+                    kcu.column_name as source_column,
+                    ccu.table_schema || '.' || ccu.table_name AS target_table,
+                    ccu.column_name AS target_column,
+                    rc.match_option,
+                    rc.update_rule,
+                    rc.delete_rule,
+                    'INBOUND' as direction
+                FROM information_schema.table_constraints AS tc 
+                JOIN information_schema.key_column_usage AS kcu
+                    ON tc.constraint_name = kcu.constraint_name
+                JOIN information_schema.constraint_column_usage AS ccu
+                    ON ccu.constraint_name = tc.constraint_name
+                JOIN information_schema.referential_constraints AS rc
+                    ON tc.constraint_name = rc.constraint_name
+                WHERE tc.constraint_type = 'FOREIGN KEY'
+                  AND ccu.table_name = $1 AND ccu.table_schema = $2
+                ORDER BY tc.constraint_name, kcu.ordinal_position
+            ),
+            view_dependencies AS (
+                SELECT DISTINCT
+                    v.view_schema || '.' || v.view_name as view_name,
+                    'Depends on this table' as dependency_type
+                FROM information_schema.view_table_usage v
+                WHERE v.table_schema = $2 AND v.table_name = $1
+            ),
+            inheritance_info AS (
+                SELECT 
+                    schemaname || '.' || tablename as child_table,
+                    schemaname || '.' || tablename as parent_table,
+                    'INHERITS' as relationship_type
+                FROM pg_tables pt
+                JOIN pg_inherits i ON i.inhrelid = (pt.schemaname||'.'||pt.tablename)::regclass::oid
+                JOIN pg_class pc ON i.inhparent = pc.oid
+                JOIN pg_namespace pn ON pc.relnamespace = pn.oid
+                WHERE (pt.tablename = $1 AND pt.schemaname = $2)
+                   OR (pc.relname = $1 AND pn.nspname = $2)
+            )
+            SELECT * FROM (
+                SELECT 
+                    'TABLE_INFO' as section,
+                    'Table: ' || ti.table_schema || '.' || ti.table_name as name,
+                    'Type: ' || ti.table_type as type,
+                    'Analysis target table' as size,
+                    '' as rows,
+                    '' as writes,
+                    '' as extra1,
+                    '' as extra2,
+                    '' as extra3,
+                    1 as sort_order
+                FROM table_info ti
+                
+                UNION ALL
+                
+                SELECT 
+                    'FK_OUTBOUND' as section,
+                    'FK: ' || fko.constraint_name as name,
+                    fko.direction as type,
+                    fko.source_column || ' → ' || fko.target_table as size,
+                    'Column: ' || fko.target_column as rows,
+                    'Update: ' || fko.update_rule || ', Delete: ' || fko.delete_rule as writes,
+                    '' as extra1,
+                    '' as extra2,
+                    '' as extra3,
+                    2 as sort_order
+                FROM foreign_keys_out fko
+                
+                UNION ALL
+                
+                SELECT 
+                    'FK_INBOUND' as section,
+                    'FK: ' || fki.constraint_name as name,
+                    fki.direction as type,
+                    fki.source_table || ' → ' || fki.source_column as size,
+                    'Referencing Column: ' || fki.target_column as rows,
+                    'Update: ' || fki.update_rule || ', Delete: ' || fki.delete_rule as writes,
+                    '' as extra1,
+                    '' as extra2,
+                    '' as extra3,
+                    3 as sort_order
+                FROM foreign_keys_in fki
+                
+                UNION ALL
+                
+                SELECT 
+                    'VIEW_DEPENDENCY' as section,
+                    'View: ' || vd.view_name as name,
+                    vd.dependency_type as type,
+                    'View depends on this table' as size,
+                    '' as rows,
+                    '' as writes,
+                    '' as extra1,
+                    '' as extra2,
+                    '' as extra3,
+                    4 as sort_order
+                FROM view_dependencies vd
+                
+                UNION ALL
+                
+                SELECT 
+                    'INHERITANCE' as section,
+                    'Relation: ' || ii.child_table as name,
+                    ii.relationship_type as type,
+                    ii.parent_table as size,
+                    '' as rows,
+                    '' as writes,
+                    '' as extra1,
+                    '' as extra2,
+                    '' as extra3,
+                    5 as sort_order
+                FROM inheritance_info ii
+            ) combined_results
+            ORDER BY sort_order, name
+            """
+            
+            params = [table_name, schema_name]  # Only 2 parameters needed - table_name and schema_name reused in all WHERE clauses
+            results = await execute_query(query, params, database=database_name)
+            title = f"Relationships for {schema_name}.{table_name}"
+            if database_name:
+                title += f" (Database: {database_name})"
+        else:
+            # Database-wide relationship overview
+            query = """
+            WITH relationship_stats AS (
+                SELECT 
+                    'Foreign Key Relationships' as category,
+                    COUNT(*) as count,
+                    'Total FK constraints in database' as description
+                FROM information_schema.table_constraints 
+                WHERE constraint_type = 'FOREIGN KEY'
+            
+                UNION ALL
+                
+                SELECT 
+                    'Referenced Tables' as category,
+                    COUNT(DISTINCT ccu.table_schema || '.' || ccu.table_name) as count,
+                    'Tables being referenced by foreign keys' as description
+                FROM information_schema.table_constraints AS tc 
+                JOIN information_schema.constraint_column_usage AS ccu
+                    ON ccu.constraint_name = tc.constraint_name
+                WHERE tc.constraint_type = 'FOREIGN KEY'
+                
+                UNION ALL
+                
+                SELECT 
+                    'Referencing Tables' as category,
+                    COUNT(DISTINCT tc.table_schema || '.' || tc.table_name) as count,
+                    'Tables that reference other tables' as description
+                FROM information_schema.table_constraints AS tc 
+                WHERE tc.constraint_type = 'FOREIGN KEY'
+                
+                UNION ALL
+                
+                SELECT 
+                    'Orphaned Tables' as category,
+                    COUNT(*) as count,
+                    'Tables with no foreign key relationships' as description
+                FROM information_schema.tables t
+                WHERE t.table_type = 'BASE TABLE'
+                  AND t.table_schema NOT IN ('information_schema', 'pg_catalog')
+                  AND t.table_schema NOT LIKE 'pg_%'
+                  AND NOT EXISTS (
+                      SELECT 1 FROM information_schema.table_constraints tc
+                      WHERE tc.table_name = t.table_name 
+                        AND tc.table_schema = t.table_schema
+                        AND tc.constraint_type = 'FOREIGN KEY'
+                  )
+                  AND NOT EXISTS (
+                      SELECT 1 FROM information_schema.constraint_column_usage ccu
+                      WHERE ccu.table_name = t.table_name 
+                        AND ccu.table_schema = t.table_schema
+                  )
+            ),
+            top_referenced_tables AS (
+                SELECT 
+                    ccu.table_schema || '.' || ccu.table_name as table_name,
+                    COUNT(*) as reference_count,
+                    'Most referenced table' as category
+                FROM information_schema.table_constraints AS tc 
+                JOIN information_schema.constraint_column_usage AS ccu
+                    ON ccu.constraint_name = tc.constraint_name
+                WHERE tc.constraint_type = 'FOREIGN KEY'
+                GROUP BY ccu.table_schema, ccu.table_name
+                ORDER BY COUNT(*) DESC
+                LIMIT 5
+            ),
+            relationship_details AS (
+                SELECT 
+                    tc.table_schema || '.' || tc.table_name as referencing_table,
+                    kcu.column_name as referencing_column,
+                    ccu.table_schema || '.' || ccu.table_name AS referenced_table,
+                    ccu.column_name AS referenced_column,
+                    rc.update_rule,
+                    rc.delete_rule,
+                    tc.constraint_name
+                FROM information_schema.table_constraints AS tc 
+                JOIN information_schema.key_column_usage AS kcu
+                    ON tc.constraint_name = kcu.constraint_name
+                JOIN information_schema.constraint_column_usage AS ccu
+                    ON ccu.constraint_name = tc.constraint_name
+                JOIN information_schema.referential_constraints AS rc
+                    ON tc.constraint_name = rc.constraint_name
+                WHERE tc.constraint_type = 'FOREIGN KEY'
+                ORDER BY tc.table_schema, tc.table_name, kcu.ordinal_position
+            )
+            SELECT * FROM (
+                SELECT 
+                    'STATISTICS' as section,
+                    rs.category as name,
+                    rs.count::text as type,
+                    rs.description as size,
+                    '' as rows,
+                    '' as writes,
+                    '' as extra1,
+                    '' as extra2,
+                    '' as extra3,
+                    1 as sort_order
+                FROM relationship_stats rs
+                
+                UNION ALL
+                
+                SELECT 
+                    'TOP_REFERENCED' as section,
+                    trt.table_name as name,
+                    'Referenced ' || trt.reference_count || ' times' as type,
+                    'High-traffic table in relationships' as size,
+                    '' as rows,
+                    '' as writes,
+                    '' as extra1,
+                    '' as extra2,
+                    '' as extra3,
+                    2 as sort_order
+                FROM top_referenced_tables trt
+                
+                UNION ALL
+                
+                SELECT 
+                    'RELATIONSHIP' as section,
+                    rd.constraint_name as name,
+                    rd.referencing_table || ' → ' || rd.referenced_table as type,
+                    rd.referencing_column || ' → ' || rd.referenced_column as size,
+                    'Update: ' || rd.update_rule as rows,
+                    'Delete: ' || rd.delete_rule as writes,
+                    '' as extra1,
+                    '' as extra2,
+                    '' as extra3,
+                    3 as sort_order
+                FROM relationship_details rd
+            ) combined_results
+            ORDER BY sort_order, name
+            """
+            
+            results = await execute_query(query, [], database=database_name)
+            title = f"Database Relationship Overview"
+            if database_name:
+                title += f" (Database: {database_name})"
+            
+        return format_table_data(results, title)
+        
+    except Exception as e:
+        logger.error(f"Failed to get table relationships: {e}")
+        return f"Error retrieving table relationships: {str(e)}"
+
+
+@mcp.tool()
 async def get_active_connections() -> str:
     """
     [Tool Purpose]: Retrieve all active connections and session information on current PostgreSQL server
