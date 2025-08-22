@@ -567,6 +567,9 @@ SET track_io_timing = 'on';
 3. Check database load before running analysis
 
 ### Version Compatibility Issues
+
+> For more details, see the [## Tool Compatibility Matrix](#tool-compatibility-matrix)
+
 1. **Run compatibility check first**:
    ```bash
    # "Use get_server_info to check version and available features"
