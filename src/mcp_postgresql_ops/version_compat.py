@@ -65,6 +65,21 @@ class PostgreSQLVersion:
     def has_parallel_leader_tracking(self) -> bool:
         """Check if pg_stat_activity has leader_pid column (14+)."""
         return self.major >= 14
+        
+    @property
+    def has_replication_slot_wal_status(self) -> bool:
+        """Check if pg_replication_slots has wal_status and safe_wal_size columns (13+)."""
+        return self.major >= 13
+        
+    @property
+    def has_table_stats_ins_since_vacuum(self) -> bool:
+        """Check if pg_stat_*_tables has n_ins_since_vacuum column (13+)."""
+        return self.major >= 13
+        
+    @property
+    def has_pg_stat_statements_exec_time(self) -> bool:
+        """Check if pg_stat_statements uses total_exec_time and mean_exec_time columns (13+)."""
+        return self.major >= 13
 
 # Global version cache
 _cached_version: Optional[PostgreSQLVersion] = None
@@ -288,6 +303,178 @@ class VersionAwareQueries:
         )
         
         return f"SELECT {columns} FROM pg_stat_activity WHERE state = 'active'"
+    
+    @staticmethod
+    async def get_replication_slots_query(database: str = None) -> str:
+        """Get replication slots info with version compatibility."""
+        version = await get_postgresql_version(database)
+        
+        base_columns = [
+            "slot_name", "plugin", "slot_type", "datoid", "temporary",
+            "active", "active_pid", "restart_lsn", "confirmed_flush_lsn"
+        ]
+        
+        # wal_status and safe_wal_size are available from PostgreSQL 13+
+        if version.has_replication_slot_wal_status:
+            return """
+            SELECT 
+                slot_name,
+                plugin,
+                slot_type,
+                datoid,
+                temporary,
+                active,
+                active_pid,
+                restart_lsn,
+                confirmed_flush_lsn,
+                wal_status,
+                safe_wal_size / 1024 / 1024 as safe_wal_size_mb
+            FROM pg_replication_slots
+            ORDER BY slot_name
+            """
+        else:
+            # PostgreSQL 12 and older - without wal_status and safe_wal_size
+            return """
+            SELECT 
+                slot_name,
+                plugin,
+                slot_type,
+                datoid,
+                temporary,
+                active,
+                active_pid,
+                restart_lsn,
+                confirmed_flush_lsn,
+                NULL::text as wal_status,
+                NULL::numeric as safe_wal_size_mb
+            FROM pg_replication_slots
+            ORDER BY slot_name
+            """
+    
+    @staticmethod
+    async def get_wal_receiver_query(database: str = None) -> str:
+        """Get WAL receiver status with version compatibility."""
+        version = await get_postgresql_version(database)
+        
+        if version.has_enhanced_wal_receiver:
+            # PostgreSQL 16+: has written_lsn/flushed_lsn columns
+            return """
+            SELECT 
+                pid,
+                status,
+                receive_start_lsn,
+                receive_start_tli,
+                written_lsn,
+                flushed_lsn,
+                received_tli,
+                last_msg_send_time,
+                last_msg_receipt_time,
+                latest_end_lsn,
+                latest_end_time,
+                slot_name,
+                sender_host,
+                sender_port,
+                conninfo
+            FROM pg_stat_wal_receiver
+            """
+        else:
+            # PostgreSQL 10-15: no written_lsn/flushed_lsn columns
+            return """
+            SELECT 
+                pid,
+                status,
+                receive_start_lsn,
+                receive_start_tli,
+                NULL::text as written_lsn,
+                NULL::text as flushed_lsn,
+                received_tli,
+                last_msg_send_time,
+                last_msg_receipt_time,
+                latest_end_lsn,
+                latest_end_time,
+                slot_name,
+                sender_host,
+                sender_port,
+                conninfo
+            FROM pg_stat_wal_receiver
+            """
+    
+    @staticmethod
+    async def get_all_tables_stats_query(include_system: bool = False, database: str = None) -> str:
+        """Get all tables statistics query with version compatibility."""
+        version = await get_postgresql_version(database)
+        
+        view_name = "pg_stat_all_tables" if include_system else "pg_stat_user_tables"
+        
+        # n_ins_since_vacuum is available from PostgreSQL 13+
+        if version.has_table_stats_ins_since_vacuum:
+            return f"""
+            SELECT 
+                schemaname as schema_name,
+                relname as table_name,
+                seq_scan as sequential_scans,
+                seq_tup_read as seq_tuples_read,
+                idx_scan as index_scans,
+                idx_tup_fetch as idx_tuples_fetched,
+                n_tup_ins as tuples_inserted,
+                n_tup_upd as tuples_updated,
+                n_tup_del as tuples_deleted,
+                n_tup_hot_upd as hot_updates,
+                n_live_tup as estimated_live_tuples,
+                n_dead_tup as estimated_dead_tuples,
+                CASE 
+                    WHEN n_live_tup > 0 THEN
+                        ROUND((n_dead_tup::numeric / n_live_tup) * 100, 2)
+                    ELSE 0
+                END as dead_tuple_ratio_percent,
+                n_mod_since_analyze as modified_since_analyze,
+                n_ins_since_vacuum as inserted_since_vacuum,
+                last_vacuum,
+                last_autovacuum,
+                last_analyze,
+                last_autoanalyze,
+                vacuum_count,
+                autovacuum_count,
+                analyze_count,
+                autoanalyze_count
+            FROM {view_name}
+            ORDER BY seq_scan + COALESCE(idx_scan, 0) DESC, schemaname, relname
+            """
+        else:
+            # PostgreSQL 12 - without n_ins_since_vacuum
+            return f"""
+            SELECT 
+                schemaname as schema_name,
+                relname as table_name,
+                seq_scan as sequential_scans,
+                seq_tup_read as seq_tuples_read,
+                idx_scan as index_scans,
+                idx_tup_fetch as idx_tuples_fetched,
+                n_tup_ins as tuples_inserted,
+                n_tup_upd as tuples_updated,
+                n_tup_del as tuples_deleted,
+                n_tup_hot_upd as hot_updates,
+                n_live_tup as estimated_live_tuples,
+                n_dead_tup as estimated_dead_tuples,
+                CASE 
+                    WHEN n_live_tup > 0 THEN
+                        ROUND((n_dead_tup::numeric / n_live_tup) * 100, 2)
+                    ELSE 0
+                END as dead_tuple_ratio_percent,
+                n_mod_since_analyze as modified_since_analyze,
+                NULL::bigint as inserted_since_vacuum,
+                last_vacuum,
+                last_autovacuum,
+                last_analyze,
+                last_autoanalyze,
+                vacuum_count,
+                autovacuum_count,
+                analyze_count,
+                autoanalyze_count
+            FROM {view_name}
+            ORDER BY seq_scan + COALESCE(idx_scan, 0) DESC, schemaname, relname
+            """
+
 
 # Utility functions for tool implementations
 async def execute_version_aware_query(queries_by_version: dict, 
@@ -310,3 +497,97 @@ async def execute_version_aware_query(queries_by_version: dict,
     query = get_version_appropriate_query(fallback_query, queries_by_version, version)
     
     return await execute_query(query, database=database)
+
+
+# Version-aware pg_stat_statements queries
+async def get_pg_stat_statements_query(database: str = None) -> str:
+    """
+    Get version-compatible pg_stat_statements query.
+    
+    Args:
+        database: Database to connect to for version detection
+        
+    Returns:
+        SQL query string compatible with the database version
+    """
+    version = await get_postgresql_version(database)
+    
+    # Common base columns available in all versions
+    base_columns = [
+        "queryid", "query", "calls", "rows"
+    ]
+    
+    # Add version-specific timing columns
+    if version.has_pg_stat_statements_exec_time:
+        # PostgreSQL 13+: uses total_exec_time, mean_exec_time
+        base_columns.extend([
+            "total_exec_time", "mean_exec_time", "min_exec_time", "max_exec_time", "stddev_exec_time"
+        ])
+    else:
+        # PostgreSQL 12: uses total_time, mean_time
+        base_columns.extend([
+            "total_time as total_exec_time", "mean_time as mean_exec_time", 
+            "min_time as min_exec_time", "max_time as max_exec_time", 
+            "stddev_time as stddev_exec_time"
+        ])
+        
+    # Add remaining common columns
+    base_columns.extend([
+        "shared_blks_hit", "shared_blks_read", "shared_blks_dirtied", 
+        "shared_blks_written", "local_blks_hit", "local_blks_read", 
+        "local_blks_dirtied", "local_blks_written", "temp_blks_read", "temp_blks_written"
+    ])
+    
+    columns_str = ",\n    ".join(base_columns)
+    
+    return f"""
+    SELECT 
+        {columns_str}
+    FROM pg_stat_statements 
+    ORDER BY total_exec_time DESC 
+    """
+
+
+# Version-aware pg_stat_monitor queries
+async def get_pg_stat_monitor_query(database: str = None) -> str:
+    """
+    Get version-compatible pg_stat_monitor query.
+    
+    Args:
+        database: Database to connect to for version detection
+        
+    Returns:
+        SQL query string compatible with the database version
+    """
+    version = await get_postgresql_version(database)
+    
+    # Common base columns available in all versions
+    base_columns = [
+        "query", "calls", "rows"
+    ]
+    
+    # Add version-specific timing columns
+    if version.has_pg_stat_statements_exec_time:
+        # PostgreSQL 13+: uses total_exec_time, mean_exec_time
+        base_columns.extend([
+            "total_exec_time", "mean_exec_time"
+        ])
+    else:
+        # PostgreSQL 12: uses total_time, mean_time
+        base_columns.extend([
+            "total_time as total_exec_time", "mean_time as mean_exec_time"
+        ])
+        
+    # Add remaining common columns
+    base_columns.extend([
+        "shared_blks_hit", "shared_blks_read", "client_ip", "bucket_start_time"
+    ])
+    
+    columns_str = ",\n    ".join(base_columns)
+    
+    return f"""
+    SELECT 
+        {columns_str}
+    FROM pg_stat_monitor 
+    ORDER BY total_exec_time DESC 
+    """

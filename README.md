@@ -7,17 +7,19 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 ## Features
 
 - ✅ **Version Compatibility**: Transparent PostgreSQL version support (12-18) - automatically detects your PostgreSQL version and adapts functionality accordingly with zero configuration
-- ✅ **PostgreSQL Monitoring**: Performance analysis based on pg_stat_statements and pg_stat_monitor
+- ✅ **PostgreSQL Monitoring**: Performance analysis based on pg_stat_statements and pg_stat_monitor with full backward compatibility
 - ✅ **Structure Exploration**: Database, table, and user listing with detailed schema information
 - ✅ **Schema Analysis**: Detailed table structure with columns, constraints, indexes, and relationships
-- ✅ **Performance Analysis**: Slow query identification and index usage analysis
+- ✅ **Performance Analysis**: Slow query identification and index usage analysis with version-aware query optimization
 - ✅ **Capacity Management**: Database and table size analysis
 - ✅ **Configuration Retrieval**: PostgreSQL configuration parameter verification
 - ✅ **Database Performance Statistics**: Comprehensive transaction, I/O, and buffer cache analysis
 - ✅ **I/O Performance Monitoring**: Version-aware I/O statistics (comprehensive on PG16+, basic on PG12-15)
 - ✅ **Background Process Monitoring**: Version-aware checkpoint and background writer analysis (split on PG15+)
-- ✅ **Replication Monitoring**: Standby server conflict detection and replication lag analysis
+- ✅ **Table Statistics Monitoring**: Version-aware comprehensive table usage and maintenance statistics (enhanced vacuum tracking on PG13+)
+- ✅ **Replication Monitoring**: Standby server conflict detection and replication lag analysis with version-compatible WAL status tracking
 - ✅ **Function Performance Analysis**: User-defined function execution statistics
+- ✅ **Query Performance Analysis**: Version-compatible pg_stat_statements integration (PG12: total_time mapping, PG13+: native columns)
 - ✅ **Safe Read-Only**: All operations are read-only and safe
 
 - 🛠️ **Easy Customization**: Simple and clean codebase makes it very easy to add new tools or customize existing ones
@@ -105,9 +107,7 @@ http://localhost:3003/
 | `get_vacuum_analyze_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
 | `get_lock_monitoring` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_locks`, `pg_stat_activity` |
 | `get_wal_status` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_current_wal_lsn()` |
-| `get_replication_status` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_replication` |
 | `get_database_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_database` |
-| `get_all_tables_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
 | `get_table_io_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_statio_user_tables` |
 | `get_index_io_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_statio_user_indexes` |
 | `get_database_conflicts_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_database_conflicts` |
@@ -118,14 +118,16 @@ http://localhost:3003/
 |-----------|-------------------|-------|-------|-------|-------|-------|-------|-------|------------------|
 | `get_io_stats` | ❌ None | ✅ Basic | ✅ Basic | ✅ Basic | ✅ Basic | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | PG16+: `pg_stat_io` support |
 | `get_bgwriter_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ **Special** | ✅ | ✅ | ✅ | PG15: Separate checkpointer stats |
+| `get_replication_status` | ❌ None | ✅ Compatible | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | PG13+: `wal_status`, `safe_wal_size`; PG16+: enhanced WAL receiver |
+| `get_all_tables_stats` | ❌ None | ✅ Compatible | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | PG13+: `n_ins_since_vacuum` tracking for vacuum maintenance optimization |
 | `get_user_functions_stats` | ⚙️ Config Required | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | Requires `track_functions=pl` |
 
 ### 🟡 **Extension-Dependent Tools (Extensions Required)**
 
 | Tool Name | Required Extension | PG 12 | PG 13 | PG 14 | PG 15 | PG 16 | PG 17 | PG 18 | Notes |
 |-----------|-------------------|-------|-------|-------|-------|-------|-------|-------|-------|
-| `get_pg_stat_statements_top_queries` | `pg_stat_statements` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | Performance analysis |
-| `get_pg_stat_monitor_recent_queries` | `pg_stat_monitor` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | Real-time monitoring |
+| `get_pg_stat_statements_top_queries` | `pg_stat_statements` | ✅ **Compatible** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | PG12: `total_time` → `total_exec_time`; PG13+: native `total_exec_time` |
+| `get_pg_stat_monitor_recent_queries` | `pg_stat_monitor` | ✅ **Compatible** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | PG12: `total_time` → `total_exec_time`; PG13+: native `total_exec_time` |
 
 ---
 
@@ -455,10 +457,6 @@ SET track_io_timing = 'on';
   - "Show me checkpoint performance"
   - "Show background writer efficiency statistics"
   - "Monitor buffer allocation and fsync patterns"
-- **get_all_tables_stats**
-  - "Show comprehensive statistics for all tables"
-  - "Include system tables with include_system=true parameter"
-  - "Analyze table access patterns and maintenance needs"
 - **get_user_functions_stats**
   - "Analyze user-defined function performance"
   - "Show function call counts and execution times"
@@ -501,15 +499,25 @@ SET track_io_timing = 'on';
   - "Check server compatibility"
   - "Check what MCP tools are available on this PostgreSQL version"
   - "Displays feature availability matrix and upgrade recommendations"
+- **get_all_tables_stats** (Enhanced!)
+  - "Show comprehensive statistics for all tables" (version-compatible for PG12-18)
+  - "Include system tables with include_system=true parameter"
+  - "Analyze table access patterns and maintenance needs"
+  - 📈 **PG13+**: Tracks insertions since vacuum (`n_ins_since_vacuum`) for optimal maintenance scheduling
+  - 📊 **PG12**: Compatible mode with NULL for unsupported columns
 
 ### 🟡 Extension-Dependent Tools
 
 - **get_pg_stat_statements_top_queries** (Requires `pg_stat_statements`)
   - "Show top 10 slowest queries"
   - "Analyze slow queries in the inventory database"
+  - 📈 **Version-Compatible**: PG12 uses `total_time` → `total_exec_time` mapping; PG13+ uses native columns
+  - 💡 **Cross-Version**: Automatically adapts query structure for PostgreSQL 12-18 compatibility
 - **get_pg_stat_monitor_recent_queries** (Optional, uses `pg_stat_monitor`)
   - "Show recent queries in real time"
   - "Monitor query activity for the last 5 minutes"
+  - 📈 **Version-Compatible**: PG12 uses `total_time` → `total_exec_time` mapping; PG13+ uses native columns
+  - 💡 **Cross-Version**: Automatically adapts query structure for PostgreSQL 12-18 compatibility
 
 **💡 Pro Tip**: All tools support multi-database operations using the `database_name` parameter. This allows PostgreSQL superusers to analyze and monitor multiple databases from a single MCP server instance.
 

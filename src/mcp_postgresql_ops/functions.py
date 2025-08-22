@@ -178,19 +178,17 @@ async def get_pg_stat_statements_data(limit: int = 20, database: str = None) -> 
         limit: Maximum number of results to return
         database: Database name to query (uses default if omitted)
     """
-    query = """
-    SELECT 
-        query,
-        calls,
-        total_exec_time,
-        mean_exec_time,
-        rows,
-        100.0 * shared_blks_hit / nullif(shared_blks_hit + shared_blks_read, 0) AS hit_percent
-    FROM pg_stat_statements 
-    ORDER BY total_exec_time DESC 
-    LIMIT $1
-    """
-    return await execute_query(query, [limit], database=database)
+    from .version_compat import get_pg_stat_statements_query
+    
+    try:
+        # Get version-compatible query
+        base_query = await get_pg_stat_statements_query(database)
+        query = f"{base_query} LIMIT $1"
+        
+        return await execute_query(query, [limit], database=database)
+    except Exception as e:
+        logger.error(f"Failed to fetch pg_stat_statements data: {e}")
+        raise Exception(f"Failed to fetch pg_stat_statements data: {e}")
 
 
 # pg_stat_monitor related functions
@@ -201,22 +199,17 @@ async def get_pg_stat_monitor_data(limit: int = 20, database: str = None) -> Lis
         limit: Maximum number of results to return
         database: Database name to query (uses default if omitted)
     """
-    query = """
-    SELECT 
-        query,
-        calls,
-        total_exec_time,
-        mean_exec_time,
-        rows,
-        shared_blks_hit,
-        shared_blks_read,
-        client_ip,
-        bucket_start_time
-    FROM pg_stat_monitor 
-    ORDER BY total_exec_time DESC 
-    LIMIT $1
-    """
-    return await execute_query(query, [limit], database=database)
+    from .version_compat import get_pg_stat_monitor_query
+    
+    try:
+        # Get version-compatible query
+        base_query = await get_pg_stat_monitor_query(database)
+        query = f"{base_query} LIMIT $1"
+        
+        return await execute_query(query, [limit], database=database)
+    except Exception as e:
+        logger.error(f"Failed to fetch pg_stat_monitor data: {e}")
+        raise Exception(f"Failed to fetch pg_stat_monitor data: {e}")
 
 
 def sanitize_connection_info() -> Dict[str, Any]:

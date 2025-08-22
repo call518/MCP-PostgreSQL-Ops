@@ -326,60 +326,12 @@ async def get_replication_status() -> str:
         
         repl_connections = await execute_query(repl_query)
         
-        # Get replication slots
-        slots_query = """
-        SELECT 
-            slot_name,
-            plugin,
-            slot_type,
-            datoid,
-            temporary,
-            active,
-            active_pid,
-            restart_lsn,
-            confirmed_flush_lsn,
-            wal_status,
-            safe_wal_size / 1024 / 1024 as safe_wal_size_mb
-        FROM pg_replication_slots
-        ORDER BY slot_name
-        """
-        
+        # Get replication slots with version compatibility
+        slots_query = await VersionAwareQueries.get_replication_slots_query()
         repl_slots = await execute_query(slots_query)
         
-        # Get WAL receiver status (from standby)
-        # PostgreSQL 16+ uses written_lsn/flushed_lsn, older versions use received_lsn
-        receiver_query = """
-        SELECT 
-            pid,
-            status,
-            receive_start_lsn,
-            receive_start_tli,
-            CASE 
-                WHEN EXISTS (SELECT 1 FROM information_schema.columns 
-                           WHERE table_name = 'pg_stat_wal_receiver' 
-                           AND column_name = 'written_lsn')
-                THEN written_lsn::text
-                ELSE NULL::text
-            END AS written_lsn,
-            CASE 
-                WHEN EXISTS (SELECT 1 FROM information_schema.columns 
-                           WHERE table_name = 'pg_stat_wal_receiver' 
-                           AND column_name = 'flushed_lsn')
-                THEN flushed_lsn::text
-                ELSE NULL::text
-            END AS flushed_lsn,
-            received_tli,
-            last_msg_send_time,
-            last_msg_receipt_time,
-            latest_end_lsn,
-            latest_end_time,
-            slot_name,
-            sender_host,
-            sender_port,
-            conninfo
-        FROM pg_stat_wal_receiver
-        """
-        
+        # Get WAL receiver status with version compatibility
+        receiver_query = await VersionAwareQueries.get_wal_receiver_query()
         wal_receiver = await execute_query(receiver_query)
         
         result = []
@@ -2470,41 +2422,8 @@ async def get_all_tables_stats(database_name: str = None, include_system: bool =
         Comprehensive table statistics including access patterns and maintenance history
     """
     try:
-        view_name = "pg_stat_all_tables" if include_system else "pg_stat_user_tables"
-        
-        query = f"""
-        SELECT 
-            schemaname as schema_name,
-            relname as table_name,
-            seq_scan as sequential_scans,
-            seq_tup_read as seq_tuples_read,
-            idx_scan as index_scans,
-            idx_tup_fetch as idx_tuples_fetched,
-            n_tup_ins as tuples_inserted,
-            n_tup_upd as tuples_updated,
-            n_tup_del as tuples_deleted,
-            n_tup_hot_upd as hot_updates,
-            n_live_tup as estimated_live_tuples,
-            n_dead_tup as estimated_dead_tuples,
-            CASE 
-                WHEN n_live_tup > 0 THEN
-                    ROUND((n_dead_tup::numeric / n_live_tup) * 100, 2)
-                ELSE 0
-            END as dead_tuple_ratio_percent,
-            n_mod_since_analyze as modified_since_analyze,
-            n_ins_since_vacuum as inserted_since_vacuum,
-            last_vacuum,
-            last_autovacuum,
-            last_analyze,
-            last_autoanalyze,
-            vacuum_count,
-            autovacuum_count,
-            analyze_count,
-            autoanalyze_count
-        FROM {view_name}
-        ORDER BY seq_scan + COALESCE(idx_scan, 0) DESC, schemaname, relname
-        """
-        
+        # Use version-compatible query
+        query = await VersionAwareQueries.get_all_tables_stats_query(include_system, database_name)
         stats = await execute_query(query, database=database_name)
         
         title = "All Tables Statistics"

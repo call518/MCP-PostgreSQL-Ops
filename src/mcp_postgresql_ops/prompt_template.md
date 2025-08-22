@@ -6,12 +6,14 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 
 ## Key Features
 
-- ✅ **PostgreSQL Monitoring**: Performance analysis based on pg_stat_statements and pg_stat_monitor
+- ✅ **Version Compatibility**: Transparent PostgreSQL version support (12-18) - automatically detects and adapts functionality
+- ✅ **PostgreSQL Monitoring**: Performance analysis based on pg_stat_statements and pg_stat_monitor with backward compatibility
 - ✅ **Structure Exploration**: Database, table, and user listing with detailed schema information
 - ✅ **Schema Analysis**: Detailed table structure with columns, constraints, indexes, and relationships
-- ✅ **Performance Analysis**: Slow query identification and index usage analysis
+- ✅ **Performance Analysis**: Slow query identification and index usage analysis with version-aware optimization
 - ✅ **Capacity Management**: Database and table size analysis
 - ✅ **Configuration Retrieval**: PostgreSQL configuration parameter verification
+- ✅ **Replication Monitoring**: Version-compatible replication lag analysis and WAL status tracking
 - ✅ **Safe Read-Only**: All operations are read-only and safe
 
 ## Available Tools
@@ -323,7 +325,9 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 
 **get_replication_status**
 - "Check replication connections and lag status"
-- "Monitor replication slots and WAL receiver status"
+- "Monitor replication slots and WAL receiver status"  
+- "Show replication status (version-compatible for PG12-18)"
+- "Check if replication is active or standby servers are connected"
 
 **get_database_stats**
 - "Show comprehensive database performance metrics"
@@ -348,9 +352,10 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 - "Show comprehensive statistics for all tables"
 - "Include system tables with include_system=true parameter"
 - "Analyze table access patterns and maintenance needs"
-- "Show comprehensive statistics for all user tables"
+- "Show comprehensive statistics for all user tables (version-compatible for PG12-18)"
 - "Include system tables in statistics analysis with include_system=true"
 - "Monitor dead tuple ratios and table activity"
+- "Show insertions since vacuum statistics (PG13+ only)"
 
 **get_user_functions_stats**
 - "Analyze user-defined function performance"
@@ -411,12 +416,14 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 - "Find queries consuming most resources"
 - "Monitor query execution patterns"
 - "Show cache hit ratios for queries"
+- 📈 **Version-Compatible**: Automatically adapts for PostgreSQL 12-18 (PG12: total_time→total_exec_time mapping)
 
 **get_pg_stat_monitor_recent_queries** (Optional, uses `pg_stat_monitor`)
 - "Show recent queries in real time"
 - "Monitor query activity for the last 5 minutes"
 - "Monitor recent 15 queries with detailed stats"
 - "Track recent queries in ecommerce database"
+- 📈 **Version-Compatible**: Automatically adapts for PostgreSQL 12-18 (PG12: total_time→total_exec_time mapping)
 
 ### 🔧 Advanced Usage Examples
 
