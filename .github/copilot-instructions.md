@@ -5,8 +5,9 @@
 This is a **Model Context Protocol (MCP) server** built with **FastMCP** that provides PostgreSQL database monitoring and operations through natural language queries. The server acts as a safe, read-only bridge between AI assistants and PostgreSQL databases.
 
 ### Core Components
-- **`mcp_main.py`**: Main MCP server with 12 `@mcp.tool()` decorated functions
+- **`mcp_main.py`**: Main MCP server with 24+ `@mcp.tool()` decorated functions
 - **`functions.py`**: Database connection layer using `asyncpg` with multi-database support
+- **`version_compat.py`**: PostgreSQL 12-18 version detection and adaptive feature handling
 - **`prompt_template.md`**: Comprehensive prompt definitions loaded via `@mcp.prompt()` decorators
 - **Docker stack**: PostgreSQL + MCP server + MCPO proxy + Open WebUI integration
 
@@ -15,6 +16,8 @@ This is a **Model Context Protocol (MCP) server** built with **FastMCP** that pr
 **Multi-Database Architecture**: All tools accept optional `database_name` parameter to target specific databases while maintaining a default connection database from `POSTGRES_DB` env var.
 
 **Extension Dependencies**: Core functionality requires `pg_stat_statements` extension; `pg_stat_monitor` is optional. Always check extension availability with `check_extension_exists()` before using related tools.
+
+**Version-Aware Tools**: Use `version_compat.py` for PostgreSQL 12-18 compatibility. Tools auto-adapt features based on detected version.
 
 **Tool Structure**: Each MCP tool follows this pattern:
 ```python
@@ -30,6 +33,11 @@ async def get_something(limit: int = 20, database_name: str = None) -> str:
         logger.error(f"Failed to...: {e}")
         return f"Error: {str(e)}"
 ```
+
+**Schema Analysis Tools**: New extension-independent tools for database schema analysis:
+- `get_table_schema_info()`: Detailed table structure with columns, constraints, indexes
+- `get_database_schema_info()`: Complete database schema overview with metadata
+- `get_table_relationships()`: Foreign key relationships and cross-schema dependencies
 
 ## Development Workflows
 
@@ -77,6 +85,13 @@ async def get_db_connection(database: str = None) -> asyncpg.Connection:
 - Use `format_table_data(results, title)` for consistent table output
 - Apply `format_bytes()` and `format_duration()` for human-readable values
 - Enforce limit constraints: `limit = max(1, min(limit, 100))`
+
+### Tool Compatibility Matrix
+When adding new tools, **must** update the compatibility matrix in `README.md`:
+- Classify as Extension-Independent, Version-Aware, or Extension-Dependent
+- Document PostgreSQL version support (12-18)
+- List system views/tables used
+- Update tool count statistics
 
 ## Project-Specific Integrations
 
@@ -131,3 +146,4 @@ Test tools with realistic prompts - never use function names directly:
 3. **Port Misalignment**: `FASTMCP_PORT`, Docker external port, and MCP config files must all match
 4. **Environment Loading**: Use `scripts/run-mcp-inspector-local.sh` which properly loads `.env` - direct Python execution won't load environment
 5. **Query Limits**: All tools enforce 1-100 limits for performance; don't assume unlimited results
+6. **asyncpg Parameter Binding**: Use `$1, $2, ...` format, not `%s` - all SQL queries must use asyncpg-compatible parameter binding
