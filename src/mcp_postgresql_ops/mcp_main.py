@@ -1500,17 +1500,17 @@ async def get_user_functions_stats(database_name: str = None) -> str:
             ROUND(self_time::numeric, 2) as self_time_ms,
             CASE 
                 WHEN calls > 0 THEN
-                    ROUND((total_time / calls)::numeric, 4)
+                    ROUND((total_time::numeric / calls), 4)
                 ELSE 0
             END as avg_total_time_per_call_ms,
             CASE 
                 WHEN calls > 0 THEN
-                    ROUND((self_time / calls)::numeric, 4)
+                    ROUND((self_time::numeric / calls), 4)
                 ELSE 0
             END as avg_self_time_per_call_ms,
             CASE 
                 WHEN total_time > 0 THEN
-                    ROUND((self_time::numeric / total_time) * 100, 2)
+                    ROUND((self_time::numeric / total_time::numeric) * 100, 2)
                 ELSE 0
             END as self_time_ratio_percent,
             CASE 
