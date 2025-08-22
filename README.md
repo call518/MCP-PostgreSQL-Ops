@@ -209,9 +209,7 @@ python -m src.mcp_postgresql_ops.mcp_main \
 
 ### Required PostgreSQL Extensions
 
-**⚠️ Note**:
-Most MCP tools work without any PostgreSQL extensions.
-However, advanced performance analysis tools require the following extensions:
+**Note**: Most MCP tools work without any PostgreSQL extensions. For more details, see the [## Tool Compatibility Matrix](#tool-compatibility-matrix) section below. Some advanced performance analysis tools require the following extensions:
 
 ```sql
 -- Query performance statistics (required only for get_pg_stat_statements_top_queries)
