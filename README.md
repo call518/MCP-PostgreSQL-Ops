@@ -567,6 +567,13 @@ We're always excited to welcome new contributors! Whether you're fixing a typo, 
 
 ---
 
+## Example: MCPO Swagger APIs
+
+> [MCPO Swagger URL] http://localhost:8003/postgresql-ops/docs
+
+![MCPO Swagger APIs](img/screenshot-swagger-api.png)
+
+
 ## Related Projects
 
 **Other MCP servers by the same author:**
