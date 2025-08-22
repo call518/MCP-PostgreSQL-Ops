@@ -1252,8 +1252,8 @@ async def get_table_io_stats(database_name: str = None, schema_name: str = "publ
         Table I/O statistics including heap, index, and TOAST performance metrics
     """
     try:
-        where_clause = "WHERE schemaname = %s" if schema_name else ""
-        params = [schema_name] if schema_name else []
+        where_clause = "WHERE schemaname = $1" if schema_name else ""
+        params = [schema_name] if schema_name else None
         
         query = f"""
         SELECT 
