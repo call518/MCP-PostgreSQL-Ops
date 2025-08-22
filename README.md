@@ -6,7 +6,7 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 
 ## Features
 
-- ✅ **Version Compatibility**: Automatic PostgreSQL version detection with adaptive functionality (12-18)
+- ✅ **Version Compatibility**: Transparent PostgreSQL version support (12-18) - automatically detects your PostgreSQL version and adapts functionality accordingly with zero configuration
 - ✅ **PostgreSQL Monitoring**: Performance analysis based on pg_stat_statements and pg_stat_monitor
 - ✅ **Structure Exploration**: Database, table, and user listing
 - ✅ **Performance Analysis**: Slow query identification and index usage analysis
