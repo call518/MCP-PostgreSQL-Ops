@@ -330,6 +330,23 @@ SET track_io_timing = 'on';
 
 ---
 
+## RDS/Aurora Compatibility
+
+- This server is read-only and works with regular roles on RDS/Aurora. For advanced analysis enable pg_stat_statements; pg_stat_monitor is not available on managed engines.
+- On RDS/Aurora, prefer DB Parameter Group over ALTER SYSTEM for persistent settings.
+  ```sql
+  -- Verify preload setting
+  SHOW shared_preload_libraries;
+
+  -- Enable extension in target DB
+  CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+
+  -- Recommended visibility for monitoring
+  GRANT pg_read_all_stats TO <app_user>;
+  ```
+
+---
+
 ## Example Queries
 
 ### 🟢 Extension-Independent Tools (Always Available)
