@@ -69,8 +69,8 @@ http://localhost:3003/
 
 ## Usage Examples
 
-### Claude Desktop Integration (Examples)
-Add to your Claude Desktop configuration file:
+### Claude Desktop Integration
+(Recommended) Add to your Claude Desktop configuration file:
 
 ```json
 {
@@ -92,7 +92,7 @@ Add to your Claude Desktop configuration file:
 
 ![Claude Desktop Integration](img/screenshot-003.png)
 
-Options: Run with Local Source:
+(Optional) Run with Local Source:
 
 ```json
 {
@@ -115,22 +115,7 @@ Options: Run with Local Source:
 
 ### Command Line Usage
 
-#### /w Local Source
-
-```bash
-# Stdio mode
-python -m src.mcp_postgresql_ops.mcp_main \
-  --type stdio
-
-# HTTP mode
-python -m src.mcp_postgresql_ops.mcp_main \
-  --type streamable-http \
-  --host 127.0.0.1 \
-  --port 8080 \
-  --log-level DEBUG
-```
-
-#### /w Pypi and uvx
+#### /w Pypi and uvx (Recommended)
 
 ```bash
 # Stdio mode
@@ -139,6 +124,23 @@ uvx --python 3.11 mcp-postgresql-ops \
 
 # HTTP mode
 uvx --python 3.11 mcp-postgresql-ops
+  --type streamable-http \
+  --host 127.0.0.1 \
+  --port 8080 \
+  --log-level DEBUG
+```
+
+#### /w Local Source
+
+```bash
+# Stdio mode
+PYTHONPATH=/path/to/MCP-PostgreSQL-Ops
+python -m src.mcp_postgresql_ops.mcp_main \
+  --type stdio
+
+# HTTP mode
+PYTHONPATH=/path/to/MCP-PostgreSQL-Ops
+python -m src.mcp_postgresql_ops.mcp_main \
   --type streamable-http \
   --host 127.0.0.1 \
   --port 8080 \
