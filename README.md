@@ -258,11 +258,15 @@ For Docker or command-line PostgreSQL startup:
 docker run -d \
   -e POSTGRES_PASSWORD=mypassword \
   postgres:16 \
+  -c track_activities=on \
+  -c track_counts=on \
   -c track_functions=pl \
   -c track_io_timing=on
 
 # Direct postgres command
 postgres -D /data \
+  -c track_activities=on \
+  -c track_counts=on \
   -c track_functions=pl \
   -c track_io_timing=on
 ```
@@ -271,6 +275,10 @@ postgres -D /data \
 For managed PostgreSQL services where you cannot modify `postgresql.conf`, use SQL commands to change settings dynamically:
 
 ```sql
+-- Enable basic statistics collection (usually enabled by default)
+ALTER SYSTEM SET track_activities = 'on';
+ALTER SYSTEM SET track_counts = 'on';
+
 -- Enable function statistics collection (requires superuser privileges)
 ALTER SYSTEM SET track_functions = 'pl';
 
@@ -284,6 +292,8 @@ SELECT pg_reload_conf();
 **Alternative for session-level testing**:
 ```sql
 -- Set for current session only (temporary)
+SET track_activities = 'on';
+SET track_counts = 'on';
 SET track_functions = 'pl';
 SET track_io_timing = 'on';
 ```
