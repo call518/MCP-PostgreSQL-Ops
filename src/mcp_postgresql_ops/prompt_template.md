@@ -42,7 +42,32 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 14. **get_wal_status**: WAL status and archiving information
 15. **get_replication_status**: Replication connections and lag monitoring
 
+### 📈 Database Performance Statistics
+16. **get_database_stats**: Comprehensive database-wide performance metrics
+17. **get_bgwriter_stats**: Background writer and checkpoint performance analysis
+18. **get_all_tables_stats**: Complete table statistics (including system tables)
+19. **get_user_functions_stats**: User-defined function performance analysis
+
+### 💿 I/O Performance Analysis
+20. **get_table_io_stats**: Table I/O statistics (disk reads vs buffer cache hits)
+21. **get_index_io_stats**: Index I/O performance and buffer efficiency analysis
+
+### 🔄 Replication Monitoring
+22. **get_database_conflicts_stats**: Query conflicts in standby/replica environments
+
 ## Sample Prompts
+
+### � Database Performance Analysis
+- "Show database-wide performance statistics"
+- "Analyze transaction commit ratios and I/O patterns"
+- "Check buffer cache hit ratios for all databases"
+- "Monitor temporary file usage and deadlock counts"
+
+### 🔧 Background Writer & Checkpoints
+- "Analyze checkpoint performance and timing"
+- "Show background writer efficiency statistics"
+- "Check buffer allocation and writing patterns"
+- "Monitor checkpoint scheduling vs requested ratios"
 
 ### 🔍 Server Health Check
 - "Check PostgreSQL server status"
@@ -253,6 +278,52 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 
 **get_replication_status**
 - "Check replication connections and lag status"
+- "Monitor replication slots and WAL receiver status"
+
+### 📈 Database Performance Statistics Examples
+
+**get_database_stats**
+- "Show comprehensive database performance metrics"
+- "Analyze transaction commit ratios across all databases"
+- "Check buffer cache hit ratios and I/O statistics"
+- "Monitor temporary file usage and deadlock counts"
+
+**get_bgwriter_stats**
+- "Analyze checkpoint performance and timing"
+- "Show background writer efficiency and buffer statistics"
+- "Monitor checkpoint scheduling patterns"
+- "Check buffer allocation and fsync performance"
+
+**get_all_tables_stats**
+- "Show comprehensive statistics for all user tables"
+- "Include system tables in statistics analysis with include_system=true"
+- "Analyze table access patterns and maintenance needs"
+- "Monitor dead tuple ratios and table activity"
+
+**get_user_functions_stats**
+- "Analyze user-defined function performance"
+- "Show function call counts and execution times"
+- "Identify slow or frequently called functions"
+- "Monitor function performance bottlenecks"
+
+### 💿 I/O Performance Analysis Examples
+
+**get_table_io_stats**
+- "Analyze table I/O performance and buffer hit ratios"
+- "Show disk reads vs buffer cache hits for tables in public schema"
+- "Identify tables with poor buffer cache performance"
+- "Monitor TOAST table I/O statistics"
+
+**get_index_io_stats**
+- "Show index I/O performance and buffer efficiency"
+- "Analyze index buffer hit ratios in specific schema"
+- "Identify indexes causing excessive disk I/O"
+- "Monitor index cache-friendliness patterns"
+
+**get_database_conflicts_stats**
+- "Check replication conflicts on standby server"
+- "Analyze conflict types and resolution statistics"
+- "Monitor standby server query cancellation patterns"
 - "Monitor replication slots and WAL receiver status"
 
 ### 🔧 Advanced Usage Examples

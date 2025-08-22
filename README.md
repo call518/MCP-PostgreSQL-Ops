@@ -11,6 +11,11 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 - ✅ **Performance Analysis**: Slow query identification and index usage analysis
 - ✅ **Capacity Management**: Database and table size analysis
 - ✅ **Configuration Retrieval**: PostgreSQL configuration parameter verification
+- ✅ **Database Performance Statistics**: Comprehensive transaction, I/O, and buffer cache analysis
+- ✅ **I/O Performance Monitoring**: Table and index I/O statistics with buffer hit ratio analysis
+- ✅ **Background Process Monitoring**: Checkpoint and background writer performance analysis
+- ✅ **Replication Monitoring**: Standby server conflict detection and replication lag analysis
+- ✅ **Function Performance Analysis**: User-defined function execution statistics
 - ✅ **Safe Read-Only**: All operations are read-only and safe
 
 - 🛠️ **Easy Customization**: Simple and clean codebase makes it very easy to add new tools or customize existing ones
@@ -248,6 +253,38 @@ Then restart PostgreSQL and run the CREATE EXTENSION commands above.
   - "Check exclusive locks with mode filter"
 - **get_wal_status**
   - "Show WAL status and archiving information"
+  - "Monitor WAL generation and current LSN position"
+- **get_replication_status**
+  - "Check replication connections and lag status"
+  - "Monitor replication slots and WAL receiver status"
+- **get_database_stats**
+  - "Show comprehensive database performance metrics"
+  - "Analyze transaction commit ratios and I/O statistics"
+  - "Monitor buffer cache hit ratios and temporary file usage"
+- **get_bgwriter_stats**
+  - "Analyze checkpoint performance and timing"
+  - "Show background writer efficiency statistics"
+  - "Monitor buffer allocation and fsync patterns"
+- **get_all_tables_stats**
+  - "Show comprehensive statistics for all tables"
+  - "Include system tables with include_system=true parameter"
+  - "Analyze table access patterns and maintenance needs"
+- **get_user_functions_stats**
+  - "Analyze user-defined function performance"
+  - "Show function call counts and execution times"
+  - "Identify performance bottlenecks in custom functions"
+- **get_table_io_stats**
+  - "Analyze table I/O performance and buffer hit ratios"
+  - "Identify tables with poor buffer cache performance"
+  - "Monitor TOAST table I/O statistics"
+- **get_index_io_stats**
+  - "Show index I/O performance and buffer efficiency"
+  - "Identify indexes causing excessive disk I/O"
+  - "Monitor index cache-friendliness patterns"
+- **get_database_conflicts_stats**
+  - "Check replication conflicts on standby servers"
+  - "Analyze conflict types and resolution statistics"
+  - "Monitor standby server query cancellation patterns"
   - "Monitor WAL generation and current LSN position"
 - **get_replication_status**
   - "Check replication connections and lag status"

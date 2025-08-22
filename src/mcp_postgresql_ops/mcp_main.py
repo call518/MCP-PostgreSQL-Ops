@@ -1074,6 +1074,523 @@ async def get_vacuum_analyze_stats(database_name: str = None) -> str:
         return f"Error retrieving VACUUM/ANALYZE statistics: {str(e)}"
 
 
+@mcp.tool()
+async def get_database_stats() -> str:
+    """
+    [Tool Purpose]: Get comprehensive database-wide statistics and performance metrics
+    
+    [Exact Functionality]:
+    - Show database-wide transaction statistics (commits, rollbacks)
+    - Display block I/O statistics (disk reads vs buffer hits)
+    - Provide tuple operation statistics (returned, fetched, inserted, updated, deleted)
+    - Show temporary file usage and deadlock counts
+    - Include checksum failure information and I/O timing data
+    
+    [Required Use Cases]:
+    - When user requests "database statistics", "database performance", "transaction stats", etc.
+    - When analyzing overall database performance and activity
+    - When investigating I/O performance or buffer cache efficiency
+    - When checking for deadlocks or temporary file usage
+    
+    [Strictly Prohibited Use Cases]:
+    - Requests for statistics reset or modification
+    - Requests for database configuration changes
+    - Requests for performance tuning actions
+    
+    Returns:
+        Comprehensive database statistics including transactions, I/O, tuples, and performance metrics
+    """
+    try:
+        query = """
+        SELECT 
+            datname as database_name,
+            numbackends as active_connections,
+            xact_commit as transactions_committed,
+            xact_rollback as transactions_rolled_back,
+            ROUND((xact_commit::numeric / NULLIF(xact_commit + xact_rollback, 0)) * 100, 2) as commit_ratio_percent,
+            blks_read as disk_blocks_read,
+            blks_hit as buffer_blocks_hit,
+            CASE 
+                WHEN blks_read + blks_hit > 0 THEN 
+                    ROUND((blks_hit::numeric / (blks_read + blks_hit)) * 100, 2)
+                ELSE 0
+            END as buffer_hit_ratio_percent,
+            tup_returned as tuples_returned,
+            tup_fetched as tuples_fetched,
+            tup_inserted as tuples_inserted,
+            tup_updated as tuples_updated,
+            tup_deleted as tuples_deleted,
+            conflicts as query_conflicts,
+            temp_files as temporary_files_created,
+            pg_size_pretty(temp_bytes) as temp_files_size,
+            deadlocks as deadlock_count,
+            COALESCE(checksum_failures, 0) as checksum_failures,
+            CASE 
+                WHEN checksum_last_failure IS NOT NULL THEN
+                    checksum_last_failure::text
+                ELSE 'None'
+            END as last_checksum_failure,
+            COALESCE(ROUND(blk_read_time, 2), 0) as disk_read_time_ms,
+            COALESCE(ROUND(blk_write_time, 2), 0) as disk_write_time_ms,
+            stats_reset
+        FROM pg_stat_database 
+        WHERE datname IS NOT NULL
+        ORDER BY datname
+        """
+        
+        stats = await execute_query(query)
+        return format_table_data(stats, "Database Statistics")
+        
+    except Exception as e:
+        logger.error(f"Failed to get database stats: {e}")
+        return f"Error retrieving database statistics: {str(e)}"
+
+
+@mcp.tool()
+async def get_bgwriter_stats() -> str:
+    """
+    [Tool Purpose]: Analyze background writer and checkpoint performance statistics
+    
+    [Exact Functionality]:
+    - Show checkpoint execution statistics (timed vs requested)
+    - Display checkpoint timing information (write and sync times)
+    - Provide buffer writing statistics by different processes
+    - Analyze background writer performance and efficiency
+    
+    [Required Use Cases]:
+    - When user requests "checkpoint stats", "bgwriter performance", "buffer stats", etc.
+    - When analyzing I/O performance and checkpoint impact
+    - When investigating background writer efficiency
+    - When troubleshooting checkpoint-related performance issues
+    
+    [Strictly Prohibited Use Cases]:
+    - Requests for checkpoint execution or configuration changes
+    - Requests for background writer parameter modifications
+    - Requests for statistics reset
+    
+    Returns:
+        Background writer and checkpoint performance statistics
+    """
+    try:
+        query = """
+        SELECT 
+            checkpoints_timed as scheduled_checkpoints,
+            checkpoints_req as requested_checkpoints,
+            checkpoints_timed + checkpoints_req as total_checkpoints,
+            CASE 
+                WHEN (checkpoints_timed + checkpoints_req) > 0 THEN
+                    ROUND((checkpoints_timed::numeric / (checkpoints_timed + checkpoints_req)) * 100, 2)
+                ELSE 0
+            END as scheduled_checkpoint_ratio_percent,
+            ROUND(checkpoint_write_time, 2) as checkpoint_write_time_ms,
+            ROUND(checkpoint_sync_time, 2) as checkpoint_sync_time_ms,
+            ROUND(checkpoint_write_time + checkpoint_sync_time, 2) as total_checkpoint_time_ms,
+            buffers_checkpoint as buffers_written_by_checkpoints,
+            buffers_clean as buffers_written_by_bgwriter,
+            buffers_backend as buffers_written_by_backend,
+            buffers_backend_fsync as backend_fsync_calls,
+            buffers_alloc as buffers_allocated,
+            maxwritten_clean as bgwriter_maxwritten_stops,
+            CASE 
+                WHEN buffers_clean > 0 AND maxwritten_clean > 0 THEN
+                    ROUND((maxwritten_clean::numeric / buffers_clean) * 100, 2)
+                ELSE 0
+            END as bgwriter_stop_ratio_percent,
+            stats_reset as stats_reset_time
+        FROM pg_stat_bgwriter
+        """
+        
+        stats = await execute_query(query)
+        return format_table_data(stats, "Background Writer Statistics")
+        
+    except Exception as e:
+        logger.error(f"Failed to get bgwriter stats: {e}")
+        return f"Error retrieving background writer statistics: {str(e)}"
+
+
+@mcp.tool()
+async def get_table_io_stats(database_name: str = None, schema_name: str = "public") -> str:
+    """
+    [Tool Purpose]: Analyze I/O performance statistics for tables (disk reads vs buffer cache hits)
+    
+    [Exact Functionality]:
+    - Show heap, index, and TOAST table I/O statistics
+    - Calculate buffer hit ratios for performance analysis
+    - Identify tables with poor buffer cache performance
+    - Provide detailed I/O breakdown by table component
+    
+    [Required Use Cases]:
+    - When user requests "table I/O stats", "buffer performance", "disk vs cache", etc.
+    - When analyzing table-level I/O performance
+    - When identifying tables causing excessive disk I/O
+    - When optimizing buffer cache efficiency
+    
+    [Strictly Prohibited Use Cases]:
+    - Requests for I/O optimization actions
+    - Requests for buffer cache configuration changes
+    - Requests for statistics reset
+    
+    Args:
+        database_name: Database name to analyze (uses default database if omitted)
+        schema_name: Schema name to filter (default: public)
+    
+    Returns:
+        Table I/O statistics including heap, index, and TOAST performance metrics
+    """
+    try:
+        where_clause = "WHERE schemaname = %s" if schema_name else ""
+        params = [schema_name] if schema_name else []
+        
+        query = f"""
+        SELECT 
+            schemaname as schema_name,
+            relname as table_name,
+            heap_blks_read as heap_disk_reads,
+            heap_blks_hit as heap_buffer_hits,
+            CASE 
+                WHEN heap_blks_read + heap_blks_hit > 0 THEN
+                    ROUND((heap_blks_hit::numeric / (heap_blks_read + heap_blks_hit)) * 100, 2)
+                ELSE 0
+            END as heap_hit_ratio_percent,
+            idx_blks_read as index_disk_reads,
+            idx_blks_hit as index_buffer_hits,
+            CASE 
+                WHEN idx_blks_read + idx_blks_hit > 0 THEN
+                    ROUND((idx_blks_hit::numeric / (idx_blks_read + idx_blks_hit)) * 100, 2)
+                ELSE 0
+            END as index_hit_ratio_percent,
+            COALESCE(toast_blks_read, 0) as toast_disk_reads,
+            COALESCE(toast_blks_hit, 0) as toast_buffer_hits,
+            CASE 
+                WHEN COALESCE(toast_blks_read, 0) + COALESCE(toast_blks_hit, 0) > 0 THEN
+                    ROUND((COALESCE(toast_blks_hit, 0)::numeric / 
+                           (COALESCE(toast_blks_read, 0) + COALESCE(toast_blks_hit, 0))) * 100, 2)
+                ELSE 0
+            END as toast_hit_ratio_percent,
+            COALESCE(tidx_blks_read, 0) as toast_idx_disk_reads,
+            COALESCE(tidx_blks_hit, 0) as toast_idx_buffer_hits,
+            heap_blks_read + idx_blks_read + COALESCE(toast_blks_read, 0) + COALESCE(tidx_blks_read, 0) as total_disk_reads
+        FROM pg_statio_user_tables
+        {where_clause}
+        ORDER BY total_disk_reads DESC, schemaname, relname
+        """
+        
+        stats = await execute_query(query, params, database=database_name)
+        
+        title = "Table I/O Statistics"
+        if database_name:
+            title += f" (Database: {database_name}"
+            if schema_name:
+                title += f", Schema: {schema_name}"
+            title += ")"
+        elif schema_name:
+            title += f" (Schema: {schema_name})"
+            
+        return format_table_data(stats, title)
+        
+    except Exception as e:
+        logger.error(f"Failed to get table I/O stats: {e}")
+        return f"Error retrieving table I/O statistics: {str(e)}"
+
+
+@mcp.tool()
+async def get_index_io_stats(database_name: str = None, schema_name: str = "public") -> str:
+    """
+    [Tool Purpose]: Analyze I/O performance statistics for indexes (disk reads vs buffer cache hits)
+    
+    [Exact Functionality]:
+    - Show index-level I/O statistics and buffer hit ratios
+    - Identify indexes with poor buffer cache performance
+    - Provide detailed I/O performance metrics per index
+    - Help optimize index and buffer cache usage
+    
+    [Required Use Cases]:
+    - When user requests "index I/O stats", "index buffer performance", etc.
+    - When analyzing index-level I/O performance
+    - When identifying indexes causing excessive disk I/O
+    - When optimizing index buffer cache efficiency
+    
+    [Strictly Prohibited Use Cases]:
+    - Requests for index optimization actions
+    - Requests for buffer cache configuration changes
+    - Requests for statistics reset
+    
+    Args:
+        database_name: Database name to analyze (uses default database if omitted)
+        schema_name: Schema name to filter (default: public)
+    
+    Returns:
+        Index I/O statistics including buffer hit ratios and performance metrics
+    """
+    try:
+        where_clause = "WHERE schemaname = %s" if schema_name else ""
+        params = [schema_name] if schema_name else []
+        
+        query = f"""
+        SELECT 
+            schemaname as schema_name,
+            relname as table_name,
+            indexrelname as index_name,
+            idx_blks_read as disk_reads,
+            idx_blks_hit as buffer_hits,
+            idx_blks_read + idx_blks_hit as total_block_accesses,
+            CASE 
+                WHEN idx_blks_read + idx_blks_hit > 0 THEN
+                    ROUND((idx_blks_hit::numeric / (idx_blks_read + idx_blks_hit)) * 100, 2)
+                ELSE 0
+            END as buffer_hit_ratio_percent,
+            CASE 
+                WHEN idx_blks_read + idx_blks_hit = 0 THEN 'No I/O activity'
+                WHEN idx_blks_read > idx_blks_hit THEN 'Disk-heavy'
+                WHEN idx_blks_hit > idx_blks_read * 10 THEN 'Cache-friendly'
+                ELSE 'Mixed I/O'
+            END as io_pattern
+        FROM pg_statio_user_indexes
+        {where_clause}
+        ORDER BY idx_blks_read DESC, schemaname, relname, indexrelname
+        """
+        
+        stats = await execute_query(query, params, database=database_name)
+        
+        title = "Index I/O Statistics"
+        if database_name:
+            title += f" (Database: {database_name}"
+            if schema_name:
+                title += f", Schema: {schema_name}"
+            title += ")"
+        elif schema_name:
+            title += f" (Schema: {schema_name})"
+            
+        return format_table_data(stats, title)
+        
+    except Exception as e:
+        logger.error(f"Failed to get index I/O stats: {e}")
+        return f"Error retrieving index I/O statistics: {str(e)}"
+
+
+@mcp.tool()
+async def get_all_tables_stats(database_name: str = None, include_system: bool = False) -> str:
+    """
+    [Tool Purpose]: Get comprehensive statistics for all tables (including system tables if requested)
+    
+    [Exact Functionality]:
+    - Show detailed access statistics for all tables in database
+    - Include sequential scans, index scans, and tuple operations
+    - Provide live/dead tuple estimates and maintenance history
+    - Option to include system catalog tables
+    
+    [Required Use Cases]:
+    - When user requests "all tables stats", "complete table statistics", etc.
+    - When analyzing overall table usage patterns
+    - When investigating table maintenance needs across the database
+    - When getting comprehensive database activity overview
+    
+    [Strictly Prohibited Use Cases]:
+    - Requests for table maintenance operations (VACUUM, ANALYZE)
+    - Requests for statistics reset or modification
+    - Requests for table optimization actions
+    
+    Args:
+        database_name: Database name to analyze (uses default database if omitted)
+        include_system: Include system tables in results (default: False)
+    
+    Returns:
+        Comprehensive table statistics including access patterns and maintenance history
+    """
+    try:
+        view_name = "pg_stat_all_tables" if include_system else "pg_stat_user_tables"
+        
+        query = f"""
+        SELECT 
+            schemaname as schema_name,
+            relname as table_name,
+            seq_scan as sequential_scans,
+            seq_tup_read as seq_tuples_read,
+            idx_scan as index_scans,
+            idx_tup_fetch as idx_tuples_fetched,
+            n_tup_ins as tuples_inserted,
+            n_tup_upd as tuples_updated,
+            n_tup_del as tuples_deleted,
+            n_tup_hot_upd as hot_updates,
+            n_live_tup as estimated_live_tuples,
+            n_dead_tup as estimated_dead_tuples,
+            CASE 
+                WHEN n_live_tup > 0 THEN
+                    ROUND((n_dead_tup::numeric / n_live_tup) * 100, 2)
+                ELSE 0
+            END as dead_tuple_ratio_percent,
+            n_mod_since_analyze as modified_since_analyze,
+            n_ins_since_vacuum as inserted_since_vacuum,
+            last_vacuum,
+            last_autovacuum,
+            last_analyze,
+            last_autoanalyze,
+            vacuum_count,
+            autovacuum_count,
+            analyze_count,
+            autoanalyze_count
+        FROM {view_name}
+        ORDER BY seq_scan + COALESCE(idx_scan, 0) DESC, schemaname, relname
+        """
+        
+        stats = await execute_query(query, database=database_name)
+        
+        title = "All Tables Statistics"
+        if include_system:
+            title = "All Tables Statistics (Including System)"
+        if database_name:
+            title += f" (Database: {database_name})"
+            
+        return format_table_data(stats, title)
+        
+    except Exception as e:
+        logger.error(f"Failed to get all tables stats: {e}")
+        return f"Error retrieving all tables statistics: {str(e)}"
+
+
+@mcp.tool()
+async def get_user_functions_stats(database_name: str = None) -> str:
+    """
+    [Tool Purpose]: Analyze performance statistics for user-defined functions
+    
+    [Exact Functionality]:
+    - Show execution count and timing statistics for user functions
+    - Calculate average execution time per function call
+    - Identify performance bottlenecks in user-defined functions
+    - Provide total and self execution time breakdown
+    
+    [Required Use Cases]:
+    - When user requests "function stats", "function performance", etc.
+    - When analyzing user-defined function performance
+    - When identifying slow or frequently called functions
+    - When optimizing application function usage
+    
+    [Strictly Prohibited Use Cases]:
+    - Requests for function modification or optimization
+    - Requests for statistics reset
+    - Requests for function execution or testing
+    
+    Args:
+        database_name: Database name to analyze (uses default database if omitted)
+    
+    Returns:
+        User-defined function performance statistics including call counts and timing
+    """
+    try:
+        query = """
+        SELECT 
+            schemaname as schema_name,
+            funcname as function_name,
+            calls as total_calls,
+            ROUND(total_time, 2) as total_time_ms,
+            ROUND(self_time, 2) as self_time_ms,
+            CASE 
+                WHEN calls > 0 THEN
+                    ROUND(total_time / calls, 4)
+                ELSE 0
+            END as avg_total_time_per_call_ms,
+            CASE 
+                WHEN calls > 0 THEN
+                    ROUND(self_time / calls, 4)
+                ELSE 0
+            END as avg_self_time_per_call_ms,
+            CASE 
+                WHEN total_time > 0 THEN
+                    ROUND((self_time / total_time) * 100, 2)
+                ELSE 0
+            END as self_time_ratio_percent,
+            CASE 
+                WHEN calls = 0 THEN 'Never called'
+                WHEN calls < 10 THEN 'Low usage'
+                WHEN calls < 100 THEN 'Medium usage'
+                ELSE 'High usage'
+            END as usage_level
+        FROM pg_stat_user_functions
+        ORDER BY total_time DESC, calls DESC, schemaname, funcname
+        """
+        
+        stats = await execute_query(query, database=database_name)
+        
+        title = "User Functions Statistics"
+        if database_name:
+            title += f" (Database: {database_name})"
+            
+        return format_table_data(stats, title)
+        
+    except Exception as e:
+        logger.error(f"Failed to get user functions stats: {e}")
+        return f"Error retrieving user functions statistics: {str(e)}"
+
+
+@mcp.tool()
+async def get_database_conflicts_stats(database_name: str = None) -> str:
+    """
+    [Tool Purpose]: Analyze query conflicts in standby/replica database environments
+    
+    [Exact Functionality]:
+    - Show conflict statistics for standby servers (only relevant on replicas)
+    - Display conflicts by type (tablespace, lock, snapshot, bufferpin, deadlock)
+    - Help diagnose replication-related performance issues
+    - Provide conflict resolution statistics
+    
+    [Required Use Cases]:
+    - When user requests "replication conflicts", "standby conflicts", etc.
+    - When analyzing replica server performance issues
+    - When troubleshooting replication lag or conflicts
+    - When monitoring standby server health
+    
+    [Strictly Prohibited Use Cases]:
+    - Requests for conflict resolution actions
+    - Requests for replication configuration changes
+    - Requests for statistics reset
+    
+    Args:
+        database_name: Database name to analyze (uses default database if omitted)
+    
+    Returns:
+        Database conflict statistics (meaningful only on standby servers)
+    """
+    try:
+        query = """
+        SELECT 
+            datname as database_name,
+            confl_tablespace as tablespace_conflicts,
+            confl_lock as lock_timeout_conflicts,
+            confl_snapshot as snapshot_conflicts,
+            confl_bufferpin as buffer_pin_conflicts,
+            confl_deadlock as deadlock_conflicts,
+            confl_tablespace + confl_lock + confl_snapshot + 
+            confl_bufferpin + confl_deadlock as total_conflicts,
+            CASE 
+                WHEN confl_tablespace + confl_lock + confl_snapshot + 
+                     confl_bufferpin + confl_deadlock = 0 THEN 'No conflicts'
+                WHEN confl_tablespace + confl_lock + confl_snapshot + 
+                     confl_bufferpin + confl_deadlock < 10 THEN 'Low conflict rate'
+                WHEN confl_tablespace + confl_lock + confl_snapshot + 
+                     confl_bufferpin + confl_deadlock < 100 THEN 'Medium conflict rate'
+                ELSE 'High conflict rate'
+            END as conflict_level
+        FROM pg_stat_database_conflicts
+        WHERE datname IS NOT NULL
+        ORDER BY total_conflicts DESC, datname
+        """
+        
+        stats = await execute_query(query, database=database_name)
+        
+        if not stats:
+            return "Database Conflicts Statistics\n\nNote: This server appears to be a primary server. Conflict statistics are only available on standby/replica servers."
+        
+        title = "Database Conflicts Statistics (Standby Server)"
+        if database_name:
+            title += f" (Database: {database_name})"
+            
+        return format_table_data(stats, title)
+        
+    except Exception as e:
+        logger.error(f"Failed to get database conflicts stats: {e}")
+        return f"Error retrieving database conflicts statistics: {str(e)}"
+
+
 # =============================================================================
 # Prompt Template Tools
 # =============================================================================
