@@ -80,7 +80,7 @@ http://localhost:3003/
 This MCP server automatically detects your PostgreSQL version and adapts its functionality accordingly:
 
 - **PostgreSQL 16+**: Full feature support including comprehensive I/O statistics (`pg_stat_io`)
-- **PostgreSQL 15+**: Enhanced background process monitoring with separate checkpointer stats
+- **PostgreSQL 15**: Enhanced background process monitoring with separate checkpointer stats (unique to PG15)
 - **PostgreSQL 14+**: Parallel query tracking and replication slot statistics
 - **PostgreSQL 13+**: Query ID support for performance correlation  
 - **PostgreSQL 12+**: Core functionality with all essential monitoring tools
@@ -371,6 +371,7 @@ SET track_io_timing = 'on';
   - "Monitor buffer cache hit ratios and temporary file usage"
 - **get_bgwriter_stats**
   - "Analyze checkpoint performance and timing"
+  - "Show me checkpoint performance"
   - "Show background writer efficiency statistics"
   - "Monitor buffer allocation and fsync patterns"
 - **get_all_tables_stats**
@@ -405,24 +406,26 @@ SET track_io_timing = 'on';
 
 - **get_io_stats** (New!)
   - "Show comprehensive I/O statistics" (PostgreSQL 16+ provides detailed breakdown)
+  - "Analyze I/O statistics"
   - "Analyze buffer cache efficiency and I/O timing"
   - "Monitor I/O patterns by backend type and context"
   - 📈 **PG16+**: Full pg_stat_io with timing, backend types, and contexts
   - 📊 **PG12-15**: Basic pg_statio_* fallback with buffer hit ratios
 - **get_bgwriter_stats** (Enhanced!)
   - "Show background writer and checkpoint performance"
-  - 📈 **PG15+**: Separate checkpointer and bgwriter statistics
-  - 📊 **PG12-14**: Combined bgwriter stats (includes checkpointer data)
+  - 📈 **PG15**: Separate checkpointer and bgwriter statistics (unique feature)
+  - 📊 **PG12-14, 16+**: Combined bgwriter stats (includes checkpointer data)
 - **get_server_info** (Enhanced!)
   - "Show server version and compatibility features"
+  - "Check server compatibility"
   - "Check what MCP tools are available on this PostgreSQL version"
-  - Displays feature availability matrix and upgrade recommendations
+  - "Displays feature availability matrix and upgrade recommendations"
 
 ### 🟡 Extension-Dependent Tools
 
 - **get_pg_stat_statements_top_queries** (Requires `pg_stat_statements`)
   - "Show top 10 slowest queries"
-  - "Analyze slow queries in the sales database"
+  - "Analyze slow queries in the inventory database"
 - **get_pg_stat_monitor_recent_queries** (Optional, uses `pg_stat_monitor`)
   - "Show recent queries in real time"
   - "Monitor query activity for the last 5 minutes"

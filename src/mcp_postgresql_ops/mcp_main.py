@@ -1226,7 +1226,7 @@ async def get_bgwriter_stats() -> str:
         pg_version = await get_postgresql_version()
         
         if pg_version.has_checkpointer_split:
-            # PostgreSQL 15+: Use separate views
+            # PostgreSQL 15 ONLY: Use separate views  
             query = """
             SELECT 
                 'Checkpointer (PG15+)' as component,
@@ -1274,9 +1274,9 @@ async def get_bgwriter_stats() -> str:
                 stats_reset as stats_reset_time
             FROM pg_stat_bgwriter
             """
-            explanation = f"PostgreSQL {pg_version} detected - using separate checkpointer and bgwriter views for detailed statistics"
+            explanation = f"PostgreSQL {pg_version} detected - using separate checkpointer and bgwriter views (PG15 only)"
         else:
-            # PostgreSQL 12-14: Use combined bgwriter view
+            # PostgreSQL 12-14, 16+: Use combined bgwriter view
             query = """
             SELECT 
                 'Combined BGWriter (PG12-14)' as component,
@@ -1305,7 +1305,7 @@ async def get_bgwriter_stats() -> str:
                 stats_reset as stats_reset_time
             FROM pg_stat_bgwriter
             """
-            explanation = f"PostgreSQL {pg_version} detected - using combined bgwriter view (includes checkpointer stats)"
+            explanation = f"PostgreSQL {pg_version} detected - using combined bgwriter view (includes checkpointer)"
         
         stats = await execute_query(query)
         
@@ -1316,8 +1316,9 @@ async def get_bgwriter_stats() -> str:
         result.append(format_table_data(stats, "Background Process Performance"))
         
         if pg_version.has_checkpointer_split:
-            result.append("\nNote: PostgreSQL 15+ provides separate detailed statistics for checkpointer and background writer processes")
+            result.append("\nNote: PostgreSQL 15 provides separate detailed statistics for checkpointer and background writer processes")
         else:
+            result.append(f"\nNote: PostgreSQL {pg_version} uses combined bgwriter view with all background process statistics")
             result.append("\nNote: Upgrade to PostgreSQL 15+ for separate checkpointer and background writer statistics")
         
         return "\n".join(result)

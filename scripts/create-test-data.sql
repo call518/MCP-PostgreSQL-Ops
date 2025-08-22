@@ -66,6 +66,7 @@ GRANT CONNECT ON DATABASE hr_system TO app_readwrite;
 
 -- Enable extensions in this database
 CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 
 -- Create schemas
 CREATE SCHEMA IF NOT EXISTS sales;
@@ -349,6 +350,7 @@ FROM generate_series(1, 800);
 
 -- Enable extensions
 CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 
 -- Grant permissions
 GRANT USAGE ON SCHEMA public TO analytics_user;
@@ -451,6 +453,7 @@ FROM generate_series(0, 8999) AS series;
 
 -- Enable extensions
 CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 
 -- Grant permissions
 GRANT USAGE ON SCHEMA public TO app_readwrite;
@@ -641,6 +644,7 @@ FROM generate_series(1, 200);
 
 -- Enable extensions
 CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 
 -- Grant permissions
 GRANT USAGE ON SCHEMA public TO app_readwrite;

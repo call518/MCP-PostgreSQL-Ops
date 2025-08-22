@@ -43,8 +43,8 @@ class PostgreSQLVersion:
         
     @property
     def has_checkpointer_split(self) -> bool:
-        """Check if checkpointer stats are in separate view (15+)."""
-        return self.major >= 15
+        """Check if checkpointer stats are in separate view (only PG15)."""
+        return self.major == 15
         
     @property
     def has_pg_stat_io(self) -> bool:
