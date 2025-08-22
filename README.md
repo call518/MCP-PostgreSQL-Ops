@@ -490,7 +490,7 @@ SET track_io_timing = 'on';
 ### Version Compatibility Issues
 1. **Run compatibility check first**:
    ```bash
-   # Use get_server_info to check version and available features
+   # "Use get_server_info to check version and available features"
    ```
 
 2. **Understanding feature availability**:
