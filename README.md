@@ -121,8 +121,8 @@ This MCP server automatically detects your PostgreSQL version and adapts its fun
 }
 ```
 
-![Claude Desktop Integration](img/screenshot-claude-desktop-mermaid-diagram.png)
 ![Claude Desktop Integration](img/screenshot-003.png)
+![Claude Desktop Integration](img/screenshot-claude-desktop-mermaid-diagram.png)
 
 (Optional) Run with Local Source:
 
