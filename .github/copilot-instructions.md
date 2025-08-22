@@ -7,7 +7,7 @@ This is a **Model Context Protocol (MCP) server** built with **FastMCP** that pr
 ### Core Components
 - **`mcp_main.py`**: Main MCP server with 24+ `@mcp.tool()` decorated functions
 - **`functions.py`**: Database connection layer using `asyncpg` with multi-database support
-- **`version_compat.py`**: PostgreSQL 12-18 version detection and adaptive feature handling
+- **`version_compat.py`**: PostgreSQL 12-17 version detection and adaptive feature handling
 - **`prompt_template.md`**: Comprehensive prompt definitions loaded via `@mcp.prompt()` decorators
 - **Docker stack**: PostgreSQL + MCP server + MCPO proxy + Open WebUI integration
 
@@ -17,7 +17,7 @@ This is a **Model Context Protocol (MCP) server** built with **FastMCP** that pr
 
 **Extension Dependencies**: Core functionality requires `pg_stat_statements` extension; `pg_stat_monitor` is optional. Always check extension availability with `check_extension_exists()` before using related tools.
 
-**Version-Aware Tools**: Use `version_compat.py` for PostgreSQL 12-18 compatibility. Tools auto-adapt features based on detected version.
+**Version-Aware Tools**: Use `version_compat.py` for PostgreSQL 12-17 compatibility. Tools auto-adapt features based on detected version. **PostgreSQL 18 is beta and not yet supported** - will be added once stable.
 
 **Tool Structure**: Each MCP tool follows this pattern:
 ```python
@@ -34,10 +34,16 @@ async def get_something(limit: int = 20, database_name: str = None) -> str:
         return f"Error: {str(e)}"
 ```
 
-**Schema Analysis Tools**: New extension-independent tools for database schema analysis:
-- `get_table_schema_info()`: Detailed table structure with columns, constraints, indexes
-- `get_database_schema_info()`: Complete database schema overview with metadata
-- `get_table_relationships()`: Foreign key relationships and cross-schema dependencies
+**Version Compatibility Pattern**: Critical for PostgreSQL 12 support - many tools use version-aware query builders:
+```python
+# In functions.py
+from .version_compat import get_pg_stat_statements_query
+
+async def get_pg_stat_statements_data(limit: int = 20, database: str = None):
+    base_query = await get_pg_stat_statements_query(database)  # Auto-adapts for PG12/13+
+    query = f"{base_query} LIMIT $1"
+    return await execute_query(query, [limit], database=database)
+```
 
 ## Development Workflows
 
@@ -89,9 +95,15 @@ async def get_db_connection(database: str = None) -> asyncpg.Connection:
 ### Tool Compatibility Matrix
 When adding new tools, **must** update the compatibility matrix in `README.md`:
 - Classify as Extension-Independent, Version-Aware, or Extension-Dependent
-- Document PostgreSQL version support (12-18)
+- Document PostgreSQL version support (12-17)
 - List system views/tables used
 - Update tool count statistics
+
+### Recent Major Changes
+- **PostgreSQL 18 Support Removed**: Now supports 12-17 range (18 is beta)
+- **Comprehensive PG12 Compatibility**: All tools now work on PostgreSQL 12
+- **Version-Aware Query Generation**: Automatic column mapping and NULL handling
+- **Enhanced Schema Analysis**: New tools for table relationships and schema introspection
 
 ## Project-Specific Integrations
 
@@ -102,7 +114,7 @@ The server loads prompts from `prompt_template.md` using a custom parsing system
 - `get_prompt_template(section="specific_section")` - targeted content
 
 ### Docker Multi-Service Architecture
-- **postgres**: Percona PostgreSQL 16 with pre-configured extensions
+- **postgres**: Percona PostgreSQL (version from `PGSQL_VERSION` env var, default 13)
 - **postgres-init-extensions**: One-shot container that installs extensions and creates comprehensive test data
 - **mcp-server**: Main MCP server container
 - **mcpo-proxy**: HTTP proxy for web-based MCP clients
@@ -118,6 +130,26 @@ from fastmcp import FastMCP
 
 # Extension checks are mandatory for performance tools
 await check_extension_exists("pg_stat_statements")
+```
+
+### PostgreSQL 12 Compatibility Patterns
+The major recent work focused on PostgreSQL 12 compatibility. Key patterns:
+
+**Column Mapping for pg_stat_statements/pg_stat_monitor**: PostgreSQL 12 uses `total_time`/`mean_time` while 13+ uses `total_exec_time`/`mean_exec_time`. Version-aware queries handle this:
+```python
+# In version_compat.py
+if version.has_pg_stat_statements_exec_time:  # PG13+
+    base_columns.extend(["total_exec_time", "mean_exec_time"])
+else:  # PG12
+    base_columns.extend(["total_time as total_exec_time", "mean_time as mean_exec_time"])
+```
+
+**NULL Column Handling**: Many PG13+ columns don't exist in PG12 (e.g., `wal_status`, `n_ins_since_vacuum`). Use NULL placeholders:
+```python
+if version.has_replication_slot_wal_status:
+    base_columns.append("wal_status")
+else:
+    base_columns.append("NULL as wal_status")
 ```
 
 ## Testing Strategy
@@ -147,3 +179,5 @@ Test tools with realistic prompts - never use function names directly:
 4. **Environment Loading**: Use `scripts/run-mcp-inspector-local.sh` which properly loads `.env` - direct Python execution won't load environment
 5. **Query Limits**: All tools enforce 1-100 limits for performance; don't assume unlimited results
 6. **asyncpg Parameter Binding**: Use `$1, $2, ...` format, not `%s` - all SQL queries must use asyncpg-compatible parameter binding
+7. **PostgreSQL Version Support**: Currently supports 12-17; PostgreSQL 18 support pending stable release
+8. **Version-Specific Features**: Always use `version_compat.py` patterns for new tools that query system catalogs

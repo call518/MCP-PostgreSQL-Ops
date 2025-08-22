@@ -24,7 +24,7 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 
 - 🛠️ **Easy Customization**: Simple and clean codebase makes it very easy to add new tools or customize existing ones
 
-# Tool Usage Examples
+## Tool Usage Examples
 
 ### 📸 **[More Examples with Screenshots →](https://github.com/call518/MCP-PostgreSQL-Ops/wiki/Tool-Usage-Example)**
 
