@@ -1252,8 +1252,20 @@ async def get_table_io_stats(database_name: str = None, schema_name: str = "publ
         Table I/O statistics including heap, index, and TOAST performance metrics
     """
     try:
-        where_clause = "WHERE schemaname = $1" if schema_name else ""
-        params = [schema_name] if schema_name else None
+        # Build WHERE clause with proper filtering for schema and non-empty I/O stats
+        where_conditions = []
+        params = []
+        param_count = 0
+        
+        if schema_name:
+            param_count += 1
+            where_conditions.append(f"schemaname = ${param_count}")
+            params.append(schema_name)
+        
+        # Only show tables with actual I/O activity
+        where_conditions.append("(heap_blks_read + heap_blks_hit + idx_blks_read + idx_blks_hit + COALESCE(toast_blks_read, 0) + COALESCE(toast_blks_hit, 0) + COALESCE(tidx_blks_read, 0) + COALESCE(tidx_blks_hit, 0)) > 0")
+        
+        where_clause = "WHERE " + " AND ".join(where_conditions) if where_conditions else ""
         
         query = f"""
         SELECT 
@@ -1337,8 +1349,20 @@ async def get_index_io_stats(database_name: str = None, schema_name: str = "publ
         Index I/O statistics including buffer hit ratios and performance metrics
     """
     try:
-        where_clause = "WHERE schemaname = $1" if schema_name else ""
-        params = [schema_name] if schema_name else None
+        # Build WHERE clause with proper filtering for schema and non-empty I/O stats
+        where_conditions = []
+        params = []
+        param_count = 0
+        
+        if schema_name:
+            param_count += 1
+            where_conditions.append(f"schemaname = ${param_count}")
+            params.append(schema_name)
+        
+        # Only show indexes with actual I/O activity
+        where_conditions.append("(idx_blks_read + idx_blks_hit) > 0")
+        
+        where_clause = "WHERE " + " AND ".join(where_conditions) if where_conditions else ""
         
         query = f"""
         SELECT 
@@ -1520,6 +1544,7 @@ async def get_user_functions_stats(database_name: str = None) -> str:
                 ELSE 'High usage'
             END as usage_level
         FROM pg_stat_user_functions
+        WHERE calls > 0
         ORDER BY total_time DESC, calls DESC, schemaname, funcname
         """
         

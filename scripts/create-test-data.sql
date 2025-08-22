@@ -923,3 +923,112 @@ SELECT d.name, COUNT(e.id) FROM public.departments d LEFT JOIN public.employees 
 \echo '  get_pg_stat_statements_top_queries(limit=10, database_name="ecommerce")'
 \echo '  get_index_usage_stats(database_name="inventory")'
 \echo '============================================================================='
+
+-- =============================================================================
+-- GENERATE STATISTICS DATA FOR NEW MCP TOOLS
+-- =============================================================================
+\echo ''
+\echo 'Generating statistics data for new MCP tools...'
+
+-- Generate I/O activity by scanning tables multiple times
+\c ecommerce
+\echo 'Generating I/O activity in ecommerce database...'
+SELECT COUNT(*) FROM products p JOIN categories c ON p.category_id = c.id;
+SELECT COUNT(*) FROM orders o JOIN customers cu ON o.customer_id = cu.id;
+SELECT COUNT(*) FROM order_items oi JOIN products p ON oi.product_id = p.id;
+
+-- Force some index usage
+SELECT * FROM products WHERE sku LIKE 'PROD-1%' ORDER BY price DESC;
+SELECT * FROM orders WHERE created_at >= CURRENT_DATE - INTERVAL '30 days' ORDER BY created_at DESC;
+SELECT * FROM customers WHERE email LIKE '%@example.com' ORDER BY last_name;
+
+\c analytics
+\echo 'Generating I/O activity in analytics database...'
+SELECT COUNT(*) FROM sales_data WHERE sale_date >= CURRENT_DATE - INTERVAL '7 days';
+SELECT COUNT(*) FROM web_analytics WHERE visit_date >= CURRENT_DATE - INTERVAL '30 days';
+SELECT AVG(revenue) FROM sales_data WHERE sale_date >= CURRENT_DATE - INTERVAL '90 days';
+
+\c inventory
+\echo 'Generating I/O activity in inventory database...'
+SELECT COUNT(*) FROM warehouse_items wi JOIN warehouses w ON wi.warehouse_id = w.id;
+SELECT COUNT(*) FROM stock_movements WHERE movement_date >= CURRENT_DATE - INTERVAL '7 days';
+SELECT * FROM suppliers ORDER BY name;
+
+\c hr_system
+\echo 'Generating I/O activity in hr_system database...'
+SELECT COUNT(*) FROM employees e JOIN departments d ON e.department_id = d.id;
+SELECT COUNT(*) FROM payroll_records WHERE pay_date >= CURRENT_DATE - INTERVAL '30 days';
+SELECT * FROM employees WHERE hire_date >= CURRENT_DATE - INTERVAL '365 days';
+
+-- Create some user-defined functions for function stats
+\c ecommerce
+\echo 'Creating user-defined functions for testing...'
+CREATE OR REPLACE FUNCTION calculate_order_total(order_id INTEGER)
+RETURNS DECIMAL(10,2) AS $$
+DECLARE
+    total DECIMAL(10,2);
+BEGIN
+    SELECT SUM(quantity * unit_price) INTO total
+    FROM order_items 
+    WHERE order_items.order_id = $1;
+    RETURN COALESCE(total, 0);
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION get_customer_order_count(customer_id INTEGER)
+RETURNS INTEGER AS $$
+DECLARE
+    order_count INTEGER;
+BEGIN
+    SELECT COUNT(*) INTO order_count
+    FROM orders
+    WHERE orders.customer_id = $1;
+    RETURN COALESCE(order_count, 0);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Execute functions multiple times to generate statistics
+\echo 'Executing functions to generate statistics...'
+SELECT calculate_order_total(id) FROM orders LIMIT 20;
+SELECT get_customer_order_count(id) FROM customers LIMIT 15;
+SELECT calculate_order_total(id) FROM orders WHERE id BETWEEN 1 AND 10;
+SELECT get_customer_order_count(id) FROM customers WHERE id BETWEEN 1 AND 5;
+
+-- Force statistics collection
+SELECT pg_stat_reset();
+
+-- Run more queries to regenerate fresh statistics
+\c ecommerce
+SELECT COUNT(*) FROM products WHERE price > 100;
+SELECT COUNT(*) FROM orders WHERE status = 'completed';
+VACUUM ANALYZE products;
+VACUUM ANALYZE orders;
+
+\c analytics
+SELECT COUNT(*) FROM sales_data;
+VACUUM ANALYZE sales_data;
+
+\c inventory  
+SELECT COUNT(*) FROM warehouse_items;
+VACUUM ANALYZE warehouse_items;
+
+\c hr_system
+SELECT COUNT(*) FROM employees;
+VACUUM ANALYZE employees;
+
+-- Re-execute functions after reset
+\c ecommerce
+SELECT calculate_order_total(id) FROM orders LIMIT 5;
+SELECT get_customer_order_count(id) FROM customers LIMIT 5;
+
+\echo ''
+\echo 'Statistics data generation completed!'
+\echo 'The following new MCP tools should now return data:'
+\echo '  - get_database_stats() - Database performance metrics'
+\echo '  - get_bgwriter_stats() - Background writer statistics' 
+\echo '  - get_all_tables_stats() - Comprehensive table statistics'
+\echo '  - get_user_functions_stats() - User-defined function performance'
+\echo '  - get_table_io_stats() - Table I/O performance statistics'
+\echo '  - get_index_io_stats() - Index I/O performance statistics'
+\echo '  - get_database_conflicts_stats() - Replication conflict statistics'
+\echo ''

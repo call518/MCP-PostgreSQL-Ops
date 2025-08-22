@@ -216,6 +216,32 @@ Then restart PostgreSQL and run the CREATE EXTENSION commands above.
 - Network access to PostgreSQL server
 - Read permissions on system catalogs
 
+### Required PostgreSQL Configuration
+
+**⚠️ Statistics Collection Settings**:
+Some MCP tools require specific PostgreSQL configuration parameters to collect statistics. Add the following to your `postgresql.conf`:
+
+**Tools affected by these settings**:
+- **get_user_functions_stats**: Requires `track_functions = pl` or `track_functions = all`
+- **get_table_io_stats** & **get_index_io_stats**: More accurate timing with `track_io_timing = on`
+- **get_database_stats**: Enhanced I/O timing with `track_io_timing = on`
+
+**After modifying postgresql.conf**:
+1. Restart PostgreSQL server
+2. Verify settings: `SHOW track_functions;` and `SHOW track_io_timing;`
+
+```ini
+# Basic statistics collection (usually enabled by default)
+track_activities = on
+track_counts = on
+
+# Required for function statistics tools
+track_functions = pl    # Enables PL/pgSQL function statistics collection
+
+# Optional but recommended for accurate I/O timing
+track_io_timing = on    # Enables I/O timing statistics collection
+```
+
 ---
 
 ## Example Queries
@@ -279,14 +305,17 @@ Then restart PostgreSQL and run the CREATE EXTENSION commands above.
   - "Analyze user-defined function performance"
   - "Show function call counts and execution times"
   - "Identify performance bottlenecks in custom functions"
+  - ⚠️ **Requires**: `track_functions = pl` in postgresql.conf
 - **get_table_io_stats**
   - "Analyze table I/O performance and buffer hit ratios"
   - "Identify tables with poor buffer cache performance"
   - "Monitor TOAST table I/O statistics"
+  - 💡 **Enhanced with**: `track_io_timing = on` for accurate timing
 - **get_index_io_stats**
   - "Show index I/O performance and buffer efficiency"
   - "Identify indexes causing excessive disk I/O"
   - "Monitor index cache-friendliness patterns"
+  - 💡 **Enhanced with**: `track_io_timing = on` for accurate timing
 - **get_database_conflicts_stats**
   - "Check replication conflicts on standby servers"
   - "Analyze conflict types and resolution statistics"
@@ -327,6 +356,20 @@ Then restart PostgreSQL and run the CREATE EXTENSION commands above.
    CREATE EXTENSION pg_stat_monitor;
    ```
 3. Restart PostgreSQL if needed
+
+### Configuration Issues
+1. **"No data found" for function statistics**: Check `track_functions` setting
+   ```sql
+   SHOW track_functions;  -- Should be 'pl' or 'all'
+   ```
+2. **Missing I/O timing data**: Enable timing collection
+   ```sql
+   SHOW track_io_timing;  -- Should be 'on'
+   ```
+3. **Apply configuration changes**:
+   - Add settings to `postgresql.conf`
+   - Restart PostgreSQL server
+   - Generate some database activity to populate statistics
 
 ### Performance Issues
 1. Use `limit` parameters to reduce result size
