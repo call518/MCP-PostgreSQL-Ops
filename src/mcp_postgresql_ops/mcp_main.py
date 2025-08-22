@@ -32,6 +32,11 @@ from .functions import (
     parse_prompt_sections,
     POSTGRES_CONFIG
 )
+from .version_compat import (
+    get_postgresql_version,
+    check_feature_availability,
+    VersionAwareQueries
+)
 
 # =============================================================================
 # Logging configuration
@@ -429,6 +434,7 @@ async def get_server_info() -> str:
     try:
         # Retrieve server version
         version = await get_server_version()
+        pg_version = await get_postgresql_version()
         
         # Connection information (with password masking)
         conn_info = sanitize_connection_info()
@@ -437,18 +443,48 @@ async def get_server_info() -> str:
         pg_stat_statements_exists = await check_extension_exists("pg_stat_statements")
         pg_stat_monitor_exists = await check_extension_exists("pg_stat_monitor")
         
+        # Version compatibility features
+        features = {
+            'Modern Version (12+)': pg_version.is_modern,
+            'Checkpointer Split (15+)': pg_version.has_checkpointer_split,
+            'pg_stat_io View (16+)': pg_version.has_pg_stat_io,
+            'Enhanced WAL Receiver (16+)': pg_version.has_enhanced_wal_receiver,
+            'Replication Slot Stats (14+)': pg_version.has_replication_slot_stats,
+            'Parallel Leader Tracking (14+)': pg_version.has_parallel_leader_tracking,
+        }
+        
         result = []
         result.append("=== PostgreSQL Server Information ===\n")
         result.append(f"Version: {version}")
+        result.append(f"Parsed Version: PostgreSQL {pg_version}")
         result.append(f"Host: {conn_info['host']}")
         result.append(f"Port: {conn_info['port']}")
         result.append(f"Database: {conn_info['database']}")
         result.append(f"User: {conn_info['user']}")
         result.append("")
+        
         result.append("=== Extension Status ===")
         result.append(f"pg_stat_statements: {'✓ Installed' if pg_stat_statements_exists else '✗ Not installed'}")
         result.append(f"pg_stat_monitor: {'✓ Installed' if pg_stat_monitor_exists else '✗ Not installed'}")
+        result.append("")
         
+        result.append("=== Version Compatibility Features ===")
+        for feature, available in features.items():
+            status = "✓ Available" if available else "✗ Not Available"
+            result.append(f"{feature}: {status}")
+        result.append("")
+        
+        # Add compatibility summary
+        if pg_version.is_modern:
+            if pg_version >= 16:
+                result.append("🚀 Excellent: All MCP tools fully supported with latest features!")
+            elif pg_version >= 14:
+                result.append("✅ Great: Most advanced features available, consider upgrading to PG16+ for pg_stat_io")
+            else:
+                result.append("✅ Good: Core features supported, upgrade to PG14+ recommended for enhanced monitoring")
+        else:
+            result.append("⚠️  Limited: PostgreSQL 12+ required for full MCP tool support")
+            
         return "\n".join(result)
         
     except Exception as e:
@@ -1163,13 +1199,14 @@ async def get_database_stats() -> str:
 @mcp.tool()
 async def get_bgwriter_stats() -> str:
     """
-    [Tool Purpose]: Analyze background writer and checkpoint performance statistics
+    [Tool Purpose]: Analyze background writer and checkpoint performance statistics with version compatibility
     
     [Exact Functionality]:
     - Show checkpoint execution statistics (timed vs requested)
     - Display checkpoint timing information (write and sync times)
     - Provide buffer writing statistics by different processes
     - Analyze background writer performance and efficiency
+    - Automatically adapts to PostgreSQL version (15+ uses separate checkpointer view)
     
     [Required Use Cases]:
     - When user requests "checkpoint stats", "bgwriter performance", "buffer stats", etc.
@@ -1183,43 +1220,242 @@ async def get_bgwriter_stats() -> str:
     - Requests for statistics reset
     
     Returns:
-        Background writer and checkpoint performance statistics
+        Background writer and checkpoint performance statistics with version-appropriate data
     """
     try:
-        query = """
-        SELECT 
-            checkpoints_timed as scheduled_checkpoints,
-            checkpoints_req as requested_checkpoints,
-            checkpoints_timed + checkpoints_req as total_checkpoints,
-            CASE 
-                WHEN (checkpoints_timed + checkpoints_req) > 0 THEN
-                    ROUND((checkpoints_timed::numeric / (checkpoints_timed + checkpoints_req)) * 100, 2)
-                ELSE 0
-            END as scheduled_checkpoint_ratio_percent,
-            ROUND(checkpoint_write_time::numeric, 2) as checkpoint_write_time_ms,
-            ROUND(checkpoint_sync_time::numeric, 2) as checkpoint_sync_time_ms,
-            ROUND((checkpoint_write_time + checkpoint_sync_time)::numeric, 2) as total_checkpoint_time_ms,
-            buffers_checkpoint as buffers_written_by_checkpoints,
-            buffers_clean as buffers_written_by_bgwriter,
-            buffers_backend as buffers_written_by_backend,
-            buffers_backend_fsync as backend_fsync_calls,
-            buffers_alloc as buffers_allocated,
-            maxwritten_clean as bgwriter_maxwritten_stops,
-            CASE 
-                WHEN buffers_clean > 0 AND maxwritten_clean > 0 THEN
-                    ROUND((maxwritten_clean::numeric / buffers_clean) * 100, 2)
-                ELSE 0
-            END as bgwriter_stop_ratio_percent,
-            stats_reset as stats_reset_time
-        FROM pg_stat_bgwriter
-        """
+        pg_version = await get_postgresql_version()
+        
+        if pg_version.has_checkpointer_split:
+            # PostgreSQL 15+: Use separate views
+            query = """
+            SELECT 
+                'Checkpointer (PG15+)' as component,
+                num_timed as scheduled_checkpoints,
+                num_requested as requested_checkpoints,
+                num_timed + num_requested as total_checkpoints,
+                CASE 
+                    WHEN (num_timed + num_requested) > 0 THEN
+                        ROUND((num_timed::numeric / (num_timed + num_requested)) * 100, 2)
+                    ELSE 0
+                END as scheduled_checkpoint_ratio_percent,
+                ROUND(write_time::numeric, 2) as checkpoint_write_time_ms,
+                ROUND(sync_time::numeric, 2) as checkpoint_sync_time_ms,
+                ROUND((write_time + sync_time)::numeric, 2) as total_checkpoint_time_ms,
+                buffers_written as buffers_written_by_checkpoints,
+                0 as buffers_written_by_bgwriter,
+                0 as buffers_written_by_backend,
+                0 as backend_fsync_calls,
+                0 as buffers_allocated,
+                0 as bgwriter_maxwritten_stops,
+                0 as bgwriter_stop_ratio_percent,
+                stats_reset as stats_reset_time
+            FROM pg_stat_checkpointer
+            UNION ALL
+            SELECT 
+                'Background Writer (PG15+)' as component,
+                0 as scheduled_checkpoints,
+                0 as requested_checkpoints,
+                0 as total_checkpoints,
+                0 as scheduled_checkpoint_ratio_percent,
+                0 as checkpoint_write_time_ms,
+                0 as checkpoint_sync_time_ms,
+                0 as total_checkpoint_time_ms,
+                0 as buffers_written_by_checkpoints,
+                buffers_clean as buffers_written_by_bgwriter,
+                0 as buffers_written_by_backend,
+                0 as backend_fsync_calls,
+                buffers_alloc as buffers_allocated,
+                maxwritten_clean as bgwriter_maxwritten_stops,
+                CASE 
+                    WHEN buffers_clean > 0 AND maxwritten_clean > 0 THEN
+                        ROUND((maxwritten_clean::numeric / buffers_clean) * 100, 2)
+                    ELSE 0
+                END as bgwriter_stop_ratio_percent,
+                stats_reset as stats_reset_time
+            FROM pg_stat_bgwriter
+            """
+            explanation = f"PostgreSQL {pg_version} detected - using separate checkpointer and bgwriter views for detailed statistics"
+        else:
+            # PostgreSQL 12-14: Use combined bgwriter view
+            query = """
+            SELECT 
+                'Combined BGWriter (PG12-14)' as component,
+                checkpoints_timed as scheduled_checkpoints,
+                checkpoints_req as requested_checkpoints,
+                checkpoints_timed + checkpoints_req as total_checkpoints,
+                CASE 
+                    WHEN (checkpoints_timed + checkpoints_req) > 0 THEN
+                        ROUND((checkpoints_timed::numeric / (checkpoints_timed + checkpoints_req)) * 100, 2)
+                    ELSE 0
+                END as scheduled_checkpoint_ratio_percent,
+                ROUND(checkpoint_write_time::numeric, 2) as checkpoint_write_time_ms,
+                ROUND(checkpoint_sync_time::numeric, 2) as checkpoint_sync_time_ms,
+                ROUND((checkpoint_write_time + checkpoint_sync_time)::numeric, 2) as total_checkpoint_time_ms,
+                buffers_checkpoint as buffers_written_by_checkpoints,
+                buffers_clean as buffers_written_by_bgwriter,
+                buffers_backend as buffers_written_by_backend,
+                buffers_backend_fsync as backend_fsync_calls,
+                buffers_alloc as buffers_allocated,
+                maxwritten_clean as bgwriter_maxwritten_stops,
+                CASE 
+                    WHEN buffers_clean > 0 AND maxwritten_clean > 0 THEN
+                        ROUND((maxwritten_clean::numeric / buffers_clean) * 100, 2)
+                    ELSE 0
+                END as bgwriter_stop_ratio_percent,
+                stats_reset as stats_reset_time
+            FROM pg_stat_bgwriter
+            """
+            explanation = f"PostgreSQL {pg_version} detected - using combined bgwriter view (includes checkpointer stats)"
         
         stats = await execute_query(query)
-        return format_table_data(stats, "Background Writer Statistics")
+        
+        result = []
+        result.append("=== Background Writer & Checkpointer Statistics ===\n")
+        result.append(explanation)
+        result.append("")
+        result.append(format_table_data(stats, "Background Process Performance"))
+        
+        if pg_version.has_checkpointer_split:
+            result.append("\nNote: PostgreSQL 15+ provides separate detailed statistics for checkpointer and background writer processes")
+        else:
+            result.append("\nNote: Upgrade to PostgreSQL 15+ for separate checkpointer and background writer statistics")
+        
+        return "\n".join(result)
         
     except Exception as e:
         logger.error(f"Failed to get bgwriter stats: {e}")
         return f"Error retrieving background writer statistics: {str(e)}"
+
+
+@mcp.tool()
+async def get_io_stats(limit: int = 20, database_name: str = None) -> str:
+    """
+    [Tool Purpose]: Analyze comprehensive I/O statistics across all database operations with version compatibility
+    
+    [Exact Functionality]:
+    - PostgreSQL 16+: Shows detailed I/O statistics from pg_stat_io (reads, writes, hits, timing)
+    - PostgreSQL 12-15: Falls back to pg_statio_* views with basic I/O information
+    - Provides buffer cache efficiency analysis and I/O timing when available
+    - Identifies I/O patterns and performance bottlenecks
+    
+    [Required Use Cases]:
+    - When user requests "I/O stats", "I/O performance", "buffer cache analysis", etc.
+    - When analyzing storage performance and buffer efficiency
+    - When identifying I/O bottlenecks across different backend types
+    - When comparing I/O patterns between relation types
+    
+    [Strictly Prohibited Use Cases]:
+    - Requests for I/O configuration changes or buffer tuning
+    - Requests for storage or filesystem modifications
+    - Requests for I/O statistics reset
+    
+    Args:
+        limit: Maximum number of results to return (1-100, default 20)
+        database_name: Target database name (optional)
+    
+    Returns:
+        Comprehensive I/O statistics with version-appropriate detail level
+    """
+    try:
+        limit = max(1, min(limit, 100))
+        pg_version = await get_postgresql_version(database_name)
+        
+        if pg_version.has_pg_stat_io:
+            # PostgreSQL 16+: Use comprehensive pg_stat_io
+            query = f"""
+            SELECT 
+                backend_type,
+                object,
+                context,
+                reads,
+                ROUND(read_time::numeric, 2) as read_time_ms,
+                writes,
+                ROUND(write_time::numeric, 2) as write_time_ms,
+                extends,
+                ROUND(extend_time::numeric, 2) as extend_time_ms,
+                hits,
+                evictions,
+                reuses,
+                fsyncs,
+                ROUND(fsync_time::numeric, 2) as fsync_time_ms,
+                CASE 
+                    WHEN (reads + hits) > 0 THEN
+                        ROUND((hits::numeric / (reads + hits)) * 100, 2)
+                    ELSE 0
+                END as hit_ratio_percent
+            FROM pg_stat_io
+            WHERE reads > 0 OR writes > 0 OR hits > 0 OR extends > 0 OR fsyncs > 0
+            ORDER BY (reads + writes + extends) DESC
+            LIMIT {limit}
+            """
+            title = f"Comprehensive I/O Statistics (pg_stat_io - PostgreSQL {pg_version})"
+            explanation = "Detailed I/O statistics showing all backend types, contexts, and timing information"
+        else:
+            # PostgreSQL 12-15: Fall back to pg_statio_* views
+            query = f"""
+            SELECT 
+                'relation I/O (fallback)' as backend_type,
+                'heap+index+toast' as object,
+                'basic' as context,
+                (heap_blks_read + idx_blks_read + toast_blks_read + tidx_blks_read) as reads,
+                0 as read_time_ms,
+                0 as writes,
+                0 as write_time_ms,
+                0 as extends,
+                0 as extend_time_ms,
+                (heap_blks_hit + idx_blks_hit + toast_blks_hit + tidx_blks_hit) as hits,
+                0 as evictions,
+                0 as reuses,
+                0 as fsyncs,
+                0 as fsync_time_ms,
+                CASE 
+                    WHEN ((heap_blks_read + idx_blks_read + toast_blks_read + tidx_blks_read) + 
+                          (heap_blks_hit + idx_blks_hit + toast_blks_hit + tidx_blks_hit)) > 0 THEN
+                        ROUND(((heap_blks_hit + idx_blks_hit + toast_blks_hit + tidx_blks_hit)::numeric / 
+                               ((heap_blks_read + idx_blks_read + toast_blks_read + tidx_blks_read) +
+                                (heap_blks_hit + idx_blks_hit + toast_blks_hit + tidx_blks_hit))) * 100, 2)
+                    ELSE 0
+                END as hit_ratio_percent,
+                schemaname || '.' || relname as table_name
+            FROM pg_statio_all_tables
+            WHERE (heap_blks_read + idx_blks_read + toast_blks_read + tidx_blks_read +
+                   heap_blks_hit + idx_blks_hit + toast_blks_hit + tidx_blks_hit) > 0
+            ORDER BY ((heap_blks_read + idx_blks_read + toast_blks_read + tidx_blks_read) + 
+                     (heap_blks_hit + idx_blks_hit + toast_blks_hit + tidx_blks_hit)) DESC
+            LIMIT {limit}
+            """
+            title = f"Basic I/O Statistics (pg_statio_* fallback - PostgreSQL {pg_version})"
+            explanation = "Basic I/O statistics from pg_statio_* views - limited data available on this version"
+        
+        stats = await execute_query(query, database=database_name)
+        
+        if not stats:
+            return "No I/O statistics found"
+        
+        result = []
+        result.append("=== Database I/O Statistics ===\n")
+        result.append(explanation)
+        result.append("")
+        result.append(format_table_data(stats, title))
+        
+        # Add version-specific notes
+        if pg_version.has_pg_stat_io:
+            result.append(f"\n✅ PostgreSQL {pg_version} provides comprehensive I/O monitoring with timing details")
+            result.append("📊 Backend types: client backend, checkpointer, background writer, autovacuum, etc.")
+            result.append("🎯 Contexts: normal, vacuum, bulkread, bulkwrite operations")
+        else:
+            result.append(f"\n⚠️  PostgreSQL {pg_version} provides basic I/O statistics only")
+            result.append("🚀 Upgrade to PostgreSQL 16+ for comprehensive I/O monitoring with:")
+            result.append("   • Per-backend-type I/O statistics")
+            result.append("   • I/O timing information (when track_io_timing enabled)")
+            result.append("   • Context-aware I/O tracking (normal/vacuum/bulk operations)")
+            result.append("   • Buffer eviction and reuse statistics")
+        
+        return "\n".join(result)
+        
+    except Exception as e:
+        logger.error(f"Failed to get I/O stats: {e}")
+        return f"Error retrieving I/O statistics: {str(e)}"
 
 
 @mcp.tool()

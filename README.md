@@ -6,14 +6,15 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 
 ## Features
 
+- ✅ **Version Compatibility**: Automatic PostgreSQL version detection with adaptive functionality (12-18)
 - ✅ **PostgreSQL Monitoring**: Performance analysis based on pg_stat_statements and pg_stat_monitor
 - ✅ **Structure Exploration**: Database, table, and user listing
 - ✅ **Performance Analysis**: Slow query identification and index usage analysis
 - ✅ **Capacity Management**: Database and table size analysis
 - ✅ **Configuration Retrieval**: PostgreSQL configuration parameter verification
 - ✅ **Database Performance Statistics**: Comprehensive transaction, I/O, and buffer cache analysis
-- ✅ **I/O Performance Monitoring**: Table and index I/O statistics with buffer hit ratio analysis
-- ✅ **Background Process Monitoring**: Checkpoint and background writer performance analysis
+- ✅ **I/O Performance Monitoring**: Version-aware I/O statistics (comprehensive on PG16+, basic on PG12-15)
+- ✅ **Background Process Monitoring**: Version-aware checkpoint and background writer analysis (split on PG15+)
 - ✅ **Replication Monitoring**: Standby server conflict detection and replication lag analysis
 - ✅ **Function Performance Analysis**: User-defined function execution statistics
 - ✅ **Safe Read-Only**: All operations are read-only and safe
@@ -72,9 +73,19 @@ http://localhost:3003/
 
 ---
 
-### Compatibility Roadmap
+### Version Compatibility
 
-**Notice:** This MCP server has been optimized and tested with PostgreSQL 16+. While most tools work on earlier versions, some features may have compatibility issues due to column name changes between PostgreSQL versions. Full backward compatibility for older PostgreSQL versions is planned for future releases.
+**✅ Supported Versions:** PostgreSQL 12, 13, 14, 15, 16, 17, 18
+
+This MCP server automatically detects your PostgreSQL version and adapts its functionality accordingly:
+
+- **PostgreSQL 16+**: Full feature support including comprehensive I/O statistics (`pg_stat_io`)
+- **PostgreSQL 15+**: Enhanced background process monitoring with separate checkpointer stats
+- **PostgreSQL 14+**: Parallel query tracking and replication slot statistics
+- **PostgreSQL 13+**: Query ID support for performance correlation  
+- **PostgreSQL 12+**: Core functionality with all essential monitoring tools
+
+**🔄 Automatic Adaptation:** All tools work transparently across supported versions - no configuration needed!
 
 ---
 
@@ -390,6 +401,23 @@ SET track_io_timing = 'on';
   - "Check replication connections and lag status"
   - "Monitor replication slots and WAL receiver status"
 
+### 🚀 Version-Aware Tools (Auto-Adapting)
+
+- **get_io_stats** (New!)
+  - "Show comprehensive I/O statistics" (PostgreSQL 16+ provides detailed breakdown)
+  - "Analyze buffer cache efficiency and I/O timing"
+  - "Monitor I/O patterns by backend type and context"
+  - 📈 **PG16+**: Full pg_stat_io with timing, backend types, and contexts
+  - 📊 **PG12-15**: Basic pg_statio_* fallback with buffer hit ratios
+- **get_bgwriter_stats** (Enhanced!)
+  - "Show background writer and checkpoint performance"
+  - 📈 **PG15+**: Separate checkpointer and bgwriter statistics
+  - 📊 **PG12-14**: Combined bgwriter stats (includes checkpointer data)
+- **get_server_info** (Enhanced!)
+  - "Show server version and compatibility features"
+  - "Check what MCP tools are available on this PostgreSQL version"
+  - Displays feature availability matrix and upgrade recommendations
+
 ### 🟡 Extension-Dependent Tools
 
 - **get_pg_stat_statements_top_queries** (Requires `pg_stat_statements`)
@@ -456,6 +484,23 @@ SET track_io_timing = 'on';
 2. Run monitoring during off-peak hours
 3. Check database load before running analysis
 
+### Version Compatibility Issues
+1. **Run compatibility check first**:
+   ```bash
+   # Use get_server_info to check version and available features
+   ```
+
+2. **Understanding feature availability**:
+   - **PostgreSQL 16+**: All features available
+   - **PostgreSQL 15+**: Separate checkpointer stats
+   - **PostgreSQL 14+**: Parallel query tracking
+   - **PostgreSQL 12-13**: Core functionality only
+
+3. **If a tool shows "Not Available"**:
+   - Feature requires newer PostgreSQL version
+   - Tool will automatically use best available alternative
+   - Consider upgrading PostgreSQL for enhanced monitoring
+
 ---
 
 ## Development
@@ -469,9 +514,21 @@ SET track_io_timing = 'on';
 # Direct execution for debugging
 python -m src.mcp_postgresql_ops.mcp_main --log-level DEBUG
 
+# Test version compatibility (requires different PostgreSQL versions)
+# Modify POSTGRES_HOST in .env to point to different versions
+
 # Run tests (if you add any)
 uv run pytest
 ```
+
+### Version Compatibility Testing
+
+The MCP server automatically adapts to PostgreSQL versions 12-18. To test across versions:
+
+1. **Set up test databases**: Different PostgreSQL versions (12, 14, 15, 16+)
+2. **Run compatibility tests**: Point to each version and verify tool behavior
+3. **Check feature detection**: Ensure proper version detection and feature availability
+4. **Verify fallback behavior**: Confirm graceful degradation on older versions
 
 ---
 
