@@ -1,7 +1,7 @@
 services:
   open-webui:
-    image: ghcr.io/open-webui/open-webui:main
     container_name: mcp-postgresql-ops-open-webui
+    image: ghcr.io/open-webui/open-webui:main
     ports:
       - "${DOCKER_EXTERNAL_PORT_OPENWEBUI}:8080"
     environment:
@@ -13,8 +13,8 @@ services:
     restart: unless-stopped
 
   mcp-server:
-    image: call518/mcp-server-postgresql-ops:1.0.0
     container_name: mcp-postgresql-ops-mcp-server
+    image: call518/mcp-server-postgresql-ops:1.0.0
     ports:
       - "${DOCKER_EXTERNAL_PORT_MCP_SERVER}:8080" ### (WARNING) Must be same with port number of 'FASTMCP_PORT', 'mcp-config.json' and 'mcp-config.json.http'
     environment:
@@ -48,7 +48,7 @@ services:
 #------------------------------------------------------
 
   postgres:
-    container_name: postgresql-${PGSQL_VERSION}
+    container_name: mcp-postgresql-ops-postgresql-${PGSQL_VERSION}
     image: percona/percona-distribution-postgresql:${PGSQL_VERSION}
     environment:
       POSTGRES_USER: "${POSTGRES_USER}"
@@ -80,6 +80,7 @@ services:
     restart: unless-stopped
 
   postgres-init-extensions:
+    container_name: mcp-postgresql-ops-postgres-init-extensions
     image: percona/percona-distribution-postgresql:${PGSQL_VERSION}
     depends_on:
       - postgres
