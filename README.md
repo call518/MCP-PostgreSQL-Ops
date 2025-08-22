@@ -6,7 +6,7 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 
 ## Features
 
-- ✅ **Version Compatibility**: Transparent PostgreSQL version support (12-18) - automatically detects your PostgreSQL version and adapts functionality accordingly with zero configuration
+- ✅ **Version Compatibility**: Transparent PostgreSQL version support (12-17) - automatically detects your PostgreSQL version and adapts functionality accordingly with zero configuration
 - ✅ **PostgreSQL Monitoring**: Performance analysis based on pg_stat_statements and pg_stat_monitor with full backward compatibility
 - ✅ **Structure Exploration**: Database, table, and user listing with detailed schema information
 - ✅ **Schema Analysis**: Detailed table structure with columns, constraints, indexes, and relationships
@@ -90,44 +90,46 @@ http://localhost:3003/
 
 ### 🟢 **Extension-Independent Tools (No Extensions Required)**
 
-| Tool Name | Extensions Required | PG 12 | PG 13 | PG 14 | PG 15 | PG 16 | PG 17 | PG 18 | System Views/Tables Used |
-|-----------|-------------------|-------|-------|-------|-------|-------|-------|-------|--------------------------|
-| `get_server_info` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `version()`, `pg_extension` |
-| `get_active_connections` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_activity` |
-| `get_postgresql_config` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_settings` |
-| `get_database_list` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_database` |
-| `get_table_list` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `information_schema.tables` |
-| `get_table_schema_info` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `information_schema.*`, `pg_indexes` |
-| `get_database_schema_info` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_namespace`, `pg_class`, `pg_proc` |
-| `get_table_relationships` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `information_schema.*` (constraints) |
-| `get_user_list` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_user`, `pg_roles` |
-| `get_index_usage_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_indexes` |
-| `get_database_size_info` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_database_size()` |
-| `get_table_size_info` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_total_relation_size()` |
-| `get_vacuum_analyze_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
-| `get_lock_monitoring` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_locks`, `pg_stat_activity` |
-| `get_wal_status` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_current_wal_lsn()` |
-| `get_database_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_database` |
-| `get_table_io_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_statio_user_tables` |
-| `get_index_io_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_statio_user_indexes` |
-| `get_database_conflicts_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_database_conflicts` |
+| Tool Name | Extensions Required | PG 12 | PG 13 | PG 14 | PG 15 | PG 16 | PG 17 | System Views/Tables Used |
+|-----------|-------------------|-------|-------|-------|-------|-------|-------|--------------------------|
+| `get_server_info` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `version()`, `pg_extension` |
+| `get_active_connections` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_activity` |
+| `get_postgresql_config` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_settings` |
+| `get_database_list` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_database` |
+| `get_table_list` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `information_schema.tables` |
+| `get_table_schema_info` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `information_schema.*`, `pg_indexes` |
+| `get_database_schema_info` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_namespace`, `pg_class`, `pg_proc` |
+| `get_table_relationships` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `information_schema.*` (constraints) |
+| `get_user_list` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_user`, `pg_roles` |
+| `get_index_usage_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_indexes` |
+| `get_database_size_info` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_database_size()` |
+| `get_table_size_info` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_total_relation_size()` |
+| `get_vacuum_analyze_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
+| `get_lock_monitoring` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_locks`, `pg_stat_activity` |
+| `get_wal_status` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_current_wal_lsn()` |
+| `get_database_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_database` |
+| `get_table_io_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_statio_user_tables` |
+| `get_index_io_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_statio_user_indexes` |
+| `get_database_conflicts_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_database_conflicts` |
 
 ### 🚀 **Version-Aware Tools (Auto-Adapting)**
 
-| Tool Name | Extensions Required | PG 12 | PG 13 | PG 14 | PG 15 | PG 16 | PG 17 | PG 18 | Special Features |
-|-----------|-------------------|-------|-------|-------|-------|-------|-------|-------|------------------|
-| `get_io_stats` | ❌ None | ✅ Basic | ✅ Basic | ✅ Basic | ✅ Basic | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | PG16+: `pg_stat_io` support |
-| `get_bgwriter_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ **Special** | ✅ | ✅ | ✅ | PG15: Separate checkpointer stats |
-| `get_replication_status` | ❌ None | ✅ Compatible | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | PG13+: `wal_status`, `safe_wal_size`; PG16+: enhanced WAL receiver |
-| `get_all_tables_stats` | ❌ None | ✅ Compatible | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | PG13+: `n_ins_since_vacuum` tracking for vacuum maintenance optimization |
-| `get_user_functions_stats` | ⚙️ Config Required | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | Requires `track_functions=pl` |
+| Tool Name | Extensions Required | PG 12 | PG 13 | PG 14 | PG 15 | PG 16 | PG 17 | Special Features |
+|-----------|-------------------|-------|-------|-------|-------|-------|-------|------------------|
+| `get_io_stats` | ❌ None | ✅ Basic | ✅ Basic | ✅ Basic | ✅ Basic | ✅ **Enhanced** | ✅ **Enhanced** | PG16+: `pg_stat_io` support |
+| `get_bgwriter_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ **Special** | ✅ | ✅ | PG15: Separate checkpointer stats |
+| `get_replication_status` | ❌ None | ✅ Compatible | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | PG13+: `wal_status`, `safe_wal_size`; PG16+: enhanced WAL receiver |
+| `get_all_tables_stats` | ❌ None | ✅ Compatible | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | PG13+: `n_ins_since_vacuum` tracking for vacuum maintenance optimization |
+| `get_user_functions_stats` | ⚙️ Config Required | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | Requires `track_functions=pl` |
 
 ### 🟡 **Extension-Dependent Tools (Extensions Required)**
 
-| Tool Name | Required Extension | PG 12 | PG 13 | PG 14 | PG 15 | PG 16 | PG 17 | PG 18 | Notes |
-|-----------|-------------------|-------|-------|-------|-------|-------|-------|-------|-------|
-| `get_pg_stat_statements_top_queries` | `pg_stat_statements` | ✅ **Compatible** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | PG12: `total_time` → `total_exec_time`; PG13+: native `total_exec_time` |
-| `get_pg_stat_monitor_recent_queries` | `pg_stat_monitor` | ✅ **Compatible** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | PG12: `total_time` → `total_exec_time`; PG13+: native `total_exec_time` |
+| Tool Name | Required Extension | PG 12 | PG 13 | PG 14 | PG 15 | PG 16 | PG 17 | Notes |
+|-----------|-------------------|-------|-------|-------|-------|-------|-------|-------|
+| `get_pg_stat_statements_top_queries` | `pg_stat_statements` | ✅ **Compatible** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | PG12: `total_time` → `total_exec_time`; PG13+: native `total_exec_time` |
+| `get_pg_stat_monitor_recent_queries` | `pg_stat_monitor` | ✅ **Compatible** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | PG12: `total_time` → `total_exec_time`; PG13+: native `total_exec_time` |
+
+> **📋 PostgreSQL 18 Support**: PostgreSQL 18 is currently in beta phase and not yet supported by Percona Distribution PostgreSQL. Support will be added once PostgreSQL 18 reaches stable release and distribution support becomes available.
 
 ---
 
@@ -223,7 +225,7 @@ python -m src.mcp_postgresql_ops.mcp_main \
 | `FASTMCP_TYPE` | MCP transport protocol (stdio for CLI, streamable-http for web) | `stdio` | `streamable-http` |
 | `FASTMCP_HOST` | HTTP server bind address (0.0.0.0 for all interfaces) | `127.0.0.1` | `0.0.0.0` |
 | `FASTMCP_PORT` | HTTP server port for MCP communication | `8080` | `8080` |
-| `PGSQL_VERSION` | PostgreSQL major version for Docker image selection | `16` | `16` |
+| `PGSQL_VERSION` | PostgreSQL major version for Docker image selection | `17` | `17` |
 | `POSTGRES_HOST` | PostgreSQL server hostname or IP address | `127.0.0.1` | `host.docker.internal` |
 | `POSTGRES_PORT` | PostgreSQL server port number | `5432` | `15432` |
 | `POSTGRES_USER` | PostgreSQL connection username (needs read permissions) | `postgres` | `postgres` |
@@ -265,7 +267,7 @@ Then restart PostgreSQL and run the CREATE EXTENSION commands above.
 - All other tools work without these extensions.
 
 ### Minimum Requirements
-- PostgreSQL 12+ (tested with PostgreSQL 16)
+- PostgreSQL 12+ (tested with PostgreSQL 17)
 - Python 3.11
 - Network access to PostgreSQL server
 - Read permissions on system catalogs
@@ -318,7 +320,7 @@ For Docker or command-line PostgreSQL startup:
 # Docker example
 docker run -d \
   -e POSTGRES_PASSWORD=mypassword \
-  postgres:16 \
+  postgres:17 \
   -c track_activities=on \
   -c track_counts=on \
   -c track_functions=pl \
@@ -500,7 +502,7 @@ SET track_io_timing = 'on';
   - "Check what MCP tools are available on this PostgreSQL version"
   - "Displays feature availability matrix and upgrade recommendations"
 - **get_all_tables_stats** (Enhanced!)
-  - "Show comprehensive statistics for all tables" (version-compatible for PG12-18)
+  - "Show comprehensive statistics for all tables" (version-compatible for PG12-17)
   - "Include system tables with include_system=true parameter"
   - "Analyze table access patterns and maintenance needs"
   - 📈 **PG13+**: Tracks insertions since vacuum (`n_ins_since_vacuum`) for optimal maintenance scheduling
@@ -512,12 +514,12 @@ SET track_io_timing = 'on';
   - "Show top 10 slowest queries"
   - "Analyze slow queries in the inventory database"
   - 📈 **Version-Compatible**: PG12 uses `total_time` → `total_exec_time` mapping; PG13+ uses native columns
-  - 💡 **Cross-Version**: Automatically adapts query structure for PostgreSQL 12-18 compatibility
+  - 💡 **Cross-Version**: Automatically adapts query structure for PostgreSQL 12-17 compatibility
 - **get_pg_stat_monitor_recent_queries** (Optional, uses `pg_stat_monitor`)
   - "Show recent queries in real time"
   - "Monitor query activity for the last 5 minutes"
   - 📈 **Version-Compatible**: PG12 uses `total_time` → `total_exec_time` mapping; PG13+ uses native columns
-  - 💡 **Cross-Version**: Automatically adapts query structure for PostgreSQL 12-18 compatibility
+  - 💡 **Cross-Version**: Automatically adapts query structure for PostgreSQL 12-17 compatibility
 
 **💡 Pro Tip**: All tools support multi-database operations using the `database_name` parameter. This allows PostgreSQL superusers to analyze and monitor multiple databases from a single MCP server instance.
 
@@ -584,7 +586,7 @@ SET track_io_timing = 'on';
    ```
 
 2. **Understanding feature availability**:
-   - **PostgreSQL 16+**: All features available
+   - **PostgreSQL 16-17**: All features available
    - **PostgreSQL 15+**: Separate checkpointer stats
    - **PostgreSQL 14+**: Parallel query tracking
    - **PostgreSQL 12-13**: Core functionality only
@@ -616,9 +618,9 @@ uv run pytest
 
 ### Version Compatibility Testing
 
-The MCP server automatically adapts to PostgreSQL versions 12-18. To test across versions:
+The MCP server automatically adapts to PostgreSQL versions 12-17. To test across versions:
 
-1. **Set up test databases**: Different PostgreSQL versions (12, 14, 15, 16+)
+1. **Set up test databases**: Different PostgreSQL versions (12, 14, 15, 16, 17)
 2. **Run compatibility tests**: Point to each version and verify tool behavior
 3. **Check feature detection**: Ensure proper version detection and feature availability
 4. **Verify fallback behavior**: Confirm graceful degradation on older versions

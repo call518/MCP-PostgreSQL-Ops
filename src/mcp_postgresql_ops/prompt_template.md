@@ -6,7 +6,7 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 
 ## Key Features
 
-- ✅ **Version Compatibility**: Transparent PostgreSQL version support (12-18) - automatically detects and adapts functionality
+- ✅ **Version Compatibility**: Transparent PostgreSQL version support (12-17) - automatically detects and adapts functionality
 - ✅ **PostgreSQL Monitoring**: Performance analysis based on pg_stat_statements and pg_stat_monitor with backward compatibility
 - ✅ **Structure Exploration**: Database, table, and user listing with detailed schema information
 - ✅ **Schema Analysis**: Detailed table structure with columns, constraints, indexes, and relationships
@@ -416,14 +416,14 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 - "Find queries consuming most resources"
 - "Monitor query execution patterns"
 - "Show cache hit ratios for queries"
-- 📈 **Version-Compatible**: Automatically adapts for PostgreSQL 12-18 (PG12: total_time→total_exec_time mapping)
+- 📈 **Version-Compatible**: Automatically adapts for PostgreSQL 12-17 (PG12: total_time→total_exec_time mapping)
 
 **get_pg_stat_monitor_recent_queries** (Optional, uses `pg_stat_monitor`)
 - "Show recent queries in real time"
 - "Monitor query activity for the last 5 minutes"
 - "Monitor recent 15 queries with detailed stats"
 - "Track recent queries in ecommerce database"
-- 📈 **Version-Compatible**: Automatically adapts for PostgreSQL 12-18 (PG12: total_time→total_exec_time mapping)
+- 📈 **Version-Compatible**: Automatically adapts for PostgreSQL 12-17 (PG12: total_time→total_exec_time mapping)
 
 ### 🔧 Advanced Usage Examples
 
