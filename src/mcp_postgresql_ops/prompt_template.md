@@ -7,7 +7,8 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 ## Key Features
 
 - ✅ **PostgreSQL Monitoring**: Performance analysis based on pg_stat_statements and pg_stat_monitor
-- ✅ **Structure Exploration**: Database, table, and user listing
+- ✅ **Structure Exploration**: Database, table, and user listing with detailed schema information
+- ✅ **Schema Analysis**: Detailed table structure with columns, constraints, indexes, and relationships
 - ✅ **Performance Analysis**: Slow query identification and index usage analysis
 - ✅ **Capacity Management**: Database and table size analysis
 - ✅ **Configuration Retrieval**: PostgreSQL configuration parameter verification
@@ -22,31 +23,32 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 
 ### 🗄️ Structure Exploration
 4. **get_database_list**: All database list and size information
-5. **get_table_list**: Table list and size information
-6. **get_user_list**: Database user list and permissions
+5. **get_table_list**: Table list and size information  
+6. **get_table_schema_info**: Detailed table schema with columns, constraints, indexes, and relationships
+7. **get_user_list**: Database user list and permissions
 
 ### ⚡ Performance Monitoring
-7. **get_pg_stat_statements_top_queries**: Slow query analysis based on performance statistics
-8. **get_pg_stat_monitor_recent_queries**: Real-time query monitoring
-9. **get_index_usage_stats**: Index usage rate and efficiency analysis
+8. **get_pg_stat_statements_top_queries**: Slow query analysis based on performance statistics
+9. **get_pg_stat_monitor_recent_queries**: Real-time query monitoring
+10. **get_index_usage_stats**: Index usage rate and efficiency analysis
 
 ### 💾 Capacity Management
-10. **get_database_size_info**: Database capacity analysis
-11. **get_table_size_info**: Table and index size analysis
-12. **get_vacuum_analyze_stats**: VACUUM/ANALYZE status and history
+11. **get_database_size_info**: Database capacity analysis
+12. **get_table_size_info**: Table and index size analysis
+13. **get_vacuum_analyze_stats**: VACUUM/ANALYZE status and history
 
 ### 🔒 Lock & Deadlock Monitoring
-13. **get_lock_monitoring**: Current locks and blocked sessions analysis
+14. **get_lock_monitoring**: Current locks and blocked sessions analysis
 
 ### 📝 WAL & Replication Monitoring
-14. **get_wal_status**: WAL status and archiving information
-15. **get_replication_status**: Replication connections and lag monitoring
+15. **get_wal_status**: WAL status and archiving information
+16. **get_replication_status**: Replication connections and lag monitoring
 
 ### 📈 Database Performance Statistics
-16. **get_database_stats**: Comprehensive database-wide performance metrics
-17. **get_bgwriter_stats**: Background writer and checkpoint performance analysis
-18. **get_all_tables_stats**: Complete table statistics (including system tables)
-19. **get_user_functions_stats**: User-defined function performance analysis
+17. **get_database_stats**: Comprehensive database-wide performance metrics
+18. **get_bgwriter_stats**: Background writer and checkpoint performance analysis
+19. **get_all_tables_stats**: Complete table statistics (including system tables)
+20. **get_user_functions_stats**: User-defined function performance analysis
 
 ### 💿 I/O Performance Analysis
 20. **get_table_io_stats**: Table I/O statistics (disk reads vs buffer cache hits)
@@ -120,6 +122,7 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 #### Structure Exploration Tools
 - Use `get_database_list` to overview all databases
 - Use `get_table_list` to explore database structure
+- Use `get_table_schema_info` to analyze detailed table schema with columns, constraints, and indexes
 - Use `get_user_list` for user management overview
 
 #### Performance Analysis Tools
@@ -149,6 +152,7 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 
 ### Database/Schema Parameters
 - `get_table_list(database_name)`: Specify target database
+- `get_table_schema_info(database_name, table_name, schema_name)`: **database_name is REQUIRED** - analyze specific table or all tables in schema
 - `get_table_size_info(schema_name)`: Specify target schema
 - `get_postgresql_config(config_name, filter_text)`: Specify configuration parameter or search by keyword
   - `config_name`: Exact parameter name (optional)
@@ -244,6 +248,14 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 - "Show table sizes in the public schema"
 - "List all tables in the default database"
 - "Show tables in specific database"
+
+**get_table_schema_info**
+- "Show detailed schema information for the customers table in ecommerce database"
+- "Get column details and constraints for products table in ecommerce database"
+- "Analyze table structure with indexes and foreign keys for orders table in sales schema of ecommerce database"
+- "Show schema overview for all tables in public schema of inventory database"
+- "Get complete table structure including constraints and indexes for employees table in hr_system database"
+- "Display column information with data types and constraints for inventory_items table in inventory database"
 
 **get_user_list**
 - "List all database users and their roles"
@@ -372,7 +384,7 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 
 **get_pg_stat_statements_top_queries** (Requires `pg_stat_statements`)
 - "Show top 10 slowest queries"
-- "Analyze slow queries in the inventory database"
+- "Analyze slow queries in the ecommerce database"
 - "Show top 20 slowest queries"
 - "Find queries consuming most resources"
 - "Monitor query execution patterns"
@@ -382,7 +394,7 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 - "Show recent queries in real time"
 - "Monitor query activity for the last 5 minutes"
 - "Monitor recent 15 queries with detailed stats"
-- "Track recent queries in testdb database"
+- "Track recent queries in ecommerce database"
 
 ### 🔧 Advanced Usage Examples
 
@@ -391,6 +403,14 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 - "Monitor performance across multiple databases using database_name parameter"
 - "Analyze slow queries in specific database"
 - "Check index efficiency in specific database"
+
+**Schema Analysis**
+- "Show detailed schema for products table with all constraints in ecommerce database"
+- "Analyze table relationships and foreign key dependencies for sales.orders table in ecommerce database"
+- "Get complete column information with data types for inventory_items table in inventory database"
+- "Show all indexes and constraints for employees table in hr_system database"
+- "Review schema structure for all tables in sales schema of ecommerce database"
+- "Compare table schemas across different databases"
 
 **Performance Deep Dive**
 - "Find unused indexes"

@@ -639,6 +639,264 @@ async def get_user_list() -> str:
 
 
 @mcp.tool()
+async def get_table_schema_info(database_name: str, table_name: str = None, schema_name: str = "public") -> str:
+    """
+    [Tool Purpose]: Retrieve detailed schema information for specific table or all tables in a database
+    
+    [Exact Functionality]:
+    - Retrieve detailed column information including data types, constraints, defaults
+    - Display primary keys, foreign keys, indexes, and other table constraints
+    - Show table-level metadata such as size, row count estimates
+    
+    [Required Use Cases]:
+    - When user requests "table schema", "column info", "table structure", etc.
+    - When detailed table design information is needed for development
+    - When analyzing database structure and relationships
+    
+    [Strictly Prohibited Use Cases]:
+    - Requests for actual data inside tables
+    - Requests for table structure changes or DDL operations
+    - Requests for performance statistics (use other tools for that)
+    
+    Args:
+        database_name: Database name to query (REQUIRED - specify which database to analyze)
+        table_name: Specific table name to analyze (if None, shows all tables)
+        schema_name: Schema name to search in (default: "public")
+    
+    Returns:
+        Detailed table schema information including columns, constraints, and metadata
+    """
+    try:
+        if table_name:
+            # Specific table schema information
+            query = """
+            WITH table_info AS (
+                SELECT 
+                    t.table_schema,
+                    t.table_name,
+                    t.table_type,
+                    pg_size_pretty(pg_total_relation_size(quote_ident(t.table_schema)||'.'||quote_ident(t.table_name))) as table_size,
+                    pg_stat_get_tuples_inserted(c.oid) + pg_stat_get_tuples_updated(c.oid) + pg_stat_get_tuples_deleted(c.oid) as total_writes,
+                    pg_stat_get_live_tuples(c.oid) as estimated_rows
+                FROM information_schema.tables t
+                LEFT JOIN pg_class c ON c.relname = t.table_name
+                LEFT JOIN pg_namespace n ON n.nspname = t.table_schema AND n.oid = c.relnamespace
+                WHERE t.table_name = $1 AND t.table_schema = $2
+            ),
+            column_info AS (
+                SELECT 
+                    c.column_name,
+                    c.ordinal_position,
+                    c.data_type,
+                    c.character_maximum_length,
+                    c.numeric_precision,
+                    c.numeric_scale,
+                    c.is_nullable,
+                    c.column_default,
+                    CASE 
+                        WHEN pk.column_name IS NOT NULL THEN 'PRIMARY KEY'
+                        WHEN fk.column_name IS NOT NULL THEN 'FOREIGN KEY'
+                        ELSE ''
+                    END as key_type,
+                    fk.referenced_table_name,
+                    fk.referenced_column_name
+                FROM information_schema.columns c
+                LEFT JOIN (
+                    SELECT kcu.column_name, kcu.table_name, kcu.table_schema
+                    FROM information_schema.table_constraints tc
+                    JOIN information_schema.key_column_usage kcu 
+                        ON tc.constraint_name = kcu.constraint_name
+                        AND tc.table_schema = kcu.table_schema
+                    WHERE tc.constraint_type = 'PRIMARY KEY'
+                        AND tc.table_name = $3 AND tc.table_schema = $4
+                ) pk ON c.column_name = pk.column_name 
+                    AND c.table_name = pk.table_name 
+                    AND c.table_schema = pk.table_schema
+                LEFT JOIN (
+                    SELECT 
+                        kcu.column_name, 
+                        kcu.table_name, 
+                        kcu.table_schema,
+                        ccu.table_name AS referenced_table_name,
+                        ccu.column_name AS referenced_column_name
+                    FROM information_schema.table_constraints tc
+                    JOIN information_schema.key_column_usage kcu 
+                        ON tc.constraint_name = kcu.constraint_name
+                        AND tc.table_schema = kcu.table_schema
+                    JOIN information_schema.constraint_column_usage ccu 
+                        ON ccu.constraint_name = tc.constraint_name
+                        AND ccu.table_schema = tc.table_schema
+                    WHERE tc.constraint_type = 'FOREIGN KEY'
+                        AND tc.table_name = $5 AND tc.table_schema = $6
+                ) fk ON c.column_name = fk.column_name 
+                    AND c.table_name = fk.table_name 
+                    AND c.table_schema = fk.table_schema
+                WHERE c.table_name = $7 AND c.table_schema = $8
+                ORDER BY c.ordinal_position
+            ),
+            constraint_info AS (
+                SELECT 
+                    tc.constraint_name,
+                    tc.constraint_type,
+                    string_agg(kcu.column_name, ', ' ORDER BY kcu.ordinal_position) as columns,
+                    CASE 
+                        WHEN tc.constraint_type = 'FOREIGN KEY' THEN
+                            ccu.table_name || '(' || ccu.column_name || ')'
+                        ELSE ''
+                    END as references
+                FROM information_schema.table_constraints tc
+                LEFT JOIN information_schema.key_column_usage kcu 
+                    ON tc.constraint_name = kcu.constraint_name
+                    AND tc.table_schema = kcu.table_schema
+                LEFT JOIN information_schema.constraint_column_usage ccu 
+                    ON ccu.constraint_name = tc.constraint_name
+                    AND ccu.table_schema = tc.table_schema
+                WHERE tc.table_name = $9 AND tc.table_schema = $10
+                GROUP BY tc.constraint_name, tc.constraint_type, ccu.table_name, ccu.column_name
+                ORDER BY tc.constraint_type, tc.constraint_name
+            ),
+            index_info AS (
+                SELECT 
+                    i.indexname as index_name,
+                    i.indexdef as index_definition,
+                    CASE WHEN idx.indisunique THEN 'UNIQUE' ELSE 'REGULAR' END as index_type
+                FROM pg_indexes i
+                JOIN pg_class c ON c.relname = i.indexname
+                JOIN pg_index idx ON idx.indexrelid = c.oid
+                WHERE i.tablename = $11 AND i.schemaname = $12
+                ORDER BY i.indexname
+            )
+            SELECT * FROM (
+                SELECT 
+                    'TABLE_INFO' as section,
+                    ti.table_schema || '.' || ti.table_name as name,
+                    ti.table_type as type,
+                    ti.table_size as size,
+                    COALESCE(ti.estimated_rows::text, 'N/A') as rows,
+                    COALESCE(ti.total_writes::text, 'N/A') as writes,
+                    '' as extra1,
+                    '' as extra2,
+                    '' as extra3,
+                    1 as sort_order
+                FROM table_info ti
+                
+                UNION ALL
+                
+                SELECT 
+                    'COLUMN' as section,
+                    ci.column_name as name,
+                    ci.data_type as type,
+                    COALESCE(
+                        CASE 
+                            WHEN ci.character_maximum_length IS NOT NULL THEN '(' || ci.character_maximum_length || ')'
+                            WHEN ci.numeric_precision IS NOT NULL AND ci.numeric_scale IS NOT NULL THEN '(' || ci.numeric_precision || ',' || ci.numeric_scale || ')'
+                            WHEN ci.numeric_precision IS NOT NULL THEN '(' || ci.numeric_precision || ')'
+                            ELSE ''
+                        END, ''
+                    ) as size,
+                    ci.is_nullable as rows,
+                    COALESCE(ci.column_default, '') as writes,
+                    ci.key_type as extra1,
+                    COALESCE(ci.referenced_table_name, '') as extra2,
+                    COALESCE(ci.referenced_column_name, '') as extra3,
+                    2 as sort_order
+                FROM column_info ci
+                
+                UNION ALL
+                
+                SELECT 
+                    'CONSTRAINT' as section,
+                    co.constraint_name as name,
+                    co.constraint_type as type,
+                    co.columns as size,
+                    co.references as rows,
+                    '' as writes,
+                    '' as extra1,
+                    '' as extra2,
+                    '' as extra3,
+                    3 as sort_order
+                FROM constraint_info co
+                
+                UNION ALL
+                
+                SELECT 
+                    'INDEX' as section,
+                    idx.index_name as name,
+                    idx.index_type as type,
+                    idx.index_definition as size,
+                    '' as rows,
+                    '' as writes,
+                    '' as extra1,
+                    '' as extra2,
+                    '' as extra3,
+                    4 as sort_order
+                FROM index_info idx
+            ) combined_results
+            ORDER BY sort_order, name
+            """
+            
+            # Parameters: table_name, schema_name repeated 6 times for different subqueries
+            params = [table_name, schema_name] * 6  # 12 parameters total
+            results = await execute_query(query, params, database=database_name)
+            title = f"Schema Information for {schema_name}.{table_name}"
+            if database_name:
+                title += f" (Database: {database_name})"
+        else:
+            # All tables schema overview
+            query = """
+            WITH table_columns AS (
+                SELECT 
+                    t.table_schema,
+                    t.table_name,
+                    t.table_type,
+                    COUNT(c.column_name) as column_count,
+                    string_agg(
+                        CASE WHEN pk.column_name IS NOT NULL THEN c.column_name || ' (PK)' 
+                             ELSE c.column_name 
+                        END, 
+                        ', ' ORDER BY c.ordinal_position
+                    ) as columns,
+                    pg_size_pretty(COALESCE(pg_total_relation_size(quote_ident(t.table_schema)||'.'||quote_ident(t.table_name)), 0)) as table_size
+                FROM information_schema.tables t
+                LEFT JOIN information_schema.columns c 
+                    ON t.table_name = c.table_name AND t.table_schema = c.table_schema
+                LEFT JOIN (
+                    SELECT kcu.column_name, kcu.table_name, kcu.table_schema
+                    FROM information_schema.table_constraints tc
+                    JOIN information_schema.key_column_usage kcu 
+                        ON tc.constraint_name = kcu.constraint_name
+                        AND tc.table_schema = kcu.table_schema
+                    WHERE tc.constraint_type = 'PRIMARY KEY'
+                ) pk ON c.column_name = pk.column_name 
+                    AND c.table_name = pk.table_name 
+                    AND c.table_schema = pk.table_schema
+                WHERE t.table_schema = $1 
+                    AND t.table_type IN ('BASE TABLE', 'VIEW')
+                GROUP BY t.table_schema, t.table_name, t.table_type
+                ORDER BY t.table_schema, t.table_name
+            )
+            SELECT 
+                table_schema || '.' || table_name as table_name,
+                table_type,
+                column_count,
+                table_size,
+                LEFT(columns, 100) || CASE WHEN LENGTH(columns) > 100 THEN '...' ELSE '' END as columns_preview
+            FROM table_columns
+            """
+            
+            results = await execute_query(query, [schema_name], database=database_name)
+            title = f"Schema Overview for {schema_name} schema"
+            if database_name:
+                title += f" (Database: {database_name})"
+            
+        return format_table_data(results, title)
+        
+    except Exception as e:
+        logger.error(f"Failed to get table schema info: {e}")
+        return f"Error retrieving table schema information: {str(e)}"
+
+
+@mcp.tool()
 async def get_active_connections() -> str:
     """
     [Tool Purpose]: Retrieve all active connections and session information on current PostgreSQL server

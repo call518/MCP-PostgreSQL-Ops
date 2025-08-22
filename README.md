@@ -8,7 +8,8 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 
 - ✅ **Version Compatibility**: Transparent PostgreSQL version support (12-18) - automatically detects your PostgreSQL version and adapts functionality accordingly with zero configuration
 - ✅ **PostgreSQL Monitoring**: Performance analysis based on pg_stat_statements and pg_stat_monitor
-- ✅ **Structure Exploration**: Database, table, and user listing
+- ✅ **Structure Exploration**: Database, table, and user listing with detailed schema information
+- ✅ **Schema Analysis**: Detailed table structure with columns, constraints, indexes, and relationships
 - ✅ **Performance Analysis**: Slow query identification and index usage analysis
 - ✅ **Capacity Management**: Database and table size analysis
 - ✅ **Configuration Retrieval**: PostgreSQL configuration parameter verification
@@ -347,6 +348,13 @@ SET track_io_timing = 'on';
 - **get_table_list**
   - "List all tables in the ecommerce database"
   - "Show table sizes in the public schema"
+- **get_table_schema_info** (New!)
+  - "Show detailed schema information for the customers table in ecommerce database"
+  - "Get column details and constraints for products table in ecommerce database"
+  - "Analyze table structure with indexes and foreign keys for orders table in sales schema of ecommerce database"
+  - "Show schema overview for all tables in public schema of inventory database"
+  - 📋 **Features**: Column types, constraints, indexes, foreign keys, table metadata
+  - ⚠️ **Required**: `database_name` parameter must be specified
 - **get_user_list**
   - "List all database users and their roles"
   - "Show user permissions for a specific database"
