@@ -1868,6 +1868,681 @@ async def get_database_conflicts_stats(database_name: str = None) -> str:
 
 
 # =============================================================================
+# Database Schema Analysis Tools
+# =============================================================================
+
+@mcp.tool()
+async def get_table_schema(table_name: str, database_name: Optional[str] = None) -> str:
+    """
+    Get detailed schema information for a specific table.
+    
+    [Tool Purpose]
+    Provides comprehensive table structure information including columns, data types, 
+    constraints, indexes, and additional metadata for database documentation and analysis.
+    
+    [Exact Functionality] 
+    Retrieves detailed table schema including column definitions, data types, nullability,
+    default values, primary/foreign keys, check constraints, unique constraints, indexes,
+    table size, row counts, and comments using information_schema and pg_catalog queries.
+    
+    [Required Use Cases]
+    - "Show me the structure of the users table"
+    - "Get column details for the orders table"
+    - "What's the schema of table products?"
+    - "Describe the inventory table structure"
+    
+    [Strictly Prohibited Use Cases]
+    - Schema modification or DDL operations (CREATE, ALTER, DROP)
+    - Data manipulation queries (INSERT, UPDATE, DELETE) 
+    - Performance tuning recommendations
+    """
+    try:
+        if not table_name.strip():
+            return "Error: Table name cannot be empty"
+            
+        # Query for detailed table schema information
+        query = """
+        WITH table_info AS (
+            SELECT 
+                t.table_schema,
+                t.table_name,
+                t.table_type
+            FROM information_schema.tables t
+            WHERE t.table_name = $1
+              AND t.table_schema NOT IN ('information_schema', 'pg_catalog')
+              AND ($2::text IS NULL OR t.table_schema = $2::text)
+        ),
+        column_info AS (
+            SELECT 
+                c.ordinal_position,
+                c.column_name,
+                c.data_type,
+                c.character_maximum_length,
+                c.numeric_precision,
+                c.numeric_scale,
+                c.is_nullable,
+                c.column_default,
+                c.is_identity,
+                c.identity_generation,
+                col_description(pgc.oid, c.ordinal_position) as column_comment
+            FROM information_schema.columns c
+            JOIN pg_class pgc ON pgc.relname = c.table_name
+            JOIN pg_namespace pgn ON pgn.oid = pgc.relnamespace AND pgn.nspname = c.table_schema
+            WHERE c.table_name = $1
+              AND c.table_schema NOT IN ('information_schema', 'pg_catalog')
+              AND ($2::text IS NULL OR c.table_schema = $2::text)
+            ORDER BY c.ordinal_position
+        ),
+        constraint_info AS (
+            SELECT 
+                tc.constraint_name,
+                tc.constraint_type,
+                string_agg(kcu.column_name, ', ' ORDER BY kcu.ordinal_position) as columns,
+                rc.unique_constraint_name as references_constraint,
+                ccu.table_schema as foreign_table_schema,
+                ccu.table_name as foreign_table_name,
+                string_agg(ccu.column_name, ', ' ORDER BY kcu.ordinal_position) as foreign_columns,
+                cc.check_clause
+            FROM information_schema.table_constraints tc
+            LEFT JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
+            LEFT JOIN information_schema.referential_constraints rc ON tc.constraint_name = rc.constraint_name  
+            LEFT JOIN information_schema.constraint_column_usage ccu ON rc.unique_constraint_name = ccu.constraint_name
+            LEFT JOIN information_schema.check_constraints cc ON tc.constraint_name = cc.constraint_name
+            WHERE tc.table_name = $1
+              AND tc.table_schema NOT IN ('information_schema', 'pg_catalog')
+              AND ($2::text IS NULL OR tc.table_schema = $2::text)
+            GROUP BY tc.constraint_name, tc.constraint_type, rc.unique_constraint_name, 
+                     ccu.table_schema, ccu.table_name, cc.check_clause
+        ),
+        index_info AS (
+            SELECT 
+                i.relname as index_name,
+                ix.indisprimary as is_primary,
+                ix.indisunique as is_unique,
+                string_agg(a.attname, ', ' ORDER BY array_position(ix.indkey, a.attnum)) as columns,
+                pg_size_pretty(pg_relation_size(i.oid)) as index_size
+            FROM pg_class t
+            JOIN pg_namespace n ON n.oid = t.relnamespace
+            JOIN pg_index ix ON t.oid = ix.indrelid
+            JOIN pg_class i ON i.oid = ix.indexrelid
+            JOIN pg_attribute a ON t.oid = a.attrelid AND a.attnum = ANY(ix.indkey)
+            WHERE t.relname = $1
+              AND n.nspname NOT IN ('information_schema', 'pg_catalog')
+              AND ($2::text IS NULL OR n.nspname = $2::text)
+            GROUP BY i.relname, ix.indisprimary, ix.indisunique, i.oid
+        ),
+        table_stats AS (
+            SELECT 
+                schemaname,
+                tablename,
+                n_tup_ins as inserts,
+                n_tup_upd as updates,
+                n_tup_del as deletes,
+                n_live_tup as live_tuples,
+                n_dead_tup as dead_tuples,
+                last_vacuum,
+                last_autovacuum,
+                last_analyze,
+                last_autoanalyze
+            FROM pg_stat_user_tables
+            WHERE relname = $1
+              AND ($2::text IS NULL OR schemaname = $2::text)
+        )
+        SELECT 
+            'TABLE_INFO' as section_type,
+            ti.table_schema as schema_name,
+            ti.table_name,
+            ti.table_type,
+            pg_size_pretty(pg_total_relation_size(ti.table_schema||'.'||ti.table_name)) as total_size,
+            pg_size_pretty(pg_relation_size(ti.table_schema||'.'||ti.table_name)) as table_size,
+            obj_description((ti.table_schema||'.'||ti.table_name)::regclass::oid) as table_comment,
+            NULL::text as detail1,
+            NULL::text as detail2,
+            NULL::text as detail3,
+            NULL::text as detail4
+        FROM table_info ti
+        
+        UNION ALL
+        
+        SELECT 
+            'COLUMN' as section_type,
+            c.ordinal_position::text,
+            c.column_name,
+            CASE 
+                WHEN c.character_maximum_length IS NOT NULL THEN 
+                    c.data_type || '(' || c.character_maximum_length || ')'
+                WHEN c.numeric_precision IS NOT NULL AND c.numeric_scale IS NOT NULL THEN 
+                    c.data_type || '(' || c.numeric_precision || ',' || c.numeric_scale || ')'
+                WHEN c.numeric_precision IS NOT NULL THEN 
+                    c.data_type || '(' || c.numeric_precision || ')'
+                ELSE c.data_type
+            END as data_type,
+            c.is_nullable,
+            COALESCE(c.column_default, '') as default_value,
+            CASE WHEN c.is_identity = 'YES' THEN 'IDENTITY (' || c.identity_generation || ')' ELSE '' END as identity_info,
+            COALESCE(c.column_comment, '') as comment,
+            NULL::text as detail4
+        FROM column_info c
+        
+        UNION ALL
+        
+        SELECT 
+            'CONSTRAINT' as section_type,
+            ci.constraint_name,
+            ci.constraint_type,
+            ci.columns,
+            COALESCE(ci.foreign_table_schema || '.' || ci.foreign_table_name, '') as reference_table,
+            COALESCE(ci.foreign_columns, '') as reference_columns,
+            COALESCE(ci.check_clause, '') as check_definition,
+            NULL::text as detail4
+        FROM constraint_info ci
+        
+        UNION ALL
+        
+        SELECT 
+            'INDEX' as section_type,
+            ii.index_name,
+            CASE 
+                WHEN ii.is_primary THEN 'PRIMARY KEY'
+                WHEN ii.is_unique THEN 'UNIQUE'
+                ELSE 'INDEX'
+            END as index_type,
+            ii.columns,
+            ii.index_size,
+            NULL::text as detail2,
+            NULL::text as detail3,
+            NULL::text as detail4
+        FROM index_info ii
+        
+        UNION ALL
+        
+        SELECT 
+            'STATISTICS' as section_type,
+            ts.inserts::text as inserts,
+            ts.updates::text as updates,
+            ts.deletes::text as deletes,
+            ts.live_tuples::text as live_rows,
+            ts.dead_tuples::text as dead_rows,
+            COALESCE(ts.last_analyze::text, 'Never') as last_analyze,
+            COALESCE(ts.last_vacuum::text, 'Never') as last_vacuum
+        FROM table_stats ts
+        """
+        
+        schema_name = None
+        if '.' in table_name:
+            schema_name, table_name = table_name.split('.', 1)
+        
+        results = await execute_query(query, table_name, schema_name, database=database_name)
+        
+        if not results:
+            return f"Table '{table_name}' not found or not accessible."
+        
+        # Format the results into sections
+        output_lines = []
+        table_info = None
+        columns = []
+        constraints = []
+        indexes = []
+        statistics = None
+        
+        for row in results:
+            if row['section_type'] == 'TABLE_INFO':
+                table_info = row
+            elif row['section_type'] == 'COLUMN':
+                columns.append(row)
+            elif row['section_type'] == 'CONSTRAINT':
+                constraints.append(row)
+            elif row['section_type'] == 'INDEX':
+                indexes.append(row)
+            elif row['section_type'] == 'STATISTICS':
+                statistics = row
+        
+        # Table Information Header
+        if table_info:
+            full_name = f"{table_info['schema_name']}.{table_info['table_name']}"
+            output_lines.append(f"Table Schema: {full_name}")
+            output_lines.append("=" * (14 + len(full_name)))
+            output_lines.append(f"Type: {table_info['table_type']}")
+            output_lines.append(f"Total Size: {table_info['total_size']}")
+            output_lines.append(f"Table Size: {table_info['table_size']}")
+            if table_info['table_comment']:
+                output_lines.append(f"Comment: {table_info['table_comment']}")
+            output_lines.append("")
+        
+        # Columns Section
+        if columns:
+            output_lines.append("Columns:")
+            output_lines.append("--------")
+            for col in sorted(columns, key=lambda x: int(x['schema_name'])):  # schema_name contains ordinal_position
+                identity_info = col['detail2'] if col['detail2'] else ''
+                comment = col['detail3'] if col['detail3'] else ''
+                
+                col_line = f"{col['table_name']:20} {col['table_type']:25} {col['data_type']:8}"
+                if col['default_value']:
+                    col_line += f" DEFAULT {col['default_value']}"
+                if identity_info:
+                    col_line += f" {identity_info}"
+                output_lines.append(col_line)
+                
+                if comment:
+                    output_lines.append(f"{'':20} -- {comment}")
+            output_lines.append("")
+        
+        # Constraints Section  
+        if constraints:
+            output_lines.append("Constraints:")
+            output_lines.append("-----------")
+            for const in constraints:
+                const_line = f"{const['schema_name']:25} {const['table_name']:15} ({const['table_type']})"
+                if const['data_type']:  # reference_table
+                    const_line += f" REFERENCES {const['data_type']}"
+                    if const['default_value']:  # reference_columns
+                        const_line += f"({const['default_value']})"
+                if const['identity_info']:  # check_definition
+                    const_line += f" CHECK {const['identity_info']}"
+                output_lines.append(const_line)
+            output_lines.append("")
+        
+        # Indexes Section
+        if indexes:
+            output_lines.append("Indexes:")
+            output_lines.append("--------")
+            for idx in indexes:
+                idx_line = f"{idx['schema_name']:25} {idx['table_name']:15} ({idx['table_type']}) Size: {idx['data_type']}"
+                output_lines.append(idx_line)
+            output_lines.append("")
+        
+        # Statistics Section
+        if statistics:
+            output_lines.append("Statistics:")
+            output_lines.append("-----------")
+            output_lines.append(f"Live Rows: {statistics['data_type']:>10}    Dead Rows: {statistics['default_value']:>10}")
+            output_lines.append(f"Inserts:   {statistics['schema_name']:>10}    Updates:   {statistics['table_name']:>10}    Deletes: {statistics['table_type']:>10}")
+            output_lines.append(f"Last Analyze: {statistics['identity_info']}")
+            output_lines.append(f"Last Vacuum:  {statistics['comment']}")
+        
+        return "\n".join(output_lines)
+        
+    except Exception as e:
+        logger.error(f"Failed to get table schema for {table_name}: {e}")
+        return f"Error retrieving table schema: {str(e)}"
+
+
+@mcp.tool()
+async def get_database_schema_overview(limit: int = 50, database_name: Optional[str] = None) -> str:
+    """
+    Get a comprehensive overview of database schema with tables and their relationships.
+    
+    [Tool Purpose]
+    Provides high-level database schema overview showing all tables, views, columns count,
+    sizes, relationships, and key constraints for database architecture understanding.
+    
+    [Exact Functionality]
+    Retrieves database-wide schema information including table/view counts, column statistics,
+    primary/foreign key relationships, table sizes, row counts, and constraint summaries
+    to provide a complete architectural view of the database structure.
+    
+    [Required Use Cases]
+    - "Show me the overall database schema"
+    - "Give me an overview of all tables and their relationships" 
+    - "What's the structure of this database?"
+    - "Show me the database architecture overview"
+    
+    [Strictly Prohibited Use Cases]
+    - Schema modification operations (CREATE, ALTER, DROP)
+    - Data manipulation queries (INSERT, UPDATE, DELETE)
+    - Performance optimization suggestions
+    """
+    try:
+        # Validate limit
+        limit = max(1, min(limit, 100))
+        
+        query = """
+        WITH table_info AS (
+            SELECT 
+                t.table_schema,
+                t.table_name,
+                t.table_type,
+                COUNT(c.column_name) as column_count
+            FROM information_schema.tables t
+            LEFT JOIN information_schema.columns c ON t.table_name = c.table_name 
+                AND t.table_schema = c.table_schema
+            WHERE t.table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+            GROUP BY t.table_schema, t.table_name, t.table_type
+        ),
+        table_sizes AS (
+            SELECT 
+                schemaname,
+                tablename,
+                pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as total_size,
+                pg_size_pretty(pg_relation_size(schemaname||'.'||tablename)) as table_size,
+                n_live_tup as row_count
+            FROM pg_stat_user_tables
+        ),
+        foreign_keys AS (
+            SELECT 
+                tc.table_schema,
+                tc.table_name,
+                COUNT(*) as fk_count,
+                string_agg(
+                    ccu.table_schema || '.' || ccu.table_name, 
+                    ', ' 
+                    ORDER BY ccu.table_name
+                ) as references_tables
+            FROM information_schema.table_constraints tc
+            JOIN information_schema.referential_constraints rc ON tc.constraint_name = rc.constraint_name
+            JOIN information_schema.constraint_column_usage ccu ON rc.unique_constraint_name = ccu.constraint_name
+            WHERE tc.constraint_type = 'FOREIGN KEY'
+                AND tc.table_schema NOT IN ('information_schema', 'pg_catalog')
+            GROUP BY tc.table_schema, tc.table_name
+        ),
+        primary_keys AS (
+            SELECT 
+                tc.table_schema,
+                tc.table_name,
+                string_agg(kcu.column_name, ', ' ORDER BY kcu.ordinal_position) as pk_columns
+            FROM information_schema.table_constraints tc
+            JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
+            WHERE tc.constraint_type = 'PRIMARY KEY'
+                AND tc.table_schema NOT IN ('information_schema', 'pg_catalog')
+            GROUP BY tc.table_schema, tc.table_name
+        )
+        SELECT 
+            ti.table_schema as schema_name,
+            ti.table_name,
+            ti.table_type,
+            ti.column_count,
+            COALESCE(ts.total_size, 'N/A') as total_size,
+            COALESCE(ts.row_count, 0) as row_count,
+            COALESCE(pk.pk_columns, 'None') as primary_key,
+            COALESCE(fk.fk_count, 0) as foreign_key_count,
+            COALESCE(fk.references_tables, 'None') as references
+        FROM table_info ti
+        LEFT JOIN table_sizes ts ON ti.table_schema = ts.schemaname AND ti.table_name = ts.tablename
+        LEFT JOIN foreign_keys fk ON ti.table_schema = fk.table_schema AND ti.table_name = fk.table_name  
+        LEFT JOIN primary_keys pk ON ti.table_schema = pk.table_schema AND ti.table_name = pk.table_name
+        ORDER BY 
+            ti.table_schema, 
+            CASE WHEN ti.table_type = 'BASE TABLE' THEN 1 ELSE 2 END,
+            COALESCE(ts.row_count, 0) DESC,
+            ti.table_name
+        LIMIT $1
+        """
+        
+        results = await execute_query(query, limit, database=database_name)
+        
+        if not results:
+            return "No tables found in the database."
+        
+        # Group results by schema
+        schemas = {}
+        for row in results:
+            schema = row['schema_name']
+            if schema not in schemas:
+                schemas[schema] = {'tables': [], 'views': []}
+            
+            if row['table_type'] == 'BASE TABLE':
+                schemas[schema]['tables'].append(row)
+            else:
+                schemas[schema]['views'].append(row)
+        
+        # Build output
+        output_lines = []
+        title = f"Database Schema Overview"
+        if database_name:
+            title += f" (Database: {database_name})"
+        title += f" - Showing up to {limit} objects"
+        
+        output_lines.append(title)
+        output_lines.append("=" * len(title))
+        output_lines.append("")
+        
+        # Summary statistics
+        total_tables = sum(len(s['tables']) for s in schemas.values())
+        total_views = sum(len(s['views']) for s in schemas.values())
+        total_schemas = len(schemas)
+        
+        output_lines.append("Summary:")
+        output_lines.append(f"  Schemas: {total_schemas}")
+        output_lines.append(f"  Tables:  {total_tables}")
+        output_lines.append(f"  Views:   {total_views}")
+        output_lines.append("")
+        
+        # Detailed schema breakdown
+        for schema_name in sorted(schemas.keys()):
+            schema_data = schemas[schema_name]
+            
+            output_lines.append(f"Schema: {schema_name}")
+            output_lines.append("-" * (8 + len(schema_name)))
+            
+            if schema_data['tables']:
+                output_lines.append("")
+                output_lines.append("Tables:")
+                output_lines.append(f"{'Name':<25} {'Columns':<8} {'Rows':<12} {'Size':<12} {'PK':<20} {'FK':<4}")
+                output_lines.append("-" * 95)
+                
+                for table in schema_data['tables']:
+                    fk_display = str(table['foreign_key_count']) if table['foreign_key_count'] > 0 else '-'
+                    pk_display = table['primary_key'][:18] + '..' if len(table['primary_key']) > 20 else table['primary_key']
+                    
+                    output_lines.append(
+                        f"{table['table_name']:<25} "
+                        f"{table['column_count']:<8} "
+                        f"{table['row_count']:<12,} "
+                        f"{table['total_size']:<12} "
+                        f"{pk_display:<20} "
+                        f"{fk_display:<4}"
+                    )
+                
+                output_lines.append("")
+            
+            if schema_data['views']:
+                output_lines.append("Views:")
+                output_lines.append(f"{'Name':<25} {'Columns':<8}")
+                output_lines.append("-" * 35)
+                
+                for view in schema_data['views']:
+                    output_lines.append(f"{view['table_name']:<25} {view['column_count']:<8}")
+                
+                output_lines.append("")
+        
+        # Relationship summary
+        relationship_lines = []
+        for schema_name in sorted(schemas.keys()):
+            for table in schemas[schema_name]['tables']:
+                if table['references'] != 'None':
+                    full_table_name = f"{table['schema_name']}.{table['table_name']}"
+                    relationship_lines.append(f"  {full_table_name} → {table['references']}")
+        
+        if relationship_lines:
+            output_lines.append("Key Relationships:")
+            output_lines.append("------------------")
+            output_lines.extend(relationship_lines[:20])  # Limit to prevent overflow
+            if len(relationship_lines) > 20:
+                output_lines.append(f"  ... and {len(relationship_lines) - 20} more relationships")
+        
+        return "\n".join(output_lines)
+        
+    except Exception as e:
+        logger.error(f"Failed to get database schema overview: {e}")
+        return f"Error retrieving database schema overview: {str(e)}"
+
+
+@mcp.tool()
+async def get_table_relationships(table_name: Optional[str] = None, database_name: Optional[str] = None) -> str:
+    """
+    Analyze foreign key relationships between tables.
+    
+    [Tool Purpose]
+    Maps foreign key relationships showing parent-child table connections, referential 
+    integrity constraints, and dependency chains for database relationship analysis.
+    
+    [Exact Functionality]
+    Discovers and displays foreign key relationships including table dependencies,
+    referenced columns, constraint names, and relationship directions. Shows both
+    outgoing references (what this table references) and incoming references 
+    (what references this table).
+    
+    [Required Use Cases]  
+    - "Show me all foreign key relationships"
+    - "What tables does the orders table reference?"
+    - "Which tables reference the users table?"
+    - "Map the relationships for the products table"
+    
+    [Strictly Prohibited Use Cases]
+    - Creating or modifying foreign key constraints
+    - Data manipulation across related tables
+    - Suggesting relationship optimizations
+    """
+    try:
+        if table_name and not table_name.strip():
+            return "Error: Table name cannot be empty when specified"
+        
+        # Base query for foreign key relationships
+        base_query = """
+        WITH fk_relationships AS (
+            SELECT 
+                tc.constraint_name,
+                tc.table_schema as child_schema,
+                tc.table_name as child_table,
+                string_agg(kcu.column_name, ', ' ORDER BY kcu.ordinal_position) as child_columns,
+                ccu.table_schema as parent_schema,
+                ccu.table_name as parent_table,
+                string_agg(ccu.column_name, ', ' ORDER BY kcu.ordinal_position) as parent_columns,
+                rc.update_rule,
+                rc.delete_rule
+            FROM information_schema.table_constraints tc
+            JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
+            JOIN information_schema.referential_constraints rc ON tc.constraint_name = rc.constraint_name
+            JOIN information_schema.constraint_column_usage ccu ON rc.unique_constraint_name = ccu.constraint_name
+            WHERE tc.constraint_type = 'FOREIGN KEY'
+                AND tc.table_schema NOT IN ('information_schema', 'pg_catalog')
+        """
+        
+        if table_name:
+            # Filter for specific table (both as parent and child)
+            query = base_query + """
+                AND (tc.table_name = $1 OR ccu.table_name = $1)
+            GROUP BY tc.constraint_name, tc.table_schema, tc.table_name, 
+                     ccu.table_schema, ccu.table_name, rc.update_rule, rc.delete_rule
+            ORDER BY tc.table_schema, tc.table_name, ccu.table_schema, ccu.table_name
+            """
+            results = await execute_query(query, table_name.strip(), database=database_name)
+        else:
+            # Get all relationships
+            query = base_query + """
+            GROUP BY tc.constraint_name, tc.table_schema, tc.table_name, 
+                     ccu.table_schema, ccu.table_name, rc.update_rule, rc.delete_rule
+            ORDER BY tc.table_schema, tc.table_name, ccu.table_schema, ccu.table_name
+            LIMIT 100
+            """
+            results = await execute_query(query, database=database_name)
+        
+        if not results:
+            if table_name:
+                return f"No foreign key relationships found for table '{table_name}'"
+            else:
+                return "No foreign key relationships found in the database"
+        
+        # Build output
+        output_lines = []
+        title = "Foreign Key Relationships"
+        if table_name:
+            title += f" for table '{table_name}'"
+        if database_name:
+            title += f" (Database: {database_name})"
+        
+        output_lines.append(title)
+        output_lines.append("=" * len(title))
+        output_lines.append("")
+        
+        # Group relationships by child table
+        child_tables = {}
+        parent_tables = {}
+        
+        for row in results:
+            child_full = f"{row['child_schema']}.{row['child_table']}"
+            parent_full = f"{row['parent_schema']}.{row['parent_table']}"
+            
+            # Group by child table (outgoing relationships)
+            if child_full not in child_tables:
+                child_tables[child_full] = []
+            child_tables[child_full].append(row)
+            
+            # Group by parent table (incoming relationships)  
+            if parent_full not in parent_tables:
+                parent_tables[parent_full] = []
+            parent_tables[parent_full].append(row)
+        
+        if table_name:
+            # Show specific table relationships
+            table_key = None
+            for key in child_tables.keys():
+                if key.endswith(f".{table_name}") or key == table_name:
+                    table_key = key
+                    break
+            
+            # Outgoing relationships (this table references others)
+            if table_key and table_key in child_tables:
+                output_lines.append(f"Outgoing References ({table_key} → other tables):")
+                output_lines.append("-" * 50)
+                for rel in child_tables[table_key]:
+                    parent_full = f"{rel['parent_schema']}.{rel['parent_table']}"
+                    output_lines.append(f"  → {parent_full}")
+                    output_lines.append(f"    Columns: {rel['child_columns']} → {rel['parent_columns']}")
+                    output_lines.append(f"    Constraint: {rel['constraint_name']}")
+                    output_lines.append(f"    On Update: {rel['update_rule']}, On Delete: {rel['delete_rule']}")
+                    output_lines.append("")
+            
+            # Incoming relationships (other tables reference this table)
+            parent_key = None
+            for key in parent_tables.keys():
+                if key.endswith(f".{table_name}") or key == table_name:
+                    parent_key = key
+                    break
+                    
+            if parent_key and parent_key in parent_tables:
+                output_lines.append(f"Incoming References (other tables → {parent_key}):")
+                output_lines.append("-" * 50)
+                for rel in parent_tables[parent_key]:
+                    child_full = f"{rel['child_schema']}.{rel['child_table']}"
+                    output_lines.append(f"  ← {child_full}")
+                    output_lines.append(f"    Columns: {rel['child_columns']} → {rel['parent_columns']}")
+                    output_lines.append(f"    Constraint: {rel['constraint_name']}")
+                    output_lines.append(f"    On Update: {rel['update_rule']}, On Delete: {rel['delete_rule']}")
+                    output_lines.append("")
+        else:
+            # Show all relationships grouped by child table
+            output_lines.append("All Foreign Key Relationships:")
+            output_lines.append("-" * 30)
+            
+            for child_table in sorted(child_tables.keys()):
+                output_lines.append(f"\n{child_table}:")
+                for rel in child_tables[child_table]:
+                    parent_full = f"{rel['parent_schema']}.{rel['parent_table']}"
+                    output_lines.append(f"  → {parent_full}")
+                    output_lines.append(f"    {rel['child_columns']} → {rel['parent_columns']}")
+                    if rel['update_rule'] != 'NO ACTION' or rel['delete_rule'] != 'NO ACTION':
+                        output_lines.append(f"    (Update: {rel['update_rule']}, Delete: {rel['delete_rule']})")
+        
+        # Summary statistics
+        total_relationships = len(results)
+        unique_child_tables = len(child_tables)
+        unique_parent_tables = len(parent_tables)
+        
+        output_lines.append("\nSummary:")
+        output_lines.append(f"  Total Relationships: {total_relationships}")
+        output_lines.append(f"  Tables with FKs: {unique_child_tables}")
+        output_lines.append(f"  Tables Referenced: {unique_parent_tables}")
+        
+        return "\n".join(output_lines)
+        
+    except Exception as e:
+        logger.error(f"Failed to get table relationships: {e}")
+        return f"Error retrieving table relationships: {str(e)}"
+
+
+# =============================================================================
 # Prompt Template Tools
 # =============================================================================
 

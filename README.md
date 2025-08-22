@@ -410,6 +410,35 @@ SET track_io_timing = 'on';
   - "Check replication connections and lag status"
   - "Monitor replication slots and WAL receiver status"
 
+- **get_table_schema**
+  - "Show me the structure of the users table"
+  - "Get column details for the orders table"
+  - "What's the schema of table products?"
+  - "Describe the inventory table structure"
+  - "Show the schema for ecommerce.products"
+  - "Get detailed information about the reviews table with all constraints"
+  - "Analyze the categories table structure and indexes"
+- **get_database_schema_overview**
+  - "Show me the overall database schema"
+  - "Give me an overview of all tables and their relationships"
+  - "What's the structure of this database?"
+  - "Show me the database architecture overview"
+  - "List first 30 tables with their column counts and sizes"
+  - "Display the ecommerce database structure with relationship summary"
+  - "Get a comprehensive analysis of all tables and their sizes"
+- **get_table_relationships**
+  - "Show me all foreign key relationships"
+  - "What tables does the orders table reference?"
+  - "Which tables reference the users table?"
+  - "Map the relationships for the products table"
+  - "Show foreign key dependencies in the database"
+  - "What are the relationships for the reviews table?"
+  - "Which tables have relationships with customers?"
+  - "Show me the complete relationship map for ecommerce database"
+  - "Find all tables that reference the products table"
+  - "Show hierarchical relationships in the categories table"
+  - "Display all order-related table relationships"
+
 ### 🚀 Version-Aware Tools (Auto-Adapting)
 
 - **get_io_stats** (New!)

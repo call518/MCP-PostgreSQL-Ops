@@ -52,8 +52,13 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 20. **get_table_io_stats**: Table I/O statistics (disk reads vs buffer cache hits)
 21. **get_index_io_stats**: Index I/O performance and buffer efficiency analysis
 
-### 🔄 Replication Monitoring
-22. **get_database_conflicts_stats**: Query conflicts in standby/replica environments
+### � Database Schema Analysis
+22. **get_table_schema**: Detailed table structure with columns, constraints, and indexes
+23. **get_database_schema_overview**: Comprehensive database schema overview with relationships
+24. **get_table_relationships**: Foreign key relationships and dependency analysis
+
+### �🔄 Replication Monitoring
+25. **get_database_conflicts_stats**: Query conflicts in standby/replica environments
 
 ## Sample Prompts
 
@@ -94,6 +99,10 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 - "Show tables in public schema"
 - "Display user accounts and permissions"
 - "Explore database structure"
+- "Get detailed schema for the users table"
+- "Show me the overall database structure"
+- "Map foreign key relationships between tables"
+- "Analyze table relationships and dependencies"
 
 ### 📈 Advanced Monitoring
 - "Monitor active sessions and queries"
@@ -121,6 +130,11 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 - Use `get_database_list` to overview all databases
 - Use `get_table_list` to explore database structure
 - Use `get_user_list` for user management overview
+
+#### Database Schema Analysis Tools
+- Use `get_database_schema_overview` for high-level database architecture understanding
+- Use `get_table_schema` for detailed table structure analysis including columns, constraints, and indexes
+- Use `get_table_relationships` to map foreign key dependencies and referential integrity
 
 #### Performance Analysis Tools
 - Use `get_pg_stat_statements_top_queries` for query optimization
@@ -347,7 +361,47 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 - "Check replication conflicts on standby server"
 - "Monitor replication slots and WAL receiver status"
 
-### 🚀 Version-Aware Tools (Auto-Adapting)
+### � Database Schema Analysis Tools (New!)
+
+**get_table_schema**
+- "Show me the structure of the users table"
+- "Get column details for the orders table"
+- "What's the schema of table products?"
+- "Describe the inventory table structure"
+- "Show the schema for ecommerce.products"
+- "Get detailed table information including constraints and indexes"
+- "Analyze table column definitions and data types"
+- "Review table statistics and maintenance history"
+- "Get detailed information about the reviews table with all constraints"
+- "Analyze the categories table structure and indexes"
+
+**get_database_schema_overview**
+- "Show me the overall database schema"
+- "Give me an overview of all tables and their relationships"
+- "What's the structure of this database?"
+- "Show me the database architecture overview"
+- "List first 30 tables with their column counts and sizes"
+- "Display database schema with relationship summary"
+- "Get comprehensive database structure analysis"
+- "Display the ecommerce database structure with relationship summary"
+- "Get a comprehensive analysis of all tables and their sizes"
+
+**get_table_relationships**
+- "Show me all foreign key relationships"
+- "What tables does the orders table reference?"
+- "Which tables reference the users table?"
+- "Map the relationships for the products table"
+- "Show foreign key dependencies in the database"
+- "Analyze table relationship patterns"
+- "Display referential integrity constraints"
+- "What are the relationships for the reviews table?"
+- "Which tables have relationships with customers?"
+- "Show me the complete relationship map for ecommerce database"
+- "Find all tables that reference the products table"
+- "Show hierarchical relationships in the categories table"
+- "Display all order-related table relationships"
+
+### �🚀 Version-Aware Tools (Auto-Adapting)
 
 **get_io_stats** (New!)
 - "Show comprehensive I/O statistics" (PostgreSQL 16+ provides detailed breakdown)
