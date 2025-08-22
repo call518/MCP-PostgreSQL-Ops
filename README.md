@@ -156,10 +156,10 @@ http://localhost:3003/
 }
 ```
 
-**"Show PostgreSQL configuration parameter for shared_buffers"**
+"Show PostgreSQL configuration parameter for shared_buffers"
 ![Claude Desktop Integration](img/screenshot-003.png)
 
-**"Show all relationships for customers table in ecommerce database as a Mermaid diagram"**
+"Show all relationships for customers table in ecommerce database as a Mermaid diagram"
 ![Claude Desktop Integration](img/screenshot-claude-desktop-mermaid-diagram.png)
 
 (Optional) Run with Local Source:
