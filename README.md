@@ -111,6 +111,8 @@ http://localhost:3003/
 | `get_database_bloat_overview` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
 | `get_autovacuum_status` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
 | `get_autovacuum_activity` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
+| `get_running_vacuum_operations` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_activity` |
+| `get_vacuum_effectiveness_analysis` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
 | `get_table_bloat_analysis` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
 | `get_database_bloat_overview` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
 | `get_lock_monitoring` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_locks`, `pg_stat_activity` |
@@ -489,6 +491,22 @@ SET track_io_timing = 'on';
   - 📋 **Features**: Activity patterns, execution frequency, timing analysis
   - 🔧 **PostgreSQL 12-17**: Fully compatible, no extensions required
   - 💡 **Usage**: Historical autovacuum pattern analysis
+- **get_running_vacuum_operations**
+  - "Show currently running VACUUM and ANALYZE operations."
+  - "Monitor active maintenance operations and their progress."
+  - "Check if any VACUUM operations are blocking queries."
+  - "Find long-running maintenance operations."
+  - 📋 **Features**: Real-time operation status, elapsed time, impact level, process details
+  - 🔧 **PostgreSQL 12-17**: Fully compatible, no extensions required
+  - 💡 **Usage**: Real-time maintenance monitoring using pg_stat_activity
+- **get_vacuum_effectiveness_analysis**
+  - "Analyze VACUUM effectiveness and maintenance patterns."
+  - "Compare manual VACUUM vs autovacuum efficiency."
+  - "Find tables with suboptimal maintenance patterns."
+  - "Check VACUUM frequency vs table activity ratios."
+  - 📋 **Features**: Maintenance pattern analysis, effectiveness assessment, DML-to-VACUUM ratios
+  - 🔧 **PostgreSQL 12-17**: Fully compatible, no extensions required
+  - 💡 **Usage**: Strategic VACUUM analysis using existing statistics
 - **get_table_bloat_analysis**
   - "Analyze table bloat in the public schema."
   - "Show tables with high dead tuple ratios in ecommerce database."

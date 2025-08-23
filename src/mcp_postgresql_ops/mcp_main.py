@@ -2487,6 +2487,263 @@ async def get_autovacuum_activity(database_name: str = None, schema_name: str = 
 
 
 @mcp.tool()
+async def get_running_vacuum_operations(database_name: str = None) -> str:
+    """
+    [Tool Purpose]: Monitor currently running VACUUM and ANALYZE operations in real-time
+    
+    [Exact Functionality]:
+    - Show all currently active VACUUM, ANALYZE, and REINDEX operations
+    - Display operation progress, elapsed time, and process details
+    - Identify blocking or long-running maintenance operations
+    - Provide process IDs for operation tracking
+    
+    [Required Use Cases]:
+    - When user requests "running VACUUM", "active maintenance", "current VACUUM status", etc.
+    - When troubleshooting slow or stuck VACUUM operations
+    - When monitoring maintenance operation progress
+    - When identifying maintenance operations that may be affecting performance
+    
+    [Strictly Prohibited Use Cases]:
+    - Requests for terminating or controlling VACUUM processes
+    - Requests for starting new VACUUM operations
+    - Requests for changing VACUUM parameters or configuration
+    
+    Args:
+        database_name: Target database name (shows operations in all databases if omitted)
+    
+    Returns:
+        Real-time status of running VACUUM/ANALYZE operations with timing and progress information
+    """
+    try:
+        # Build WHERE clause for database filtering
+        where_conditions = ["state = 'active'", "pid <> pg_backend_pid()"]
+        params = []
+        
+        if database_name:
+            where_conditions.append("datname = $1")
+            params.append(database_name)
+        
+        where_filter = " AND ".join(where_conditions)
+        
+        query = f"""
+        SELECT 
+            pid,
+            datname as database_name,
+            usename as username,
+            client_addr,
+            state,
+            query_start,
+            now() - query_start as elapsed_time,
+            -- Extract operation type from query
+            CASE 
+                WHEN query ILIKE '%VACUUM ANALYZE%' THEN 'VACUUM ANALYZE'
+                WHEN query ILIKE '%VACUUM%' AND query ILIKE '%FREEZE%' THEN 'VACUUM FREEZE'
+                WHEN query ILIKE '%VACUUM%' AND query ILIKE '%FULL%' THEN 'VACUUM FULL'
+                WHEN query ILIKE '%VACUUM%' THEN 'VACUUM'
+                WHEN query ILIKE '%ANALYZE%' THEN 'ANALYZE'
+                WHEN query ILIKE '%REINDEX%' THEN 'REINDEX'
+                WHEN query ILIKE '%CLUSTER%' THEN 'CLUSTER'
+                ELSE 'OTHER MAINTENANCE'
+            END as operation_type,
+            -- Extract table name if possible
+            CASE 
+                WHEN query ~* 'vacuum.*?([a-zA-Z_][a-zA-Z0-9_]*\\.?[a-zA-Z_][a-zA-Z0-9_]*)' THEN
+                    substring(query from '[a-zA-Z_][a-zA-Z0-9_]*\\.?[a-zA-Z_][a-zA-Z0-9_]*')
+                WHEN query ~* 'analyze.*?([a-zA-Z_][a-zA-Z0-9_]*\\.?[a-zA-Z_][a-zA-Z0-9_]*)' THEN
+                    substring(query from '[a-zA-Z_][a-zA-Z0-9_]*\\.?[a-zA-Z_][a-zA-Z0-9_]*')
+                ELSE 'Multiple/Unknown'
+            END as target_table,
+            -- Performance impact indicators
+            CASE 
+                WHEN query ILIKE '%FULL%' THEN 'HIGH (Exclusive Lock)'
+                WHEN query ILIKE '%FREEZE%' THEN 'MEDIUM (Shared Lock)'
+                WHEN query ILIKE '%ANALYZE%' THEN 'LOW (Shared Lock)'
+                ELSE 'LOW-MEDIUM'
+            END as impact_level,
+            -- Show partial query (first 150 characters)
+            LEFT(query, 150) as operation_query
+        FROM pg_stat_activity 
+        WHERE {where_filter}
+          AND (query ILIKE '%VACUUM%' 
+               OR query ILIKE '%ANALYZE%' 
+               OR query ILIKE '%REINDEX%'
+               OR query ILIKE '%CLUSTER%')
+        ORDER BY query_start ASC
+        """
+        
+        running_ops = await execute_query(query, params, database=database_name)
+        
+        # Get actual database name for clarity
+        if database_name:
+            actual_db_name = database_name
+        else:
+            actual_db_name = "All Databases"
+        
+        if not running_ops:
+            return f"No VACUUM/ANALYZE operations currently running (Target: {actual_db_name})"
+        
+        # Always include database context in title
+        title = f"Currently Running VACUUM/ANALYZE Operations (Target: {actual_db_name})"
+            
+        return format_table_data(running_ops, title)
+        
+    except Exception as e:
+        logger.error(f"Failed to get running VACUUM operations: {e}")
+        return f"Error retrieving running VACUUM operations: {str(e)}"
+
+
+@mcp.tool()
+async def get_vacuum_effectiveness_analysis(database_name: str = None, schema_name: str = None, limit: int = 30) -> str:
+    """
+    [Tool Purpose]: Analyze VACUUM effectiveness and maintenance patterns using existing statistics
+    
+    [Exact Functionality]:
+    - Compare manual VACUUM vs autovacuum effectiveness patterns
+    - Analyze VACUUM frequency vs table activity (DML operations)
+    - Identify tables with suboptimal VACUUM patterns
+    - Calculate maintenance efficiency ratios without performance impact
+    - Show VACUUM coverage analysis across all tables
+    
+    [Required Use Cases]:
+    - When user requests "VACUUM effectiveness", "maintenance efficiency", "VACUUM analysis", etc.
+    - When planning manual VACUUM schedules or autovacuum tuning
+    - When identifying tables with poor maintenance patterns
+    - When analyzing overall database maintenance health
+    
+    [Strictly Prohibited Use Cases]:
+    - Requests for VACUUM execution or scheduling
+    - Requests for autovacuum configuration changes
+    - Requests for maintenance operation control
+    
+    Args:
+        database_name: Target database name (uses default database from POSTGRES_DB env var if omitted)
+        schema_name: Schema to analyze (analyzes all user schemas if omitted)
+        limit: Maximum number of tables to analyze (1-100, default: 30)
+    
+    Returns:
+        VACUUM effectiveness analysis with maintenance patterns and recommendations
+    """
+    try:
+        # Validate and constrain limit
+        limit = max(1, min(limit, 100))
+        
+        # Build WHERE clause based on parameters
+        where_conditions = []
+        params = []
+        param_index = 1
+        
+        # Schema filtering
+        if schema_name:
+            where_conditions.append(f"schemaname = ${param_index}")
+            params.append(schema_name)
+            param_index += 1
+        else:
+            # Exclude system schemas
+            where_conditions.append("schemaname NOT IN ('information_schema', 'pg_catalog')")
+            where_conditions.append("schemaname NOT LIKE 'pg_%'")
+        
+        # Add LIMIT parameter
+        params.append(limit)
+        
+        # Combine WHERE conditions
+        where_filter = "WHERE " + " AND ".join(where_conditions) if where_conditions else ""
+        
+        query = f"""
+        SELECT 
+            schemaname as schema_name,
+            relname as table_name,
+            -- Current table state
+            n_dead_tup as current_dead_tuples,
+            n_live_tup as live_tuples,
+            CASE 
+                WHEN (n_live_tup + n_dead_tup) = 0 THEN 0
+                ELSE round(100.0 * n_dead_tup / (n_live_tup + n_dead_tup), 2)
+            END as current_bloat_percent,
+            -- VACUUM execution patterns
+            vacuum_count as manual_vacuum_count,
+            autovacuum_count as auto_vacuum_count,
+            (vacuum_count + autovacuum_count) as total_vacuum_operations,
+            -- Activity vs maintenance ratio
+            (n_tup_ins + n_tup_upd + n_tup_del) as total_dml_operations,
+            CASE 
+                WHEN (vacuum_count + autovacuum_count) = 0 THEN 'NEVER VACUUMED'
+                WHEN (n_tup_ins + n_tup_upd + n_tup_del) = 0 THEN 'NO DML ACTIVITY'
+                ELSE round((n_tup_ins + n_tup_upd + n_tup_del)::numeric / (vacuum_count + autovacuum_count), 1)::text
+            END as dml_per_vacuum_ratio,
+            -- Maintenance pattern analysis
+            CASE 
+                WHEN vacuum_count = 0 AND autovacuum_count = 0 THEN 'NO MAINTENANCE'
+                WHEN vacuum_count > autovacuum_count THEN 'MANUAL DOMINANT'
+                WHEN autovacuum_count > vacuum_count THEN 'AUTO DOMINANT'
+                WHEN vacuum_count = autovacuum_count THEN 'BALANCED'
+                ELSE 'MIXED PATTERN'
+            END as maintenance_pattern,
+            -- Last maintenance timing
+            GREATEST(last_vacuum, last_autovacuum) as last_any_vacuum,
+            CASE 
+                WHEN GREATEST(last_vacuum, last_autovacuum) IS NOT NULL 
+                THEN extract(hours from now() - GREATEST(last_vacuum, last_autovacuum))::int
+                ELSE NULL 
+            END as hours_since_last_vacuum,
+            -- Effectiveness assessment
+            CASE 
+                WHEN (vacuum_count + autovacuum_count) = 0 THEN 'CRITICAL: No maintenance'
+                WHEN n_dead_tup > (0.3 * n_live_tup + 100) THEN 'POOR: High bloat despite VACUUM'
+                WHEN n_dead_tup < (0.05 * n_live_tup + 10) THEN 'EXCELLENT: Very clean'
+                WHEN n_dead_tup < (0.15 * n_live_tup + 50) THEN 'GOOD: Well maintained'
+                ELSE 'MODERATE: Needs attention'
+            END as vacuum_effectiveness,
+            pg_size_pretty(pg_total_relation_size(schemaname||'.'||relname)) as table_size
+        FROM pg_stat_user_tables
+        {where_filter}
+        ORDER BY 
+            -- Priority: problems first, then by activity level
+            CASE 
+                WHEN (vacuum_count + autovacuum_count) = 0 THEN 1
+                WHEN n_dead_tup > (0.3 * n_live_tup + 100) THEN 2
+                ELSE 3
+            END,
+            (n_tup_ins + n_tup_upd + n_tup_del) DESC
+        LIMIT ${len(params)}
+        """
+        
+        effectiveness_analysis = await execute_query(query, params, database=database_name)
+        
+        # Get actual database name for clarity
+        if not database_name:
+            actual_db_name = await get_current_database_name(database_name)
+        else:
+            actual_db_name = database_name
+        
+        if not effectiveness_analysis:
+            # Build descriptive message
+            conditions = []
+            if schema_name:
+                conditions.append(f"schema '{schema_name}'")
+            else:
+                conditions.append("any user schema")
+            
+            condition_str = " and ".join(conditions)
+            return f"No tables found for VACUUM effectiveness analysis in {condition_str} (Database: {actual_db_name})"
+        
+        # Build title based on parameters - ALWAYS include actual database name
+        title_parts = []
+        if schema_name:
+            title_parts.append(f"Schema: {schema_name}")
+        else:
+            title_parts.append("All Schemas")
+        
+        # Always include database name in title for clarity
+        title = f"VACUUM Effectiveness Analysis (Database: {actual_db_name}, {', '.join(title_parts)})"
+            
+        return format_table_data(effectiveness_analysis, title)
+        
+    except Exception as e:
+        logger.error(f"Failed to analyze VACUUM effectiveness: {e}")
+        return f"Error analyzing VACUUM effectiveness: {str(e)}"
+
+
+@mcp.tool()
 async def get_database_stats() -> str:
     """
     [Tool Purpose]: Get comprehensive database-wide statistics and performance metrics

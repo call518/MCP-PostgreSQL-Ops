@@ -16,3 +16,5 @@ wheels/
 #.github/copilot-instructions.md
 
 .env
+
+docker-compose.*.yml

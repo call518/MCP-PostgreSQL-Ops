@@ -53,26 +53,28 @@
 18. **get_database_bloat_overview**: Database-wide bloat summary by schema
 19. **get_autovacuum_status**: Autovacuum configuration and trigger condition analysis
 20. **get_autovacuum_activity**: Recent autovacuum activity patterns and execution history
+21. **get_running_vacuum_operations**: Real-time monitoring of active VACUUM/ANALYZE operations
+22. **get_vacuum_effectiveness_analysis**: VACUUM effectiveness and maintenance pattern analysis
 
 ### 🔒 Lock & Deadlock Monitoring
-21. **get_lock_monitoring**: Current locks and blocked sessions analysis
+23. **get_lock_monitoring**: Current locks and blocked sessions analysis
 
 ### 📝 WAL & Replication Monitoring
-22. **get_wal_status**: WAL status and archiving information
-23. **get_replication_status**: Replication connections and lag monitoring
+24. **get_wal_status**: WAL status and archiving information
+25. **get_replication_status**: Replication connections and lag monitoring
 
 ### 📈 Database Performance Statistics
-24. **get_database_stats**: Comprehensive database-wide performance metrics
-25. **get_bgwriter_stats**: Background writer and checkpoint performance analysis
-26. **get_all_tables_stats**: Complete table statistics (including system tables)
-27. **get_user_functions_stats**: User-defined function performance analysis
+26. **get_database_stats**: Comprehensive database-wide performance metrics
+27. **get_bgwriter_stats**: Background writer and checkpoint performance analysis
+28. **get_all_tables_stats**: Complete table statistics (including system tables)
+29. **get_user_functions_stats**: User-defined function performance analysis
 
 ### 💿 I/O Performance Analysis
-28. **get_table_io_stats**: Table I/O statistics (disk reads vs buffer cache hits)
-29. **get_index_io_stats**: Index I/O performance and buffer efficiency analysis
+30. **get_table_io_stats**: Table I/O statistics (disk reads vs buffer cache hits)
+31. **get_index_io_stats**: Index I/O performance and buffer efficiency analysis
 
 ### 🔄 Replication Monitoring
-30. **get_database_conflicts_stats**: Query conflicts in standby/replica environments
+32. **get_database_conflicts_stats**: Query conflicts in standby/replica environments
 
 ## Sample Prompts
 
@@ -113,6 +115,8 @@
 - "Show database-wide bloat summary."
 - "Check autovacuum status and trigger conditions."
 - "Monitor recent autovacuum activity patterns."
+- "Show currently running VACUUM operations."
+- "Analyze VACUUM effectiveness and maintenance patterns."
 
 ### 🗄️ Structure Analysis
 - "List all databases with owners."
@@ -373,6 +377,23 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 - "Show tables with no recent autovacuum activity."
 - "Monitor autovacuum workload distribution across schemas."
 - "Identify tables with very high autovacuum frequency."
+
+**get_running_vacuum_operations**
+- "Show currently running VACUUM and ANALYZE operations."
+- "Monitor active maintenance operations and their progress."
+- "Check if any VACUUM operations are blocking queries."
+- "Find long-running maintenance operations in ecommerce database."
+- "Show real-time status of all running maintenance operations."
+- "Monitor VACUUM FULL operations and their impact level."
+
+**get_vacuum_effectiveness_analysis**
+- "Analyze VACUUM effectiveness and maintenance patterns."
+- "Compare manual VACUUM vs autovacuum efficiency."
+- "Find tables with suboptimal maintenance patterns in public schema."
+- "Check VACUUM frequency vs table activity ratios."
+- "Identify tables with poor maintenance effectiveness."
+- "Show maintenance pattern analysis for all schemas."
+- "Find tables that need better VACUUM scheduling."
 
 **get_lock_monitoring**
 - "Show all current locks and blocked sessions."
