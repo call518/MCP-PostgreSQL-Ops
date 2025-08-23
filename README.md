@@ -748,7 +748,7 @@ Freely use, modify, and distribute under the **MIT License**.
 
 ---
 
-## Other Projects
+## ⭐ Other Projects
 
 **Other MCP servers by the same author:**
 
