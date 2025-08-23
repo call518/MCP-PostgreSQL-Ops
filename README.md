@@ -181,7 +181,7 @@ http://localhost:3003/
 ```
 
 "Show PostgreSQL configuration parameter for shared_buffers."
-![Claude Desktop Integration](img/screenshot-claude-desktop-question-001)
+![Claude Desktop Integration](img/screenshot-claude-desktop-question-001.png)
 
 "Show all active connections in a clear and readable html table format."
 ![Claude Desktop Integration](img/screenshot-claude-desktop-airflow-connections-html.png)
