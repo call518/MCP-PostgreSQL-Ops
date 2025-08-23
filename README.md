@@ -56,6 +56,9 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 > **Note**: While superuser privileges provide access to all databases and system information, the MCP server also works with regular user permissions for basic monitoring tasks.
 
 ```bash
+git clone https://github.com/call518/MCP-PostgreSQL-Ops.git
+cd MCP-PostgreSQL-Ops
+
 ### Check and modify .env file
 cp .env.example .env
 
