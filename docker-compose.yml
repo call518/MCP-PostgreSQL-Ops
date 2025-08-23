@@ -60,8 +60,6 @@ services:
       - "${POSTGRES_PORT}:${POSTGRES_PORT}"
     volumes:
       - postgresql-data:${PGDATA}
-      # - ./initdb:/docker-entrypoint-initdb.d:ro   # 초기화 SQL(최초 실행시에만 적용됨)
-    # shared_preload_libraries를 기동 인자로 전달하여 pg_stat_statements + pg_stat_monitor 활성화
     command:
       - "-c"
       - "port=${POSTGRES_PORT}"
