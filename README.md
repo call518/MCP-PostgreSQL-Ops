@@ -76,7 +76,7 @@ POSTGRES_PASSWORD=changeme!@34
 POSTGRES_DB=ecommerce # Default connection DB. Superusers can access all DBs.
 ```
 
-> ⚠️ **Important**: `PGDATA=/data/db` is configured for Docker container internal use and **must not be modified**. This variable defines PostgreSQL's data directory inside the container and changing it will break the Docker setup.
+> **Note**: `PGDATA=/data/db` is preconfigured for the Percona PostgreSQL Docker image, which requires this specific path for proper write permissions.
 ```
 
 ### 2. Start Demo Containers
