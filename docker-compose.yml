@@ -51,6 +51,7 @@ services:
     container_name: mcp-postgresql-ops-postgresql-${PGSQL_VERSION}
     image: percona/percona-distribution-postgresql:${PGSQL_VERSION}
     environment:
+      PGDATA: ${PGDATA}
       POSTGRES_USER: "${POSTGRES_USER}"
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
       POSTGRES_DB: "${POSTGRES_DB}"
@@ -58,7 +59,7 @@ services:
     ports:
       - "${POSTGRES_PORT}:${POSTGRES_PORT}"
     volumes:
-      - postgresql-data:/var/lib/postgresql/data
+      - postgresql-data:${PGDATA}
       # - ./initdb:/docker-entrypoint-initdb.d:ro   # 초기화 SQL(최초 실행시에만 적용됨)
     # shared_preload_libraries를 기동 인자로 전달하여 pg_stat_statements + pg_stat_monitor 활성화
     command:
@@ -90,41 +91,19 @@ services:
   postgres-init-extensions:
     container_name: mcp-postgresql-ops-postgres-init-extensions
     image: percona/percona-distribution-postgresql:${PGSQL_VERSION}
+    environment:
+      PGDATA: ${PGDATA}
+      POSTGRES_USER: "${POSTGRES_USER}"
+      PGPASSWORD: '${POSTGRES_PASSWORD}'
+      POSTGRES_DB: "${POSTGRES_DB}"
+      POSTGRES_PORT: "${POSTGRES_PORT}"
     depends_on:
       - postgres
     entrypoint: /bin/bash
     command: 
       - "-c"
       - |
-        # Wait for PostgreSQL to be ready
-        for i in $(seq 1 120); do
-          psql -h postgres -p ${POSTGRES_PORT} -U "${POSTGRES_USER}" -d postgres -c '\q' >/dev/null 2>&1 && break
-          echo "waiting for postgres (psql)..." && sleep 1
-        done
-        
-        echo "PostgreSQL is ready. Installing extensions..."
-        
-        # Install extensions in postgres database
-        psql -h postgres -p ${POSTGRES_PORT} -U "${POSTGRES_USER}" -d postgres -c "CREATE EXTENSION IF NOT EXISTS pg_stat_statements;"
-        psql -h postgres -p ${POSTGRES_PORT} -U "${POSTGRES_USER}" -d postgres -c "CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;"
-        
-        # Install extensions in custom database if different from postgres
-        if [[ "${POSTGRES_DB}" != "postgres" ]]; then
-          psql -h postgres -p ${POSTGRES_PORT} -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -c "CREATE EXTENSION IF NOT EXISTS pg_stat_statements;"
-          psql -h postgres -p ${POSTGRES_PORT} -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -c "CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;"
-        fi
-        
-        echo "Extensions installed successfully. Creating test data..."
-        
-        # Create comprehensive test data
-        psql -h postgres -p ${POSTGRES_PORT} -U "${POSTGRES_USER}" -d postgres -f /scripts/create-test-data.sql
-        
-        echo "Test data creation completed successfully!"
-    environment:
-      POSTGRES_USER: "${POSTGRES_USER}"
-      PGPASSWORD: '${POSTGRES_PASSWORD}'
-      POSTGRES_DB: "${POSTGRES_DB}"
-      POSTGRES_PORT: "${POSTGRES_PORT}"
+        /scripts/create-test-data.sh
     volumes:
       - ./scripts:/scripts:ro
     restart: no

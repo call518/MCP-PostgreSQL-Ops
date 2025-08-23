@@ -63,14 +63,20 @@ git clone https://github.com/call518/MCP-PostgreSQL-Ops.git
 cd MCP-PostgreSQL-Ops
 
 ### Check and modify .env file
+```bash
 cp .env.example .env
+```
 
 ### No need to modify defaults, but if using your own PostgreSQL server, edit below:
+```bash
 POSTGRES_HOST=host.docker.internal
 POSTGRES_PORT=15432
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=changeme!@34
 POSTGRES_DB=ecommerce # Default connection DB. Superusers can access all DBs.
+```
+
+> ⚠️ **Important**: `PGDATA=/data/db` is configured for Docker container internal use and **must not be modified**. This variable defines PostgreSQL's data directory inside the container and changing it will break the Docker setup.
 ```
 
 ### 2. Start Demo Containers
@@ -105,12 +111,12 @@ http://localhost:3003/
 
 The `create-test-data.sql` script is executed by the `postgres-init-extensions` container (defined in docker-compose.yml) on first startup, automatically generating comprehensive test databases for MCP tool testing:
 
-| Database | Purpose | Key Tables | Scale |
-|----------|---------|------------|-------|
-| **ecommerce** | E-commerce system | customers, products, orders, reviews | 1,000+ customers, 200+ products |
-| **analytics** | Analytics & reporting | page_views, sales_summary, product_analytics | Time-series data |
-| **inventory** | Warehouse management | warehouses, suppliers, stock_levels | 5 warehouses, 20 suppliers |
-| **hr_system** | HR management | employees, departments, payroll | 100+ employees, 10 departments |
+| Database | Purpose | Schema & Tables | Scale |
+|----------|---------|-----------------|-------|
+| **ecommerce** | E-commerce system | **public**: categories, products, customers, orders, order_items | 10 categories, 500 products, 100 customers, 200 orders, 400 order items |
+| **analytics** | Analytics & reporting | **public**: page_views, sales_summary | 1,000 page views, 30 sales summaries |
+| **inventory** | Warehouse management | **public**: suppliers, inventory_items, purchase_orders | 10 suppliers, 100 items, 50 purchase orders |
+| **hr_system** | HR management | **public**: departments, employees, payroll | 5 departments, 50 employees, 150 payroll records |
 
 **Test users created:** `app_readonly`, `app_readwrite`, `analytics_user`, `backup_user`
 
@@ -272,6 +278,7 @@ python -m src.mcp_postgresql_ops.mcp_main \
 | `FASTMCP_HOST` | HTTP server bind address (0.0.0.0 for all interfaces) | `127.0.0.1` | `0.0.0.0` |
 | `FASTMCP_PORT` | HTTP server port for MCP communication | `8080` | `8080` |
 | `PGSQL_VERSION` | PostgreSQL major version for Docker image selection | `17` | `17` |
+| `PGDATA` | PostgreSQL data directory inside Docker container (**Do not modify**) | `/var/lib/postgresql/data` | `/data/db` |
 | `POSTGRES_HOST` | PostgreSQL server hostname or IP address | `127.0.0.1` | `host.docker.internal` |
 | `POSTGRES_PORT` | PostgreSQL server port number | `5432` | `15432` |
 | `POSTGRES_USER` | PostgreSQL connection username (needs read permissions) | `postgres` | `postgres` |

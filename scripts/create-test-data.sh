@@ -1,123 +1,107 @@
 #!/bin/bash
 
-# PostgreSQL Test Data Generator Script
-# This script creates comprehensive test data for MCP PostgreSQL Operations Server
+# PostgreSQL Test Data Creation Script
+# This script creates test data - assumes it's called only on first run
 
 set -e  # Exit on any error
 
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
-BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Function to print colored output
-print_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
+# Logging functions
+log_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
+log_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
+log_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
+log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
-print_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
-# Check if .env file exists and load it
-if [ -f ".env" ]; then
-    print_info "Loading environment variables from .env file..."
-    export $(grep -v '^#' .env | xargs)
-else
-    print_warning ".env file not found. Using default values."
-fi
-
-# Set default values if not provided
-POSTGRES_HOST=${POSTGRES_HOST:-localhost}
-POSTGRES_PORT=${POSTGRES_PORT:-5432}
-POSTGRES_USER=${POSTGRES_USER:-postgres}
-# Always use postgres database for test data creation (required for CREATE DATABASE)
-POSTGRES_DB=postgres
-
-print_info "PostgreSQL connection details:"
-echo "  Host: $POSTGRES_HOST"
-echo "  Port: $POSTGRES_PORT"
-echo "  User: $POSTGRES_USER"
-echo "  Database: $POSTGRES_DB"
-echo ""
-
-# Check if PostgreSQL is accessible
-print_info "Testing PostgreSQL connection..."
-if ! PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT version();" > /dev/null 2>&1; then
-    print_error "Cannot connect to PostgreSQL server!"
-    print_error "Please check your connection parameters and ensure PostgreSQL is running."
+# Check if PostgreSQL is ready
+wait_for_postgres() {
+    log_info "Waiting for PostgreSQL to be ready..."
+    for i in $(seq 1 120); do
+        if psql -h postgres -p ${POSTGRES_PORT} -U "${POSTGRES_USER}" -d postgres -c '\q' >/dev/null 2>&1; then
+            log_success "PostgreSQL is ready!"
+            return 0
+        fi
+        echo -n "."
+        sleep 1
+    done
+    log_error "PostgreSQL failed to start within 120 seconds"
     exit 1
-fi
+}
 
-print_success "PostgreSQL connection successful!"
-echo ""
+# Check if sample databases already exist
+check_existing_databases() {
+    log_info "Checking if sample databases already exist..."
+    
+    # Check if ALL test databases exist (we need all 4)
+    EXISTING_DBS=$(psql -h postgres -p ${POSTGRES_PORT} -U "${POSTGRES_USER}" -d postgres -t -c "
+        SELECT COUNT(*) FROM pg_database 
+        WHERE datname IN ('ecommerce', 'analytics', 'inventory', 'hr_system');
+    " 2>/dev/null | xargs || echo "0")
+    
+    if [ "$EXISTING_DBS" -eq 4 ]; then
+        log_warning "All sample databases already exist (found $EXISTING_DBS/4 databases)"
+        log_info "Skipping test data creation - data already fully initialized"
+        exit 0
+    elif [ "$EXISTING_DBS" -gt 0 ]; then
+        log_warning "Some sample databases exist (found $EXISTING_DBS/4 databases)"
+        log_info "Proceeding with initialization to create missing databases"
+    else
+        log_info "No sample databases found - proceeding with full initialization"
+    fi
+    
+    log_info "No sample databases found - proceeding with initialization"
+}
 
-# Warning about destructive operations
-print_warning "⚠️  WARNING: This script will create test databases and users!"
-print_warning "⚠️  It may overwrite existing data if database names conflict."
-print_warning ""
-print_warning "The following databases will be created/replaced:"
-print_warning "  - ecommerce"
-print_warning "  - analytics"  
-print_warning "  - inventory"
-print_warning "  - hr_system"
-print_warning ""
-print_warning "The following users will be created:"
-print_warning "  - app_readonly"
-print_warning "  - app_readwrite"
-print_warning "  - analytics_user"
-print_warning "  - backup_user"
-print_warning ""
+# Install extensions
+install_extensions() {
+    log_info "Installing PostgreSQL extensions..."
+    
+    # Install extensions in postgres database
+    psql -h postgres -p ${POSTGRES_PORT} -U "${POSTGRES_USER}" -d postgres -c "CREATE EXTENSION IF NOT EXISTS pg_stat_statements;" >/dev/null
+    psql -h postgres -p ${POSTGRES_PORT} -U "${POSTGRES_USER}" -d postgres -c "CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;" >/dev/null
+    
+    # Install extensions in custom database if different from postgres
+    if [[ "${POSTGRES_DB}" != "postgres" ]]; then
+        psql -h postgres -p ${POSTGRES_PORT} -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -c "CREATE EXTENSION IF NOT EXISTS pg_stat_statements;" >/dev/null 2>&1 || true
+        psql -h postgres -p ${POSTGRES_PORT} -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -c "CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;" >/dev/null 2>&1 || true
+    fi
+    
+    log_success "Extensions installed successfully"
+}
 
-# Ask for confirmation
-read -p "Do you want to continue? (y/N): " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    print_info "Operation cancelled by user."
-    exit 0
-fi
+# Create test data
+create_test_data() {
+    log_info "Creating comprehensive test data..."
+    
+    if psql -h postgres -p ${POSTGRES_PORT} -U "${POSTGRES_USER}" -d postgres -f /scripts/create-test-data.sql; then
+        log_success "Test data creation completed successfully!"
+    else
+        log_error "Failed to create test data!"
+        exit 1
+    fi
+}
 
-# Run the SQL script
-print_info "Executing test data generation script..."
-print_info "This may take a few minutes depending on your system performance..."
-echo ""
+# Main execution
+main() {
+    log_info "Starting PostgreSQL test data initialization..."
+    
+    # Wait for PostgreSQL to be ready
+    wait_for_postgres
+    
+    # Check if sample databases already exist (exit if they do)
+    check_existing_databases
+    
+    # Install extensions and create test data
+    install_extensions
+    create_test_data
+    
+    log_success "Test data initialization completed successfully!"
+}
 
-if PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f "scripts/create-test-data.sql"; then
-    echo ""
-    print_success "Test data generation completed successfully!"
-    echo ""
-    print_info "🎉 Your PostgreSQL server now has comprehensive test data!"
-    echo ""
-    print_info "Next steps:"
-    echo "  1. Start your MCP server: ./scripts/run-mcp-inspector-local.sh"
-    echo "  2. Test multi-database operations:"
-    echo "     - get_database_list()"
-    echo "     - get_table_list(database_name='ecommerce')"
-    echo "     - get_pg_stat_statements_top_queries(limit=10)"
-    echo "  3. Analyze performance and capacity:"
-    echo "     - get_database_size_info()"
-    echo "     - get_index_usage_stats(database_name='inventory')"
-    echo "     - get_vacuum_analyze_stats(database_name='hr_system')"
-    echo ""
-    print_info "Test user credentials:"
-    echo "  - app_readonly / readonly123"
-    echo "  - app_readwrite / readwrite123" 
-    echo "  - analytics_user / analytics123"
-    echo "  - backup_user / backup123"
-    echo ""
-else
-    echo ""
-    print_error "Failed to execute test data generation script!"
-    print_error "Please check the error messages above and try again."
-    exit 1
-fi
+# Execute main function
+main "$@"
