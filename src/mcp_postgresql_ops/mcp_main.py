@@ -2190,6 +2190,303 @@ async def get_database_bloat_overview(database_name: str = None, limit: int = 20
 
 
 @mcp.tool()
+async def get_autovacuum_status(database_name: str = None, schema_name: str = None, table_pattern: str = None, limit: int = 50) -> str:
+    """
+    [Tool Purpose]: Analyze autovacuum configuration and current maintenance status for tables
+    
+    [Exact Functionality]:
+    - Analyze autovacuum trigger conditions based on dead tuple thresholds
+    - Calculate current dead tuple ratios vs autovacuum trigger points
+    - Show autovacuum configuration settings per table
+    - Identify tables requiring immediate autovacuum attention
+    - Estimate next autovacuum execution likelihood
+    
+    [Required Use Cases]:
+    - When user requests "autovacuum status", "autovacuum configuration", "vacuum trigger analysis", etc.
+    - When planning autovacuum optimization and tuning
+    - When troubleshooting autovacuum performance issues
+    - When identifying tables with autovacuum problems
+    
+    [Strictly Prohibited Use Cases]:
+    - Requests for autovacuum configuration changes
+    - Requests for manual VACUUM execution
+    - Requests for autovacuum process restart or control
+    
+    Args:
+        database_name: Target database name (uses default database from POSTGRES_DB env var if omitted)
+        schema_name: Schema to analyze (analyzes all user schemas if omitted)
+        table_pattern: Table name pattern to filter (SQL LIKE pattern, e.g., 'user%', '%log%', 'temp_*')
+        limit: Maximum number of tables to analyze (1-100, default: 50)
+    
+    Returns:
+        Autovacuum configuration status with trigger analysis and maintenance recommendations
+    """
+    try:
+        # Validate and constrain limit
+        limit = max(1, min(limit, 100))
+        
+        # Build WHERE clause based on parameters
+        where_conditions = []
+        params = []
+        param_index = 1
+        
+        # Schema filtering
+        if schema_name:
+            where_conditions.append(f"schemaname = ${param_index}")
+            params.append(schema_name)
+            param_index += 1
+        else:
+            # Exclude system schemas
+            where_conditions.append("schemaname NOT IN ('information_schema', 'pg_catalog')")
+            where_conditions.append("schemaname NOT LIKE 'pg_%'")
+        
+        # Table pattern filtering
+        if table_pattern:
+            where_conditions.append(f"relname ILIKE ${param_index}")
+            params.append(table_pattern)
+            param_index += 1
+        
+        # Add LIMIT parameter
+        params.append(limit)
+        
+        # Combine WHERE conditions
+        where_filter = "WHERE " + " AND ".join(where_conditions) if where_conditions else ""
+        
+        query = f"""
+        SELECT 
+            schemaname as schema_name,
+            relname as table_name,
+            n_dead_tup as current_dead_tuples,
+            n_live_tup as live_tuples,
+            CASE 
+                WHEN n_live_tup + n_dead_tup = 0 THEN 0
+                ELSE round(100.0 * n_dead_tup / (n_live_tup + n_dead_tup), 2)
+            END as dead_tuple_ratio_percent,
+            -- Standard autovacuum thresholds (default: 20% + 50 tuples)
+            round(0.2 * n_live_tup + 50) as autovacuum_threshold,
+            -- Calculate how close we are to autovacuum trigger
+            CASE 
+                WHEN n_dead_tup >= (0.2 * n_live_tup + 50) THEN 'NEEDS AUTOVACUUM NOW'
+                WHEN n_dead_tup >= (0.15 * n_live_tup + 40) THEN 'APPROACHING THRESHOLD'  
+                WHEN n_dead_tup >= (0.1 * n_live_tup + 25) THEN 'MONITOR CLOSELY'
+                ELSE 'OK'
+            END as autovacuum_urgency,
+            -- Estimate percentage to autovacuum trigger
+            CASE 
+                WHEN (0.2 * n_live_tup + 50) = 0 THEN 0
+                ELSE round(100.0 * n_dead_tup / (0.2 * n_live_tup + 50), 1)
+            END as threshold_percentage,
+            last_autovacuum,
+            CASE 
+                WHEN last_autovacuum IS NOT NULL 
+                THEN extract(hours from now() - last_autovacuum)::int
+                ELSE NULL 
+            END as hours_since_autovacuum,
+            pg_size_pretty(pg_total_relation_size(schemaname||'.'||relname)) as table_size
+        FROM pg_stat_user_tables
+        {where_filter}
+        ORDER BY 
+            CASE 
+                WHEN n_dead_tup >= (0.2 * n_live_tup + 50) THEN 1
+                WHEN n_dead_tup >= (0.15 * n_live_tup + 40) THEN 2
+                WHEN n_dead_tup >= (0.1 * n_live_tup + 25) THEN 3
+                ELSE 4
+            END,
+            n_dead_tup DESC
+        LIMIT ${len(params)}
+        """
+        
+        autovacuum_status = await execute_query(query, params, database=database_name)
+        
+        # Get actual database name for clarity
+        if not database_name:
+            actual_db_name = await get_current_database_name(database_name)
+        else:
+            actual_db_name = database_name
+        
+        if not autovacuum_status:
+            # Build descriptive message
+            conditions = []
+            if schema_name:
+                conditions.append(f"schema '{schema_name}'")
+            else:
+                conditions.append("any user schema")
+            if table_pattern:
+                conditions.append(f"table pattern '{table_pattern}'")
+            
+            condition_str = " and ".join(conditions)
+            return f"No tables found for autovacuum analysis in {condition_str} (Database: {actual_db_name})"
+        
+        # Build title based on parameters - ALWAYS include actual database name
+        title_parts = []
+        if schema_name:
+            title_parts.append(f"Schema: {schema_name}")
+        else:
+            title_parts.append("All Schemas")
+        
+        if table_pattern:
+            title_parts.append(f"Pattern: '{table_pattern}'")
+        
+        # Always include database name in title for clarity
+        title = f"Autovacuum Status Analysis (Database: {actual_db_name}, {', '.join(title_parts)})"
+            
+        return format_table_data(autovacuum_status, title)
+        
+    except Exception as e:
+        logger.error(f"Failed to analyze autovacuum status: {e}")
+        return f"Error analyzing autovacuum status: {str(e)}"
+
+
+@mcp.tool()
+async def get_autovacuum_activity(database_name: str = None, schema_name: str = None, hours_back: int = 24, limit: int = 50) -> str:
+    """
+    [Tool Purpose]: Monitor recent autovacuum and autoanalyze activity patterns and execution history
+    
+    [Exact Functionality]:
+    - Track recent autovacuum and autoanalyze execution patterns
+    - Analyze autovacuum frequency and timing intervals
+    - Show tables with most/least autovacuum activity
+    - Calculate average time between autovacuum executions
+    - Identify tables with irregular autovacuum patterns
+    
+    [Required Use Cases]:
+    - When user requests "autovacuum activity", "autovacuum history", "vacuum patterns", etc.
+    - When monitoring autovacuum performance and effectiveness
+    - When troubleshooting autovacuum scheduling issues
+    - When analyzing autovacuum workload distribution
+    
+    [Strictly Prohibited Use Cases]:
+    - Requests for autovacuum process control or restart
+    - Requests for autovacuum configuration modifications
+    - Requests for manual vacuum scheduling
+    
+    Args:
+        database_name: Target database name (uses default database from POSTGRES_DB env var if omitted)
+        schema_name: Schema to analyze (analyzes all user schemas if omitted)
+        hours_back: Time period to analyze in hours (default: 24, max: 168 for 7 days)
+        limit: Maximum number of tables to show (1-100, default: 50)
+    
+    Returns:
+        Recent autovacuum activity analysis with patterns and timing statistics
+    """
+    try:
+        # Validate and constrain parameters
+        limit = max(1, min(limit, 100))
+        hours_back = max(1, min(hours_back, 168))  # Max 7 days
+        
+        # Build WHERE clause based on parameters
+        where_conditions = []
+        params = []
+        param_index = 1
+        
+        # Schema filtering
+        if schema_name:
+            where_conditions.append(f"schemaname = ${param_index}")
+            params.append(schema_name)
+            param_index += 1
+        else:
+            # Exclude system schemas
+            where_conditions.append("schemaname NOT IN ('information_schema', 'pg_catalog')")
+            where_conditions.append("schemaname NOT LIKE 'pg_%'")
+        
+        # Add LIMIT parameter
+        params.append(limit)
+        
+        # Combine WHERE conditions
+        where_filter = "WHERE " + " AND ".join(where_conditions) if where_conditions else ""
+        
+        query = f"""
+        SELECT 
+            schemaname as schema_name,
+            relname as table_name,
+            last_autovacuum,
+            last_autoanalyze,
+            autovacuum_count as total_autovacuums,
+            autoanalyze_count as total_autoanalyzes,
+            -- Calculate time since last autovacuum
+            CASE 
+                WHEN last_autovacuum IS NOT NULL 
+                THEN extract(hours from now() - last_autovacuum)::int
+                ELSE NULL 
+            END as hours_since_autovacuum,
+            -- Calculate time since last autoanalyze
+            CASE 
+                WHEN last_autoanalyze IS NOT NULL 
+                THEN extract(hours from now() - last_autoanalyze)::int
+                ELSE NULL 
+            END as hours_since_autoanalyze,
+            -- Activity classification
+            CASE 
+                WHEN last_autovacuum IS NULL THEN 'NEVER AUTOVACUUMED'
+                WHEN last_autovacuum < now() - interval '{hours_back} hours' THEN 'NO RECENT ACTIVITY'
+                WHEN last_autovacuum > now() - interval '4 hours' THEN 'VERY RECENT'
+                WHEN last_autovacuum > now() - interval '12 hours' THEN 'RECENT'
+                ELSE 'MODERATE'
+            END as autovacuum_activity_level,
+            -- Current table statistics for context
+            n_dead_tup as current_dead_tuples,
+            n_live_tup as live_tuples,
+            -- Activity frequency (rough estimate)
+            CASE 
+                WHEN autovacuum_count = 0 THEN 'No Activity'
+                WHEN autovacuum_count = 1 THEN 'Low Activity'
+                WHEN autovacuum_count <= 5 THEN 'Moderate Activity' 
+                WHEN autovacuum_count <= 20 THEN 'High Activity'
+                ELSE 'Very High Activity'
+            END as activity_frequency,
+            pg_size_pretty(pg_total_relation_size(schemaname||'.'||relname)) as table_size
+        FROM pg_stat_user_tables
+        {where_filter}
+        ORDER BY 
+            CASE 
+                WHEN last_autovacuum IS NULL THEN 1
+                WHEN last_autovacuum < now() - interval '{hours_back} hours' THEN 2
+                ELSE 3
+            END,
+            hours_since_autovacuum ASC NULLS LAST,
+            autovacuum_count DESC
+        LIMIT ${len(params)}
+        """
+        
+        autovacuum_activity = await execute_query(query, params, database=database_name)
+        
+        # Get actual database name for clarity
+        if not database_name:
+            actual_db_name = await get_current_database_name(database_name)
+        else:
+            actual_db_name = database_name
+        
+        if not autovacuum_activity:
+            # Build descriptive message
+            conditions = []
+            if schema_name:
+                conditions.append(f"schema '{schema_name}'")
+            else:
+                conditions.append("any user schema")
+            
+            condition_str = " and ".join(conditions)
+            return f"No tables found for autovacuum activity analysis in {condition_str} (Database: {actual_db_name})"
+        
+        # Build title based on parameters - ALWAYS include actual database name
+        title_parts = []
+        if schema_name:
+            title_parts.append(f"Schema: {schema_name}")
+        else:
+            title_parts.append("All Schemas")
+        
+        title_parts.append(f"Last {hours_back}h")
+        
+        # Always include database name in title for clarity
+        title = f"Autovacuum Activity Analysis (Database: {actual_db_name}, {', '.join(title_parts)})"
+            
+        return format_table_data(autovacuum_activity, title)
+        
+    except Exception as e:
+        logger.error(f"Failed to analyze autovacuum activity: {e}")
+        return f"Error analyzing autovacuum activity: {str(e)}"
+
+
+@mcp.tool()
 async def get_database_stats() -> str:
     """
     [Tool Purpose]: Get comprehensive database-wide statistics and performance metrics

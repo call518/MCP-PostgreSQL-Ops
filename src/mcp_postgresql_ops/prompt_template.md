@@ -48,29 +48,31 @@
 ### 💾 Capacity Management
 14. **get_database_size_info**: Database capacity analysis
 15. **get_table_size_info**: Table and index size analysis
-16. **get_vacuum_analyze_stats**: VACUUM/ANALYZE status and history
+16. **get_vacuum_analyze_stats**: VACUUM/ANALYZE status and maintenance history
 17. **get_table_bloat_analysis**: Table bloat monitoring with dead tuple analysis
 18. **get_database_bloat_overview**: Database-wide bloat summary by schema
+19. **get_autovacuum_status**: Autovacuum configuration and trigger condition analysis
+20. **get_autovacuum_activity**: Recent autovacuum activity patterns and execution history
 
 ### 🔒 Lock & Deadlock Monitoring
-19. **get_lock_monitoring**: Current locks and blocked sessions analysis
+21. **get_lock_monitoring**: Current locks and blocked sessions analysis
 
 ### 📝 WAL & Replication Monitoring
-20. **get_wal_status**: WAL status and archiving information
-21. **get_replication_status**: Replication connections and lag monitoring
+22. **get_wal_status**: WAL status and archiving information
+23. **get_replication_status**: Replication connections and lag monitoring
 
 ### 📈 Database Performance Statistics
-22. **get_database_stats**: Comprehensive database-wide performance metrics
-23. **get_bgwriter_stats**: Background writer and checkpoint performance analysis
-24. **get_all_tables_stats**: Complete table statistics (including system tables)
-25. **get_user_functions_stats**: User-defined function performance analysis
+24. **get_database_stats**: Comprehensive database-wide performance metrics
+25. **get_bgwriter_stats**: Background writer and checkpoint performance analysis
+26. **get_all_tables_stats**: Complete table statistics (including system tables)
+27. **get_user_functions_stats**: User-defined function performance analysis
 
 ### 💿 I/O Performance Analysis
-26. **get_table_io_stats**: Table I/O statistics (disk reads vs buffer cache hits)
-27. **get_index_io_stats**: Index I/O performance and buffer efficiency analysis
+28. **get_table_io_stats**: Table I/O statistics (disk reads vs buffer cache hits)
+29. **get_index_io_stats**: Index I/O performance and buffer efficiency analysis
 
 ### 🔄 Replication Monitoring
-28. **get_database_conflicts_stats**: Query conflicts in standby/replica environments
+30. **get_database_conflicts_stats**: Query conflicts in standby/replica environments
 
 ## Sample Prompts
 
@@ -109,6 +111,8 @@
 - "Display table and index sizes."
 - "Analyze table bloat and dead tuples."
 - "Show database-wide bloat summary."
+- "Check autovacuum status and trigger conditions."
+- "Monitor recent autovacuum activity patterns."
 
 ### 🗄️ Structure Analysis
 - "List all databases with owners."
@@ -350,6 +354,25 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 - "Database maintenance planning with bloat statistics."
 - "Compare bloat across all schemas in ecommerce database."
 - "Show total estimated bloat and schema sizes."
+
+**get_autovacuum_status**
+- "Check autovacuum configuration and trigger conditions."
+- "Show tables needing immediate autovacuum attention."
+- "Analyze autovacuum threshold percentages for all tables."
+- "Find tables approaching autovacuum trigger points in public schema."
+- "Check autovacuum status for log tables pattern."
+- "Show autovacuum urgency analysis for ecommerce database."
+- "Monitor tables with dead tuple ratios near autovacuum thresholds."
+
+**get_autovacuum_activity**
+- "Show autovacuum activity patterns for the last 48 hours."
+- "Monitor autovacuum execution frequency and timing."
+- "Find tables with irregular autovacuum patterns."
+- "Analyze recent autovacuum and autoanalyze history."
+- "Check autovacuum activity in public schema for last 7 days."
+- "Show tables with no recent autovacuum activity."
+- "Monitor autovacuum workload distribution across schemas."
+- "Identify tables with very high autovacuum frequency."
 
 **get_lock_monitoring**
 - "Show all current locks and blocked sessions."

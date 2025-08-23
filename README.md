@@ -109,6 +109,8 @@ http://localhost:3003/
 | `get_current_database_info` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_database`, `current_database()` |
 | `get_table_bloat_analysis` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
 | `get_database_bloat_overview` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
+| `get_autovacuum_status` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
+| `get_autovacuum_activity` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
 | `get_table_bloat_analysis` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
 | `get_database_bloat_overview` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
 | `get_lock_monitoring` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_locks`, `pg_stat_activity` |
@@ -471,6 +473,22 @@ SET track_io_timing = 'on';
   - "Identify schemas requiring maintenance attention."
   - 📋 **Features**: Schema-level aggregation, total bloat estimates, maintenance status
   - 🔧 **PostgreSQL 12-17**: Fully compatible, no extensions required
+- **get_autovacuum_status**
+  - "Check autovacuum configuration and trigger conditions."
+  - "Show tables needing immediate autovacuum attention."
+  - "Analyze autovacuum threshold percentages for public schema."
+  - "Find tables approaching autovacuum trigger points."
+  - 📋 **Features**: Trigger threshold analysis, urgency classification, configuration status
+  - 🔧 **PostgreSQL 12-17**: Fully compatible, no extensions required
+  - 💡 **Usage**: Extension-Independent autovacuum monitoring using pg_stat_user_tables
+- **get_autovacuum_activity**
+  - "Show autovacuum activity patterns for the last 48 hours."
+  - "Monitor autovacuum execution frequency and timing."
+  - "Find tables with irregular autovacuum patterns."
+  - "Analyze recent autovacuum and autoanalyze history."
+  - 📋 **Features**: Activity patterns, execution frequency, timing analysis
+  - 🔧 **PostgreSQL 12-17**: Fully compatible, no extensions required
+  - 💡 **Usage**: Historical autovacuum pattern analysis
 - **get_table_bloat_analysis**
   - "Analyze table bloat in the public schema."
   - "Show tables with high dead tuple ratios in ecommerce database."
