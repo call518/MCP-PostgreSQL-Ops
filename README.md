@@ -208,7 +208,7 @@ http://localhost:3003/
 }
 ```
 
-### Command Line Usage
+### Run MCP-Server as Standalon
 
 #### /w Pypi and uvx (Recommended)
 
