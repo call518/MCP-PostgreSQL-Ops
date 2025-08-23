@@ -743,14 +743,15 @@ We're always excited to welcome new contributors! Whether you're fixing a typo, 
 
 ---
 
-## Related Projects
+## License
+Freely use, modify, and distribute under the **MIT License**.
+
+---
+
+## Other Projects
 
 **Other MCP servers by the same author:**
 
 - [MCP-Ambari-API](https://github.com/call518/MCP-Ambari-API)
 - [MCP-Airflow-API](https://github.com/call518/MCP-Airflow-API)
-
----
-
-## License
-Freely use, modify, and distribute under the **MIT License**.
+- [LogSentinelAI - LLB-Based Log Analyzer](https://github.com/call518/LogSentinelAI)
