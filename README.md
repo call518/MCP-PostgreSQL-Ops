@@ -99,6 +99,21 @@ http://localhost:3003/
 1. Enter the `postgresql-ops` Tool address (e.g., `http://localhost:8003/postgresql-ops`) to connect MCP Tools.
 1. Setup Ollama or OpenAI.
 
+### (NOTE) Sample Test Data Overview
+
+The `create-test-data.sql` script is executed by the `postgres-init-extensions` container (defined in docker-compose.yml) on first startup, automatically generating comprehensive test databases for MCP tool testing:
+
+| Database | Purpose | Key Tables | Scale |
+|----------|---------|------------|-------|
+| **ecommerce** | E-commerce system | customers, products, orders, reviews | 1,000+ customers, 200+ products |
+| **analytics** | Analytics & reporting | page_views, sales_summary, product_analytics | Time-series data |
+| **inventory** | Warehouse management | warehouses, suppliers, stock_levels | 5 warehouses, 20 suppliers |
+| **hr_system** | HR management | employees, departments, payroll | 100+ employees, 10 departments |
+
+**Test users created:** `app_readonly`, `app_readwrite`, `analytics_user`, `backup_user`
+
+**Optimized for testing:** Intentional table bloat, various indexes (used/unused), time-series data, complex relationships
+
 ---
 
 ## Tool Compatibility Matrix
