@@ -43,7 +43,7 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 ![MCP-PostgreSQL-Ops Usage Screenshot](img/screenshot-005.png)
 ---
 
-## Quick start
+## ⭐ Quick start
 
 > **Note:** The `postgresql` container included in `docker-compose.yml` is intended for quickstart testing purposes only. You can connect to your own PostgreSQL instance by adjusting the environment variables as needed.
 
