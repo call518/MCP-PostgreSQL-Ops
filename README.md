@@ -181,7 +181,7 @@ http://localhost:3003/
 ```
 
 "Show PostgreSQL configuration parameter for shared_buffers."
-![Claude Desktop Integration](img/screenshot-claude-desktop-question-001.png)
+![Claude Desktop Integration](img/screenshot-claude-desktop-question-001)
 
 "Show all active connections in a clear and readable html table format."
 ![Claude Desktop Integration](img/screenshot-claude-desktop-airflow-connections-html.png)
@@ -414,118 +414,207 @@ SET track_io_timing = 'on';
 
 ## Example Queries
 
-### 🟢 익스텐션 불필요 도구 (항상 사용 가능)
+### 🟢 Extension-Independent Tools (Always Available)
 
 - **get_server_info**
-  - "PostgreSQL 서버 버전과 익스텐션 상태를 보여주세요."
-  - "pg_stat_statements가 설치되어 있는지 확인해주세요."
+  - "Show PostgreSQL server version and extension status."
+  - "Check if pg_stat_statements is installed."
 - **get_active_connections**
-  - "모든 활성 연결을 보여주세요."
-  - "데이터베이스와 사용자별 현재 세션 목록을 보여주세요."
+  - "Show all active connections."
+  - "List current sessions with database and user."
 - **get_postgresql_config**
-  - "PostgreSQL 설정 파라미터를 모두 보여주세요."
-  - "메모리 관련 설정들을 찾아주세요."
+  - "Show all PostgreSQL configuration parameters."
+  - "Find all memory-related configuration settings."
 - **get_database_list**
-  - "모든 데이터베이스와 크기를 보여주세요."
-  - "소유자 정보가 포함된 데이터베이스 목록을 보여주세요."
+  - "List all databases and their sizes."
+  - "Show database list with owner information."
 - **get_table_list**
-  - "ecommerce 데이터베이스의 모든 테이블을 보여주세요."
-  - "public 스키마의 테이블 크기를 보여주세요."
+  - "List all tables in the ecommerce database."
+  - "Show table sizes in the public schema."
 - **get_table_schema_info**
-  - "ecommerce 데이터베이스의 customers 테이블에 대한 상세한 스키마 정보를 보여주세요."
-  - "ecommerce 데이터베이스의 products 테이블에 대한 컬럼 세부사항과 제약조건을 확인해주세요."
+  - "Show detailed schema information for the customers table in ecommerce database."
+  - "Get column details and constraints for products table in ecommerce database."
+  - "Analyze table structure with indexes and foreign keys for orders table in sales schema of ecommerce database."
+  - "Show schema overview for all tables in public schema of inventory database."
+  - 📋 **Features**: Column types, constraints, indexes, foreign keys, table metadata
+  - ⚠️ **Required**: `database_name` parameter must be specified
 - **get_database_schema_info**
-  - "ecommerce 데이터베이스의 모든 스키마와 그 내용을 보여주세요."
-  - "ecommerce 데이터베이스의 sales 스키마에 대한 자세한 정보를 확인해주세요."
+  - "Show all schemas in ecommerce database with their contents."
+  - "Get detailed information about sales schema in ecommerce database."
+  - "Analyze schema structure and permissions for inventory database."
+  - "Show schema overview with table counts and sizes for hr_system database."
+  - 📋 **Features**: Schema owners, permissions, object counts, sizes, contents
+  - ⚠️ **Required**: `database_name` parameter must be specified
 - **get_table_relationships**
-  - "ecommerce 데이터베이스의 customers 테이블의 모든 관계를 보여주세요."
-  - "ecommerce 데이터베이스 전체의 관계 개요를 확인해주세요."
+  - "Show all relationships for customers table in ecommerce database."
+  - "Analyze foreign key relationships for orders table in sales schema of ecommerce database."
+  - "Get database-wide relationship overview for ecommerce database."
+  - "Find all tables that reference products table in ecommerce database."
+  - "Show cross-schema relationships in inventory database."
+  - 📋 **Features**: Foreign key relationships (inbound/outbound), cross-schema dependencies, constraint details
+  - ⚠️ **Required**: `database_name` parameter must be specified
+  - 💡 **Usage**: Leave `table_name` empty for database-wide relationship analysis
 - **get_user_list**
-  - "모든 데이터베이스 사용자와 역할을 보여주세요."
-  - "특정 데이터베이스에 대한 사용자 권한을 보여주세요."
+  - "List all database users and their roles."
+  - "Show user permissions for a specific database."
 - **get_index_usage_stats**
-  - "인덱스 사용 효율성을 분석해주세요."
-  - "현재 데이터베이스에서 사용되지 않는 인덱스를 찾아주세요."
+  - "Analyze index usage efficiency."
+  - "Find unused indexes in the current database."
 - **get_database_size_info**
-  - "데이터베이스 용량 분석을 보여주세요."
-  - "크기별로 가장 큰 데이터베이스들을 찾아주세요."
+  - "Show database capacity analysis."
+  - "Find the largest databases by size."
 - **get_table_size_info**
-  - "테이블과 인덱스 크기 분석을 보여주세요."
-  - "특정 스키마에서 가장 큰 테이블들을 찾아주세요."
+  - "Show table and index size analysis."
+  - "Find largest tables in a specific schema."
 - **get_vacuum_analyze_stats**
-  - "최근 VACUUM과 ANALYZE 작업을 보여주세요."
-  - "VACUUM이 필요한 테이블 목록을 보여주세요."
+  - "Show recent VACUUM and ANALYZE operations."
+  - "List tables needing VACUUM."
 - **get_current_database_info**
-  - "현재 어떤 데이터베이스에 연결되어 있나요?"
-  - "현재 데이터베이스 정보와 연결 세부사항을 보여주세요."
+  - "What database am I connected to?"
+  - "Show current database information and connection details."
+  - "Display database encoding, collation, and size information."
+  - 📋 **Features**: Database name, encoding, collation, size, connection limits
+  - 🔧 **PostgreSQL 12-17**: Fully compatible, no extensions required
 - **get_table_bloat_analysis**
-  - "현재 데이터베이스의 테이블 블로트를 분석해주세요."
-  - "VACUUM 유지보수가 필요한 높은 블로트를 가진 테이블들을 찾아주세요."
+  - "Analyze table bloat in the current database."
+  - "Show dead tuple ratios and bloat estimates for user_logs table pattern."
+  - "Find tables with high bloat that need VACUUM maintenance."
+  - "Analyze bloat in specific schema with minimum 100 dead tuples."
+  - 📋 **Features**: Dead tuple ratios, bloat size estimates, VACUUM recommendations, pattern filtering
+  - 🔧 **PostgreSQL 12-17**: Fully compatible, no extensions required
+  - 💡 **Usage**: Extension-Independent approach using pg_stat_user_tables
 - **get_database_bloat_overview**
-  - "스키마별 데이터베이스 전체 블로트 요약을 보여주세요."
-  - "모든 스키마의 스토리지 효율성에 대한 개괄적인 보기를 확인해주세요."
+  - "Show database-wide bloat summary by schema."
+  - "Get high-level view of storage efficiency across all schemas."
+  - "Identify schemas requiring maintenance attention."
+  - 📋 **Features**: Schema-level aggregation, total bloat estimates, maintenance status
+  - 🔧 **PostgreSQL 12-17**: Fully compatible, no extensions required
 - **get_autovacuum_status**
-  - "autovacuum 설정과 트리거 조건을 확인해주세요."
-  - "즉시 autovacuum 주의가 필요한 테이블들을 보여주세요."
+  - "Check autovacuum configuration and trigger conditions."
+  - "Show tables needing immediate autovacuum attention."
+  - "Analyze autovacuum threshold percentages for public schema."
+  - "Find tables approaching autovacuum trigger points."
+  - 📋 **Features**: Trigger threshold analysis, urgency classification, configuration status
+  - 🔧 **PostgreSQL 12-17**: Fully compatible, no extensions required
+  - 💡 **Usage**: Extension-Independent autovacuum monitoring using pg_stat_user_tables
 - **get_autovacuum_activity**
-  - "지난 48시간 동안의 autovacuum 활동 패턴을 보여주세요."
-  - "autovacuum 실행 빈도와 타이밍을 모니터링해주세요."
+  - "Show autovacuum activity patterns for the last 48 hours."
+  - "Monitor autovacuum execution frequency and timing."
+  - "Find tables with irregular autovacuum patterns."
+  - "Analyze recent autovacuum and autoanalyze history."
+  - 📋 **Features**: Activity patterns, execution frequency, timing analysis
+  - 🔧 **PostgreSQL 12-17**: Fully compatible, no extensions required
+  - 💡 **Usage**: Historical autovacuum pattern analysis
 - **get_running_vacuum_operations**
-  - "현재 실행 중인 VACUUM과 ANALYZE 작업을 보여주세요."
-  - "활성 유지보수 작업과 진행상황을 모니터링해주세요."
+  - "Show currently running VACUUM and ANALYZE operations."
+  - "Monitor active maintenance operations and their progress."
+  - "Check if any VACUUM operations are blocking queries."
+  - "Find long-running maintenance operations."
+  - 📋 **Features**: Real-time operation status, elapsed time, impact level, process details
+  - 🔧 **PostgreSQL 12-17**: Fully compatible, no extensions required
+  - 💡 **Usage**: Real-time maintenance monitoring using pg_stat_activity
 - **get_vacuum_effectiveness_analysis**
-  - "VACUUM 효과와 유지보수 패턴을 분석해주세요."
-  - "수동 VACUUM과 autovacuum 효율성을 비교해주세요."
+  - "Analyze VACUUM effectiveness and maintenance patterns."
+  - "Compare manual VACUUM vs autovacuum efficiency."
+  - "Find tables with suboptimal maintenance patterns."
+  - "Check VACUUM frequency vs table activity ratios."
+  - 📋 **Features**: Maintenance pattern analysis, effectiveness assessment, DML-to-VACUUM ratios
+  - 🔧 **PostgreSQL 12-17**: Fully compatible, no extensions required
+  - 💡 **Usage**: Strategic VACUUM analysis using existing statistics
+- **get_table_bloat_analysis**
+  - "Analyze table bloat in the public schema."
+  - "Show tables with high dead tuple ratios in ecommerce database."
+  - "Find tables requiring VACUUM maintenance."
+  - "Check bloat for tables with more than 5000 dead tuples."
+  - 📋 **Features**: Dead tuple ratios, estimated bloat size, VACUUM recommendations
+  - ⚠️ **Required**: Specify `database_name` for cross-database analysis
+- **get_database_bloat_overview**
+  - "Show database-wide bloat summary by schema."
+  - "Get bloat overview for inventory database."
+  - "Identify schemas with highest bloat ratios."
+  - "Database maintenance planning with bloat statistics."
+  - 📋 **Features**: Schema-level aggregation, maintenance priorities, size recommendations
 - **get_lock_monitoring**
-  - "모든 현재 락과 차단된 세션을 보여주세요."
-  - "granted=false 필터로 차단된 세션만 보여주세요."
+  - "Show all current locks and blocked sessions."
+  - "Show only blocked sessions with granted=false filter."
+  - "Monitor locks by specific user with username filter."
+  - "Check exclusive locks with mode filter."
 - **get_wal_status**
-  - "WAL 상태와 아카이빙 정보를 보여주세요."
-  - "WAL 생성과 현재 LSN 위치를 모니터링해주세요."
+  - "Show WAL status and archiving information."
+  - "Monitor WAL generation and current LSN position."
 - **get_replication_status**
-  - "복제 연결과 지연 상태를 확인해주세요."
-  - "복제 슬롯과 WAL receiver 상태를 모니터링해주세요."
+  - "Check replication connections and lag status."
+  - "Monitor replication slots and WAL receiver status."
 - **get_database_stats**
-  - "포괄적인 데이터베이스 성능 메트릭을 보여주세요."
-  - "트랜잭션 커밋 비율과 I/O 통계를 분석해주세요."
+  - "Show comprehensive database performance metrics."
+  - "Analyze transaction commit ratios and I/O statistics."
+  - "Monitor buffer cache hit ratios and temporary file usage."
 - **get_bgwriter_stats**
-  - "체크포인트 성능과 타이밍을 분석해주세요."
-  - "백그라운드 라이터 효율성 통계를 보여주세요."
+  - "Analyze checkpoint performance and timing."
+  - "Show me checkpoint performance."
+  - "Show background writer efficiency statistics."
+  - "Monitor buffer allocation and fsync patterns."
 - **get_user_functions_stats**
-  - "사용자 정의 함수 성능을 분석해주세요."
-  - "함수 호출 횟수와 실행 시간을 보여주세요."
+  - "Analyze user-defined function performance."
+  - "Show function call counts and execution times."
+  - "Identify performance bottlenecks in custom functions."
+  - ⚠️ **Requires**: `track_functions = pl` in postgresql.conf
 - **get_table_io_stats**
-  - "테이블 I/O 성능과 버퍼 히트 비율을 분석해주세요."
-  - "버퍼 캐시 성능이 낮은 테이블들을 찾아주세요."
+  - "Analyze table I/O performance and buffer hit ratios."
+  - "Identify tables with poor buffer cache performance."
+  - "Monitor TOAST table I/O statistics."
+  - 💡 **Enhanced with**: `track_io_timing = on` for accurate timing
 - **get_index_io_stats**
-  - "인덱스 I/O 성능과 버퍼 효율성을 보여주세요."
-  - "과도한 디스크 I/O를 유발하는 인덱스들을 찾아주세요."
+  - "Show index I/O performance and buffer efficiency."
+  - "Identify indexes causing excessive disk I/O."
+  - "Monitor index cache-friendliness patterns."
+  - 💡 **Enhanced with**: `track_io_timing = on` for accurate timing
 - **get_database_conflicts_stats**
-  - "스탠바이 서버의 복제 충돌을 확인해주세요."
-  - "충돌 유형과 해결 통계를 분석해주세요."
+  - "Check replication conflicts on standby servers."
+  - "Analyze conflict types and resolution statistics."
+  - "Monitor standby server query cancellation patterns."
+  - "Monitor WAL generation and current LSN position."
+- **get_replication_status**
+  - "Check replication connections and lag status."
+  - "Monitor replication slots and WAL receiver status."
 
-### 🚀 버전 적응형 도구 (자동 적응)
+### 🚀 Version-Aware Tools (Auto-Adapting)
 
-- **get_io_stats** (새로운 기능!)
-  - "포괄적인 I/O 통계를 보여주세요." (PostgreSQL 16+에서 상세한 분석 제공)
-  - "버퍼 캐시 효율성과 I/O 타이밍을 분석해주세요."
-- **get_bgwriter_stats** (향상됨!)
-  - "백그라운드 라이터와 체크포인트 성능을 보여주세요."
-- **get_server_info** (향상됨!)
-  - "서버 버전과 호환성 기능을 보여주세요."
-  - "이 PostgreSQL 버전에서 사용 가능한 MCP 도구들을 확인해주세요."
-- **get_all_tables_stats** (향상됨!)
-  - "모든 테이블에 대한 포괄적인 통계를 보여주세요." (PG12-17 버전 호환)
-  - "테이블 접근 패턴과 유지보수 필요사항을 분석해주세요."
+- **get_io_stats** (New!)
+  - "Show comprehensive I/O statistics." (PostgreSQL 16+ provides detailed breakdown)
+  - "Analyze I/O statistics."
+  - "Analyze buffer cache efficiency and I/O timing."
+  - "Monitor I/O patterns by backend type and context."
+  - 📈 **PG16+**: Full pg_stat_io with timing, backend types, and contexts
+  - 📊 **PG12-15**: Basic pg_statio_* fallback with buffer hit ratios
+- **get_bgwriter_stats** (Enhanced!)
+  - "Show background writer and checkpoint performance."
+  - 📈 **PG15**: Separate checkpointer and bgwriter statistics (unique feature)
+  - 📊 **PG12-14, 16+**: Combined bgwriter stats (includes checkpointer data)
+- **get_server_info** (Enhanced!)
+  - "Show server version and compatibility features."
+  - "Check server compatibility."
+  - "Check what MCP tools are available on this PostgreSQL version."
+  - "Displays feature availability matrix and upgrade recommendations."
+- **get_all_tables_stats** (Enhanced!)
+  - "Show comprehensive statistics for all tables." (version-compatible for PG12-17)
+  - "Include system tables with include_system=true parameter."
+  - "Analyze table access patterns and maintenance needs."
+  - 📈 **PG13+**: Tracks insertions since vacuum (`n_ins_since_vacuum`) for optimal maintenance scheduling
+  - 📊 **PG12**: Compatible mode with NULL for unsupported columns
 
-### 🟡 익스텐션 의존 도구
+### 🟡 Extension-Dependent Tools
 
-- **get_pg_stat_statements_top_queries** (`pg_stat_statements` 필요)
-  - "가장 느린 쿼리 상위 10개를 보여주세요."
-  - "inventory 데이터베이스의 느린 쿼리를 분석해주세요."
-- **get_pg_stat_monitor_recent_queries** (`pg_stat_monitor` 선택사항)
-  - "최근 쿼리를 실시간으로 보여주세요."
-  - "지난 5분간의 쿼리 활동을 모니터링해주세요."
+- **get_pg_stat_statements_top_queries** (Requires `pg_stat_statements`)
+  - "Show top 10 slowest queries."
+  - "Analyze slow queries in the inventory database."
+  - 📈 **Version-Compatible**: PG12 uses `total_time` → `total_exec_time` mapping; PG13+ uses native columns
+  - 💡 **Cross-Version**: Automatically adapts query structure for PostgreSQL 12-17 compatibility
+- **get_pg_stat_monitor_recent_queries** (Optional, uses `pg_stat_monitor`)
+  - "Show recent queries in real time."
+  - "Monitor query activity for the last 5 minutes."
+  - 📈 **Version-Compatible**: PG12 uses `total_time` → `total_exec_time` mapping; PG13+ uses native columns
+  - 💡 **Cross-Version**: Automatically adapts query structure for PostgreSQL 12-17 compatibility
 
 **💡 Pro Tip**: All tools support multi-database operations using the `database_name` parameter. This allows PostgreSQL superusers to analyze and monitor multiple databases from a single MCP server instance.
 
