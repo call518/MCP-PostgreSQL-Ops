@@ -156,10 +156,13 @@ http://localhost:3003/
 }
 ```
 
-"Show PostgreSQL configuration parameter for shared_buffers"
+"Show PostgreSQL configuration parameter for shared_buffers."
 ![Claude Desktop Integration](img/screenshot-003.png)
 
-"Show all relationships for customers table in ecommerce database as a Mermaid diagram"
+"Show all active connections in a clear and readable html table format."
+![Claude Desktop Integration](img/screenshot-claude-desktop-airflow-connections-html.png)
+
+"Show all relationships for customers table in ecommerce database as a Mermaid diagram."
 ![Claude Desktop Integration](img/screenshot-claude-desktop-mermaid-diagram.png)
 
 (Optional) Run with Local Source:
@@ -390,137 +393,137 @@ SET track_io_timing = 'on';
 ### 🟢 Extension-Independent Tools (Always Available)
 
 - **get_server_info**
-  - "Show PostgreSQL server version and extension status"
-  - "Check if pg_stat_statements is installed"
+  - "Show PostgreSQL server version and extension status."
+  - "Check if pg_stat_statements is installed."
 - **get_active_connections**
-  - "Show all active connections"
-  - "List current sessions with database and user"
+  - "Show all active connections."
+  - "List current sessions with database and user."
 - **get_postgresql_config**
-  - "Show all PostgreSQL configuration parameters"
-  - "Find all memory-related configuration settings"
+  - "Show all PostgreSQL configuration parameters."
+  - "Find all memory-related configuration settings."
 - **get_database_list**
-  - "List all databases and their sizes"
-  - "Show database list with owner information"
+  - "List all databases and their sizes."
+  - "Show database list with owner information."
 - **get_table_list**
-  - "List all tables in the ecommerce database"
-  - "Show table sizes in the public schema"
+  - "List all tables in the ecommerce database."
+  - "Show table sizes in the public schema."
 - **get_table_schema_info**
-  - "Show detailed schema information for the customers table in ecommerce database"
-  - "Get column details and constraints for products table in ecommerce database"
-  - "Analyze table structure with indexes and foreign keys for orders table in sales schema of ecommerce database"
-  - "Show schema overview for all tables in public schema of inventory database"
+  - "Show detailed schema information for the customers table in ecommerce database."
+  - "Get column details and constraints for products table in ecommerce database."
+  - "Analyze table structure with indexes and foreign keys for orders table in sales schema of ecommerce database."
+  - "Show schema overview for all tables in public schema of inventory database."
   - 📋 **Features**: Column types, constraints, indexes, foreign keys, table metadata
   - ⚠️ **Required**: `database_name` parameter must be specified
 - **get_database_schema_info**
-  - "Show all schemas in ecommerce database with their contents"
-  - "Get detailed information about sales schema in ecommerce database"
-  - "Analyze schema structure and permissions for inventory database"
-  - "Show schema overview with table counts and sizes for hr_system database"
+  - "Show all schemas in ecommerce database with their contents."
+  - "Get detailed information about sales schema in ecommerce database."
+  - "Analyze schema structure and permissions for inventory database."
+  - "Show schema overview with table counts and sizes for hr_system database."
   - 📋 **Features**: Schema owners, permissions, object counts, sizes, contents
   - ⚠️ **Required**: `database_name` parameter must be specified
 - **get_table_relationships**
-  - "Show all relationships for customers table in ecommerce database"
-  - "Analyze foreign key relationships for orders table in sales schema of ecommerce database"
-  - "Get database-wide relationship overview for ecommerce database"
-  - "Find all tables that reference products table in ecommerce database"
-  - "Show cross-schema relationships in inventory database"
+  - "Show all relationships for customers table in ecommerce database."
+  - "Analyze foreign key relationships for orders table in sales schema of ecommerce database."
+  - "Get database-wide relationship overview for ecommerce database."
+  - "Find all tables that reference products table in ecommerce database."
+  - "Show cross-schema relationships in inventory database."
   - 📋 **Features**: Foreign key relationships (inbound/outbound), cross-schema dependencies, constraint details
   - ⚠️ **Required**: `database_name` parameter must be specified
   - 💡 **Usage**: Leave `table_name` empty for database-wide relationship analysis
 - **get_user_list**
-  - "List all database users and their roles"
-  - "Show user permissions for a specific database"
+  - "List all database users and their roles."
+  - "Show user permissions for a specific database."
 - **get_index_usage_stats**
-  - "Analyze index usage efficiency"
-  - "Find unused indexes in the current database"
+  - "Analyze index usage efficiency."
+  - "Find unused indexes in the current database."
 - **get_database_size_info**
-  - "Show database capacity analysis"
-  - "Find the largest databases by size"
+  - "Show database capacity analysis."
+  - "Find the largest databases by size."
 - **get_table_size_info**
-  - "Show table and index size analysis"
-  - "Find largest tables in a specific schema"
+  - "Show table and index size analysis."
+  - "Find largest tables in a specific schema."
 - **get_vacuum_analyze_stats**
-  - "Show recent VACUUM and ANALYZE operations"
-  - "List tables needing VACUUM"
+  - "Show recent VACUUM and ANALYZE operations."
+  - "List tables needing VACUUM."
 - **get_lock_monitoring**
-  - "Show all current locks and blocked sessions"
-  - "Show only blocked sessions with granted=false filter"
-  - "Monitor locks by specific user with username filter"
-  - "Check exclusive locks with mode filter"
+  - "Show all current locks and blocked sessions."
+  - "Show only blocked sessions with granted=false filter."
+  - "Monitor locks by specific user with username filter."
+  - "Check exclusive locks with mode filter."
 - **get_wal_status**
-  - "Show WAL status and archiving information"
-  - "Monitor WAL generation and current LSN position"
+  - "Show WAL status and archiving information."
+  - "Monitor WAL generation and current LSN position."
 - **get_replication_status**
-  - "Check replication connections and lag status"
-  - "Monitor replication slots and WAL receiver status"
+  - "Check replication connections and lag status."
+  - "Monitor replication slots and WAL receiver status."
 - **get_database_stats**
-  - "Show comprehensive database performance metrics"
-  - "Analyze transaction commit ratios and I/O statistics"
-  - "Monitor buffer cache hit ratios and temporary file usage"
+  - "Show comprehensive database performance metrics."
+  - "Analyze transaction commit ratios and I/O statistics."
+  - "Monitor buffer cache hit ratios and temporary file usage."
 - **get_bgwriter_stats**
-  - "Analyze checkpoint performance and timing"
-  - "Show me checkpoint performance"
-  - "Show background writer efficiency statistics"
-  - "Monitor buffer allocation and fsync patterns"
+  - "Analyze checkpoint performance and timing."
+  - "Show me checkpoint performance."
+  - "Show background writer efficiency statistics."
+  - "Monitor buffer allocation and fsync patterns."
 - **get_user_functions_stats**
-  - "Analyze user-defined function performance"
-  - "Show function call counts and execution times"
-  - "Identify performance bottlenecks in custom functions"
+  - "Analyze user-defined function performance."
+  - "Show function call counts and execution times."
+  - "Identify performance bottlenecks in custom functions."
   - ⚠️ **Requires**: `track_functions = pl` in postgresql.conf
 - **get_table_io_stats**
-  - "Analyze table I/O performance and buffer hit ratios"
-  - "Identify tables with poor buffer cache performance"
-  - "Monitor TOAST table I/O statistics"
+  - "Analyze table I/O performance and buffer hit ratios."
+  - "Identify tables with poor buffer cache performance."
+  - "Monitor TOAST table I/O statistics."
   - 💡 **Enhanced with**: `track_io_timing = on` for accurate timing
 - **get_index_io_stats**
-  - "Show index I/O performance and buffer efficiency"
-  - "Identify indexes causing excessive disk I/O"
-  - "Monitor index cache-friendliness patterns"
+  - "Show index I/O performance and buffer efficiency."
+  - "Identify indexes causing excessive disk I/O."
+  - "Monitor index cache-friendliness patterns."
   - 💡 **Enhanced with**: `track_io_timing = on` for accurate timing
 - **get_database_conflicts_stats**
-  - "Check replication conflicts on standby servers"
-  - "Analyze conflict types and resolution statistics"
-  - "Monitor standby server query cancellation patterns"
-  - "Monitor WAL generation and current LSN position"
+  - "Check replication conflicts on standby servers."
+  - "Analyze conflict types and resolution statistics."
+  - "Monitor standby server query cancellation patterns."
+  - "Monitor WAL generation and current LSN position."
 - **get_replication_status**
-  - "Check replication connections and lag status"
-  - "Monitor replication slots and WAL receiver status"
+  - "Check replication connections and lag status."
+  - "Monitor replication slots and WAL receiver status."
 
 ### 🚀 Version-Aware Tools (Auto-Adapting)
 
 - **get_io_stats** (New!)
-  - "Show comprehensive I/O statistics" (PostgreSQL 16+ provides detailed breakdown)
-  - "Analyze I/O statistics"
-  - "Analyze buffer cache efficiency and I/O timing"
-  - "Monitor I/O patterns by backend type and context"
+  - "Show comprehensive I/O statistics." (PostgreSQL 16+ provides detailed breakdown)
+  - "Analyze I/O statistics."
+  - "Analyze buffer cache efficiency and I/O timing."
+  - "Monitor I/O patterns by backend type and context."
   - 📈 **PG16+**: Full pg_stat_io with timing, backend types, and contexts
   - 📊 **PG12-15**: Basic pg_statio_* fallback with buffer hit ratios
 - **get_bgwriter_stats** (Enhanced!)
-  - "Show background writer and checkpoint performance"
+  - "Show background writer and checkpoint performance."
   - 📈 **PG15**: Separate checkpointer and bgwriter statistics (unique feature)
   - 📊 **PG12-14, 16+**: Combined bgwriter stats (includes checkpointer data)
 - **get_server_info** (Enhanced!)
-  - "Show server version and compatibility features"
-  - "Check server compatibility"
-  - "Check what MCP tools are available on this PostgreSQL version"
-  - "Displays feature availability matrix and upgrade recommendations"
+  - "Show server version and compatibility features."
+  - "Check server compatibility."
+  - "Check what MCP tools are available on this PostgreSQL version."
+  - "Displays feature availability matrix and upgrade recommendations."
 - **get_all_tables_stats** (Enhanced!)
-  - "Show comprehensive statistics for all tables" (version-compatible for PG12-17)
-  - "Include system tables with include_system=true parameter"
-  - "Analyze table access patterns and maintenance needs"
+  - "Show comprehensive statistics for all tables." (version-compatible for PG12-17)
+  - "Include system tables with include_system=true parameter."
+  - "Analyze table access patterns and maintenance needs."
   - 📈 **PG13+**: Tracks insertions since vacuum (`n_ins_since_vacuum`) for optimal maintenance scheduling
   - 📊 **PG12**: Compatible mode with NULL for unsupported columns
 
 ### 🟡 Extension-Dependent Tools
 
 - **get_pg_stat_statements_top_queries** (Requires `pg_stat_statements`)
-  - "Show top 10 slowest queries"
-  - "Analyze slow queries in the inventory database"
+  - "Show top 10 slowest queries."
+  - "Analyze slow queries in the inventory database."
   - 📈 **Version-Compatible**: PG12 uses `total_time` → `total_exec_time` mapping; PG13+ uses native columns
   - 💡 **Cross-Version**: Automatically adapts query structure for PostgreSQL 12-17 compatibility
 - **get_pg_stat_monitor_recent_queries** (Optional, uses `pg_stat_monitor`)
-  - "Show recent queries in real time"
-  - "Monitor query activity for the last 5 minutes"
+  - "Show recent queries in real time."
+  - "Monitor query activity for the last 5 minutes."
   - 📈 **Version-Compatible**: PG12 uses `total_time` → `total_exec_time` mapping; PG13+ uses native columns
   - 💡 **Cross-Version**: Automatically adapts query structure for PostgreSQL 12-17 compatibility
 
