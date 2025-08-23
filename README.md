@@ -63,12 +63,12 @@ cd MCP-PostgreSQL-Ops
 ### Check and modify .env file
 cp .env.example .env
 
-### If you use other postgresql server, configure connection information:
-POSTGRES_HOST=your-address
-POSTGRES_PORT=your-listen-port
-POSTGRES_USER=your-username
-POSTGRES_PASSWORD=your-password
-POSTGRES_DB=your-database # Default connection DB. Superusers can access all DBs.
+### No need to modify defaults, but if using your own PostgreSQL server, edit below:
+POSTGRES_HOST=host.docker.internal
+POSTGRES_PORT=15432
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=changeme!@34
+POSTGRES_DB=ecommerce # Default connection DB. Superusers can access all DBs.
 ```
 
 ### 2. Start Demo Containers

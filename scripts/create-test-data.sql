@@ -7,6 +7,36 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
 CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 
 -- =============================================================================
+-- CLEAN UP EXISTING TEST DATABASES (SAFETY MEASURE)
+-- =============================================================================
+
+\echo 'Cleaning up existing test databases if they exist...'
+
+-- Disconnect all users from test databases before dropping them
+SELECT pg_terminate_backend(pg_stat_activity.pid)
+FROM pg_stat_activity
+WHERE pg_stat_activity.datname IN ('ecommerce', 'analytics', 'inventory', 'hr_system')
+  AND pid <> pg_backend_pid();
+
+-- Drop existing test databases if they exist (ignore errors if they don't exist)
+\set ON_ERROR_STOP off
+
+DROP DATABASE IF EXISTS ecommerce;
+DROP DATABASE IF EXISTS analytics;
+DROP DATABASE IF EXISTS inventory;
+DROP DATABASE IF EXISTS hr_system;
+
+-- Drop existing test users if they exist
+DROP USER IF EXISTS app_readonly;
+DROP USER IF EXISTS app_readwrite;
+DROP USER IF EXISTS analytics_user;
+DROP USER IF EXISTS backup_user;
+
+\set ON_ERROR_STOP on
+
+\echo 'Database cleanup completed. Starting fresh database creation...'
+
+-- =============================================================================
 -- CREATE TEST DATABASES
 -- =============================================================================
 
@@ -948,20 +978,20 @@ SELECT * FROM customers WHERE email LIKE '%@example.com' ORDER BY last_name;
 
 \c analytics
 \echo 'Generating I/O activity in analytics database...'
-SELECT COUNT(*) FROM sales_data WHERE sale_date >= CURRENT_DATE - INTERVAL '7 days';
-SELECT COUNT(*) FROM web_analytics WHERE visit_date >= CURRENT_DATE - INTERVAL '30 days';
-SELECT AVG(revenue) FROM sales_data WHERE sale_date >= CURRENT_DATE - INTERVAL '90 days';
+SELECT COUNT(*) FROM page_views WHERE view_timestamp >= CURRENT_DATE - INTERVAL '7 days';
+SELECT COUNT(*) FROM sales_summary WHERE date_key >= CURRENT_DATE - INTERVAL '30 days';
+SELECT AVG(total_revenue) FROM sales_summary WHERE date_key >= CURRENT_DATE - INTERVAL '90 days';
 
 \c inventory
 \echo 'Generating I/O activity in inventory database...'
-SELECT COUNT(*) FROM warehouse_items wi JOIN warehouses w ON wi.warehouse_id = w.id;
-SELECT COUNT(*) FROM stock_movements WHERE movement_date >= CURRENT_DATE - INTERVAL '7 days';
+SELECT COUNT(*) FROM inventory_items ii JOIN suppliers s ON ii.supplier_id = s.id;
+SELECT COUNT(*) FROM stock_levels WHERE last_updated >= CURRENT_DATE - INTERVAL '7 days';
 SELECT * FROM suppliers ORDER BY name;
 
 \c hr_system
 \echo 'Generating I/O activity in hr_system database...'
 SELECT COUNT(*) FROM employees e JOIN departments d ON e.department_id = d.id;
-SELECT COUNT(*) FROM payroll_records WHERE pay_date >= CURRENT_DATE - INTERVAL '30 days';
+SELECT COUNT(*) FROM payroll WHERE pay_period_start >= CURRENT_DATE - INTERVAL '30 days';
 SELECT * FROM employees WHERE hire_date >= CURRENT_DATE - INTERVAL '365 days';
 
 -- Create some user-defined functions for function stats
@@ -973,8 +1003,8 @@ DECLARE
     total DECIMAL(10,2);
 BEGIN
     SELECT SUM(quantity * unit_price) INTO total
-    FROM order_items 
-    WHERE order_items.order_id = $1;
+    FROM sales.order_items 
+    WHERE sales.order_items.order_id = $1;
     RETURN COALESCE(total, 0);
 END;
 $$ LANGUAGE plpgsql;
@@ -985,17 +1015,17 @@ DECLARE
     order_count INTEGER;
 BEGIN
     SELECT COUNT(*) INTO order_count
-    FROM orders
-    WHERE orders.customer_id = $1;
+    FROM sales.orders
+    WHERE sales.orders.customer_id = $1;
     RETURN COALESCE(order_count, 0);
 END;
 $$ LANGUAGE plpgsql;
 
 -- Execute functions multiple times to generate statistics
 \echo 'Executing functions to generate statistics...'
-SELECT calculate_order_total(id) FROM orders LIMIT 20;
+SELECT calculate_order_total(id) FROM sales.orders LIMIT 20;
 SELECT get_customer_order_count(id) FROM customers LIMIT 15;
-SELECT calculate_order_total(id) FROM orders WHERE id BETWEEN 1 AND 10;
+SELECT calculate_order_total(id) FROM sales.orders WHERE id BETWEEN 1 AND 10;
 SELECT get_customer_order_count(id) FROM customers WHERE id BETWEEN 1 AND 5;
 
 -- Force statistics collection
@@ -1004,17 +1034,17 @@ SELECT pg_stat_reset();
 -- Run more queries to regenerate fresh statistics
 \c ecommerce
 SELECT COUNT(*) FROM products WHERE price > 100;
-SELECT COUNT(*) FROM orders WHERE status = 'completed';
+SELECT COUNT(*) FROM sales.orders WHERE status = 'completed';
 VACUUM ANALYZE products;
-VACUUM ANALYZE orders;
+VACUUM ANALYZE sales.orders;
 
 \c analytics
-SELECT COUNT(*) FROM sales_data;
-VACUUM ANALYZE sales_data;
+SELECT COUNT(*) FROM page_views;
+VACUUM ANALYZE page_views;
 
 \c inventory  
-SELECT COUNT(*) FROM warehouse_items;
-VACUUM ANALYZE warehouse_items;
+SELECT COUNT(*) FROM inventory_items;
+VACUUM ANALYZE inventory_items;
 
 \c hr_system
 SELECT COUNT(*) FROM employees;
@@ -1022,7 +1052,7 @@ VACUUM ANALYZE employees;
 
 -- Re-execute functions after reset
 \c ecommerce
-SELECT calculate_order_total(id) FROM orders LIMIT 5;
+SELECT calculate_order_total(id) FROM sales.orders LIMIT 5;
 SELECT get_customer_order_count(id) FROM customers LIMIT 5;
 
 \echo ''
@@ -1036,3 +1066,133 @@ SELECT get_customer_order_count(id) FROM customers LIMIT 5;
 \echo '  - get_index_io_stats() - Index I/O performance statistics'
 \echo '  - get_database_conflicts_stats() - Replication conflict statistics'
 \echo ''
+
+-- =============================================================================
+-- GENERATE TABLE BLOAT FOR TESTING BLOAT ANALYSIS TOOLS
+-- =============================================================================
+\echo 'Generating table bloat for testing bloat analysis tools...'
+
+\c ecommerce
+
+-- Create bloat in products table
+\echo 'Creating bloat in products table...'
+-- Update all products multiple times to create dead tuples
+UPDATE products SET description = description || ' (updated 1)';
+UPDATE products SET description = description || ' (updated 2)';
+UPDATE products SET price = price * 1.01; -- Small price increase
+UPDATE products SET description = REPLACE(description, ' (updated 1) (updated 2)', ' - Updated for testing');
+
+-- Create bloat in customers table  
+\echo 'Creating bloat in customers table...'
+-- Update customer data multiple times
+UPDATE customers SET phone = COALESCE(phone, '+1-555-0000');
+UPDATE customers SET last_login = CURRENT_TIMESTAMP - INTERVAL '1 day' WHERE id % 3 = 0;
+UPDATE customers SET total_spent = total_spent + 1.00 WHERE id % 5 = 0;
+UPDATE customers SET customer_level = CASE 
+    WHEN total_spent > 1500 THEN 'gold'
+    WHEN total_spent > 1000 THEN 'silver' 
+    ELSE customer_level
+END;
+
+-- Create bloat in reviews table (smaller table for varied bloat sizes)
+\echo 'Creating bloat in reviews table...'
+-- Delete and re-insert some reviews to create dead space
+DELETE FROM reviews WHERE id % 10 = 0; -- Delete 10% of reviews
+INSERT INTO reviews (product_id, customer_id, rating, title, review_text, helpful_votes, is_verified_purchase)
+SELECT 
+    (random() * 100 + 1)::integer,
+    (random() * 500 + 1)::integer,
+    (random() * 5 + 1)::integer,
+    'Updated Review ' || generate_series,
+    'This is an updated review created for bloat testing - ' || generate_series,
+    (random() * 10)::integer,
+    random() < 0.8
+FROM generate_series(1, 150); -- Add back some reviews
+
+-- Create significant bloat in sales.order_items table
+\echo 'Creating bloat in order_items table...'
+-- Multiple updates to create substantial dead tuples
+UPDATE sales.order_items SET discount_percent = 5.0 WHERE id % 4 = 0;
+UPDATE sales.order_items SET discount_percent = 10.0 WHERE id % 6 = 0;  
+UPDATE sales.order_items SET total_price = unit_price * quantity * (1 - discount_percent/100);
+
+-- Create bloat in support tickets
+\echo 'Creating bloat in support_tickets table...'
+UPDATE customer_service.support_tickets SET status = 'in_progress' WHERE status = 'open' AND id % 3 = 0;
+UPDATE customer_service.support_tickets SET updated_at = CURRENT_TIMESTAMP;
+UPDATE customer_service.support_tickets SET status = 'resolved' WHERE status = 'in_progress' AND priority = 'low';
+
+-- Force statistics update to reflect new dead tuples
+\echo 'Updating table statistics after bloat generation...'
+ANALYZE products;
+ANALYZE customers;  
+ANALYZE reviews;
+ANALYZE sales.order_items;
+ANALYZE customer_service.support_tickets;
+
+-- Create some bloat in inventory database too
+\c inventory
+\echo 'Creating bloat in inventory database...'
+
+-- Create bloat in inventory_items table
+UPDATE inventory_items SET description = description || ' - Updated for testing' WHERE id % 2 = 0;
+UPDATE inventory_items SET unit_cost = unit_cost * 1.02 WHERE id % 3 = 0;
+UPDATE inventory_items SET selling_price = unit_cost * 1.5; -- Recalculate margins
+
+-- Create bloat in stock_levels table  
+UPDATE stock_levels SET last_updated = CURRENT_TIMESTAMP;
+UPDATE stock_levels SET quantity_reserved = quantity_reserved + 1 WHERE quantity_on_hand > 50;
+UPDATE stock_levels SET quantity_reserved = GREATEST(0, quantity_reserved - 1) WHERE quantity_reserved > 0;
+
+ANALYZE inventory_items;
+ANALYZE stock_levels;
+
+-- Add some bloat to hr_system database as well
+\c hr_system
+\echo 'Creating bloat in hr_system database...'
+
+-- Create bloat in employees table
+UPDATE employees SET updated_at = CURRENT_TIMESTAMP;
+UPDATE employees SET phone = COALESCE(phone, '+1-555-9999') WHERE phone IS NULL;
+UPDATE employees SET address = address || ', Updated' WHERE id % 4 = 0;
+UPDATE employees SET address = REPLACE(address, ', Updated', '') WHERE address LIKE '%, Updated';
+
+-- Create bloat in payroll table
+UPDATE payroll SET processed_date = CURRENT_TIMESTAMP WHERE id % 5 = 0;
+
+ANALYZE employees;
+ANALYZE payroll;
+
+\echo ''
+\echo '============================================================================='
+\echo 'BLOAT GENERATION COMPLETED!'
+\echo '============================================================================='
+\echo ''
+\echo 'Table bloat has been artificially created in the following tables:'
+\echo '  ecommerce database:'
+\echo '    - products (moderate bloat from multiple updates)'
+\echo '    - customers (moderate bloat from conditional updates)' 
+\echo '    - reviews (high bloat from deletes and re-inserts)'
+\echo '    - sales.order_items (significant bloat from multiple updates)'
+\echo '    - customer_service.support_tickets (light bloat from status updates)'
+\echo ''
+\echo '  inventory database:'
+\echo '    - inventory_items (moderate bloat from updates)'
+\echo '    - stock_levels (light bloat from quantity updates)'
+\echo ''
+\echo '  hr_system database:'
+\echo '    - employees (light bloat from metadata updates)'
+\echo '    - payroll (minimal bloat from timestamp updates)'
+\echo ''
+\echo 'You can now test the new bloat analysis MCP tools:'
+\echo '  - get_table_bloat_analysis(database_name="ecommerce")'
+\echo '  - get_database_bloat_overview(database_name="ecommerce")'
+\echo '  - get_autovacuum_status(database_name="ecommerce")'
+\echo '  - get_vacuum_effectiveness_analysis(database_name="ecommerce")'
+\echo ''
+\echo 'Expected results:'
+\echo '  - reviews table should show highest bloat ratio'
+\echo '  - sales.order_items should show significant dead tuples'
+\echo '  - products and customers should show moderate bloat'
+\echo '  - Some tables should trigger autovacuum thresholds'
+\echo '============================================================================='
