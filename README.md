@@ -67,10 +67,16 @@ POSTGRES_PASSWORD=your-password
 POSTGRES_DB=your-database # Default connection DB. Superusers can access all DBs.
 ```
 
-### 2. Install Dependencies
+### 2. Start Demo Containers
 
 ```bash
+# Start all containers including built-in PostgreSQL for testing
 docker-compose up -d
+
+# Alternative: If using your own PostgreSQL instance
+# Comment out postgres and postgres-init-extensions services in docker-compose.yml
+# Then use the custom configuration:
+# docker-compose -f docker-compose.custom-db.yml up -d
 ```
 
 ### 3. Access to OpenWebUI
