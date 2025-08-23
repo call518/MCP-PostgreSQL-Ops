@@ -13,6 +13,7 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 - ✅ **Performance Analysis**: Slow query identification and index usage analysis with version-aware query optimization
 - ✅ **Capacity Management**: Database and table size analysis
 - ✅ **Bloat Analysis**: Table bloat monitoring and dead tuple analysis with maintenance recommendations
+- ✅ **VACUUM/Autovacuum Analysis**: Comprehensive maintenance operation monitoring, effectiveness analysis, and real-time status tracking
 - ✅ **Configuration Retrieval**: PostgreSQL configuration parameter verification
 - ✅ **Database Performance Statistics**: Comprehensive transaction, I/O, and buffer cache analysis
 - ✅ **I/O Performance Monitoring**: Version-aware I/O statistics (comprehensive on PG16+, basic on PG12-15)

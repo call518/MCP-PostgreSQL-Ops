@@ -1,0 +1,136 @@
+services:
+  open-webui:
+    container_name: mcp-postgresql-ops-open-webui
+    image: ghcr.io/open-webui/open-webui:main
+    ports:
+      - "${DOCKER_EXTERNAL_PORT_OPENWEBUI}:8080"
+    environment:
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+    volumes:
+      - open-webui-data:/app/backend/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  mcp-server:
+    container_name: mcp-postgresql-ops-mcp-server
+    image: call518/mcp-server-postgresql-ops:1.0.0
+    ports:
+      - "${DOCKER_EXTERNAL_PORT_MCP_SERVER}:8080" ### (WARNING) Must be same with port number of 'FASTMCP_PORT', 'mcp-config.json' and 'mcp-config.json.http'
+    environment:
+      - PYTHONPATH=${PYTHONPATH}
+      - FASTMCP_TYPE=${FASTMCP_TYPE}
+      - FASTMCP_HOST=${FASTMCP_HOST}
+      - FASTMCP_PORT=${FASTMCP_PORT}
+      - PGSQL_VERSION=${PGSQL_VERSION}
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - ./src:/app/src
+      - ./scripts:/app/scripts
+      - ./.env:/app/.env:ro
+    restart: unless-stopped
+
+  mcpo-proxy:
+    image: call518/mcpo-proxy-postgresql-ops:1.0.2
+    container_name: mcp-postgresql-ops-mcpo-proxy
+    depends_on:
+      - mcp-server
+    ports:
+      - "${DOCKER_EXTERNAL_PORT_MCPO_PROXY}:8000"
+    volumes:
+      - ./mcp-config.json.http:/app/config/mcp-config.json
+    restart: unless-stopped
+
+#------------------------------------------------------
+
+  # postgres:
+  #   container_name: mcp-postgresql-ops-postgresql-${PGSQL_VERSION}
+  #   image: percona/percona-distribution-postgresql:${PGSQL_VERSION}
+  #   environment:
+  #     POSTGRES_USER: "${POSTGRES_USER}"
+  #     POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+  #     POSTGRES_DB: "${POSTGRES_DB}"
+  #     LANG: en_US.utf8
+  #   ports:
+  #     - "${POSTGRES_PORT}:${POSTGRES_PORT}"
+  #   volumes:
+  #     - postgresql-data:/var/lib/postgresql/data
+  #     # - ./initdb:/docker-entrypoint-initdb.d:ro   # 초기화 SQL(최초 실행시에만 적용됨)
+  #   # shared_preload_libraries를 기동 인자로 전달하여 pg_stat_statements + pg_stat_monitor 활성화
+  #   command:
+  #     - "-c"
+  #     - "port=${POSTGRES_PORT}"
+  #     - "-c"
+  #     - "max_connections=${POSTGRES_MAX_CONNECTIONS}"
+  #     - "-c"
+  #     - "shared_preload_libraries=pg_stat_statements,pg_stat_monitor"
+  #     - "-c"
+  #     - "pg_stat_statements.track=all"
+  #     - "-c"
+  #     - "track_activity_query_size=2048"
+  #     - "-c"
+  #     - "track_activities=on"
+  #     - "-c"
+  #     - "track_counts=on"
+  #     - "-c"
+  #     - "track_io_timing=on"
+  #     - "-c"
+  #     - "track_functions=pl"
+  #   healthcheck:
+  #     test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-p", "${POSTGRES_PORT}"]
+  #     start_period: 5s
+  #     interval: 10s
+  #     retries: 5
+  #   restart: unless-stopped
+
+  # postgres-init-extensions:
+  #   container_name: mcp-postgresql-ops-postgres-init-extensions
+  #   image: percona/percona-distribution-postgresql:${PGSQL_VERSION}
+  #   depends_on:
+  #     - postgres
+  #   entrypoint: /bin/bash
+  #   command: 
+  #     - "-c"
+  #     - |
+  #       # Wait for PostgreSQL to be ready
+  #       for i in $(seq 1 120); do
+  #         psql -h postgres -p ${POSTGRES_PORT} -U "${POSTGRES_USER}" -d postgres -c '\q' >/dev/null 2>&1 && break
+  #         echo "waiting for postgres (psql)..." && sleep 1
+  #       done
+        
+  #       echo "PostgreSQL is ready. Installing extensions..."
+        
+  #       # Install extensions in postgres database
+  #       psql -h postgres -p ${POSTGRES_PORT} -U "${POSTGRES_USER}" -d postgres -c "CREATE EXTENSION IF NOT EXISTS pg_stat_statements;"
+  #       psql -h postgres -p ${POSTGRES_PORT} -U "${POSTGRES_USER}" -d postgres -c "CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;"
+        
+  #       # Install extensions in custom database if different from postgres
+  #       if [[ "${POSTGRES_DB}" != "postgres" ]]; then
+  #         psql -h postgres -p ${POSTGRES_PORT} -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -c "CREATE EXTENSION IF NOT EXISTS pg_stat_statements;"
+  #         psql -h postgres -p ${POSTGRES_PORT} -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -c "CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;"
+  #       fi
+        
+  #       echo "Extensions installed successfully. Creating test data..."
+        
+  #       # Create comprehensive test data
+  #       psql -h postgres -p ${POSTGRES_PORT} -U "${POSTGRES_USER}" -d postgres -f /scripts/create-test-data.sql
+        
+  #       echo "Test data creation completed successfully!"
+  #   environment:
+  #     POSTGRES_USER: "${POSTGRES_USER}"
+  #     PGPASSWORD: '${POSTGRES_PASSWORD}'
+  #     POSTGRES_DB: "${POSTGRES_DB}"
+  #     POSTGRES_PORT: "${POSTGRES_PORT}"
+  #   volumes:
+  #     - ./scripts:/scripts:ro
+  #   restart: no
+
+volumes:
+  open-webui-data:
+    name: open-webui-data-mcp-postgresql-ops
+  postgresql-data:
+    name: postgresql-data-mcp-postgresql-ops
