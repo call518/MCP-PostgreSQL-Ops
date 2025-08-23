@@ -30,6 +30,7 @@ from .functions import (
     sanitize_connection_info,
     read_prompt_template,
     parse_prompt_sections,
+    get_current_database_name,
     POSTGRES_CONFIG
 )
 from .version_compat import (
@@ -442,6 +443,81 @@ async def get_server_info() -> str:
     except Exception as e:
         logger.error(f"Failed to get server info: {e}")
         return f"Error retrieving server information: {str(e)}"
+
+
+@mcp.tool()
+async def get_current_database_info(database_name: str = None) -> str:
+    """
+    [Tool Purpose]: Get information about the current database connection
+    
+    [Exact Functionality]:
+    - Show the name of the currently connected database
+    - Display database-specific information like encoding, locale, and size
+    - Provide connection context for clarity in multi-database environments
+    
+    [Required Use Cases]:
+    - When user asks "what database am I connected to?", "current database", etc.
+    - When clarifying database context for analysis operations
+    - When troubleshooting connection issues or confirming target database
+    
+    [Strictly Prohibited Use Cases]:
+    - Requests for database structure changes or creation/deletion
+    - Requests for user authentication or permission changes
+    - Requests for configuration modifications
+    
+    Args:
+        database_name: Target database to get info for (uses default connection if omitted)
+    
+    Returns:
+        Current database name and related information for connection clarity
+    """
+    try:
+        # Get current database name
+        current_db = await get_current_database_name(database_name)
+        
+        # Get detailed database information
+        query = """
+        SELECT 
+            datname as database_name,
+            pg_encoding_to_char(encoding) as encoding,
+            datcollate as collate,
+            datctype as ctype,
+            pg_size_pretty(pg_database_size(datname)) as database_size,
+            pg_database_size(datname) as size_bytes,
+            datconnlimit as connection_limit,
+            CASE 
+                WHEN datconnlimit = -1 THEN 'Unlimited'
+                ELSE datconnlimit::text
+            END as connection_limit_display
+        FROM pg_database 
+        WHERE datname = $1
+        """
+        
+        db_info = await execute_query(query, [current_db], database=database_name)
+        
+        if not db_info:
+            return f"Database information not found for: {current_db}"
+        
+        info = db_info[0]
+        
+        result = []
+        result.append("=== Current Database Information ===\n")
+        result.append(f"Connected Database: {info['database_name']}")
+        result.append(f"Database Size: {info['database_size']}")
+        result.append(f"Character Encoding: {info['encoding']}")
+        result.append(f"LC_COLLATE: {info['collate']}")
+        result.append(f"LC_CTYPE: {info['ctype']}")
+        result.append(f"Connection Limit: {info['connection_limit_display']}")
+        result.append("")
+        
+        # Add context note
+        result.append("💡 This is the database used for analysis operations when no specific database is specified.")
+        
+        return "\n".join(result)
+        
+    except Exception as e:
+        logger.error(f"Failed to get current database info: {e}")
+        return f"Error retrieving current database information: {str(e)}"
 
 
 @mcp.tool()
@@ -1871,6 +1947,246 @@ async def get_vacuum_analyze_stats(database_name: str = None) -> str:
     except Exception as e:
         logger.error(f"Failed to get vacuum/analyze stats: {e}")
         return f"Error retrieving VACUUM/ANALYZE statistics: {str(e)}"
+
+
+@mcp.tool()
+async def get_table_bloat_analysis(database_name: str = None, schema_name: str = None, table_pattern: str = None, min_dead_tuples: int = 1, limit: int = 20) -> str:
+    """
+    [Tool Purpose]: Analyze table bloat based on dead tuple statistics and size information
+    
+    [Exact Functionality]:
+    - Calculate bloat ratio based on dead tuples vs total tuples
+    - Estimate bloat size in bytes and human-readable format
+    - Show last VACUUM/AUTOVACUUM timestamps for maintenance tracking
+    - Identify tables requiring VACUUM maintenance
+    - Filter tables by name pattern using SQL LIKE or ILIKE matching
+    - Sort results by bloat severity (dead tuple ratio and count)
+    
+    [Required Use Cases]:
+    - When user requests "table bloat", "bloat analysis", "dead tuples", etc.
+    - When identifying tables that need VACUUM maintenance
+    - When investigating database storage efficiency and space usage
+    - When troubleshooting performance issues related to table bloat
+    - When analyzing specific table groups (e.g., tables with "user", "log", "temp" in names)
+    
+    [Strictly Prohibited Use Cases]:
+    - Requests for automatic VACUUM execution
+    - Requests for bloat removal or cleanup operations
+    - Requests for table restructuring or data modification
+    
+    Args:
+        database_name: Target database name (uses default database from POSTGRES_DB env var if omitted)
+        schema_name: Schema to analyze (analyzes all user schemas if omitted)
+        table_pattern: Table name pattern to filter (SQL LIKE pattern, e.g., 'user%', '%log%', 'temp_*')
+        min_dead_tuples: Minimum dead tuples to include in results (default: 1, shows all tables with any bloat)
+        limit: Maximum number of results to return (1-100, default: 20)
+    
+    Returns:
+        Table bloat analysis with bloat ratios, sizes, and maintenance recommendations
+    """
+    try:
+        # Validate and constrain limit
+        limit = max(1, min(limit, 100))
+        
+        # Build WHERE clause based on parameters
+        where_conditions = []
+        params = []
+        param_index = 1
+        
+        # Schema filtering
+        if schema_name:
+            where_conditions.append(f"schemaname = ${param_index}")
+            params.append(schema_name)
+            param_index += 1
+        else:
+            # Exclude system schemas
+            where_conditions.append("schemaname NOT IN ('information_schema', 'pg_catalog')")
+            where_conditions.append("schemaname NOT LIKE 'pg_%'")
+        
+        # Table pattern filtering
+        if table_pattern:
+            where_conditions.append(f"relname ILIKE ${param_index}")
+            params.append(table_pattern)
+            param_index += 1
+        
+        # Dead tuples filtering
+        where_conditions.append(f"n_dead_tup >= ${param_index}")
+        params.append(min_dead_tuples)
+        param_index += 1
+        
+        # Add LIMIT parameter
+        params.append(limit)
+        
+        # Combine WHERE conditions
+        schema_filter = "WHERE " + " AND ".join(where_conditions) if where_conditions else ""
+        
+        query = f"""
+        SELECT 
+            schemaname as schema_name,
+            relname as table_name,
+            pg_size_pretty(pg_total_relation_size(schemaname||'.'||relname)) as total_size,
+            pg_size_pretty(pg_relation_size(schemaname||'.'||relname)) as table_size,
+            n_dead_tup as dead_tuples,
+            n_live_tup as live_tuples,
+            CASE 
+                WHEN (n_live_tup + n_dead_tup) = 0 THEN 0
+                ELSE round(100.0 * n_dead_tup / (n_live_tup + n_dead_tup), 2)
+            END as bloat_ratio_percent,
+            pg_size_pretty(
+                (pg_relation_size(schemaname||'.'||relname) * 
+                CASE 
+                    WHEN (n_live_tup + n_dead_tup) = 0 THEN 0
+                    ELSE n_dead_tup::float / (n_live_tup + n_dead_tup)
+                END)::bigint
+            ) as estimated_bloat_size,
+            last_vacuum,
+            last_autovacuum,
+            CASE 
+                WHEN last_vacuum IS NULL AND last_autovacuum IS NULL THEN 'Never vacuumed'
+                WHEN last_vacuum IS NULL THEN 'Manual vacuum needed'
+                WHEN last_autovacuum IS NULL THEN 'Auto vacuum available'
+                WHEN last_vacuum > last_autovacuum THEN 'Recently manual vacuumed'
+                ELSE 'Recently auto vacuumed'
+            END as vacuum_status
+        FROM pg_stat_user_tables
+        {schema_filter}
+        ORDER BY 
+            CASE 
+                WHEN (n_live_tup + n_dead_tup) = 0 THEN 0
+                ELSE 100.0 * n_dead_tup / (n_live_tup + n_dead_tup)
+            END DESC, 
+            n_dead_tup DESC
+        LIMIT ${len(params)}
+        """
+        
+        bloat_stats = await execute_query(query, params, database=database_name)
+        
+        # Get actual database name for clarity
+        if not database_name:
+            actual_db_name = await get_current_database_name(database_name)
+        else:
+            actual_db_name = database_name
+        
+        if not bloat_stats:
+            # Build descriptive error message
+            conditions = []
+            if schema_name:
+                conditions.append(f"schema '{schema_name}'")
+            else:
+                conditions.append("any user schema")
+            if table_pattern:
+                conditions.append(f"table pattern '{table_pattern}'")
+            
+            condition_str = " and ".join(conditions)
+            return f"No tables found with significant bloat (>= {min_dead_tuples} dead tuples) in {condition_str} (Database: {actual_db_name})"
+        
+        # Build title based on parameters - ALWAYS include actual database name
+        title_parts = []
+        if schema_name:
+            title_parts.append(f"Schema: {schema_name}")
+        else:
+            title_parts.append("All Schemas")
+        
+        if table_pattern:
+            title_parts.append(f"Pattern: '{table_pattern}'")
+        
+        title_parts.append(f"Min Dead Tuples: {min_dead_tuples}")
+        
+        # Always include database name in title for clarity
+        title = f"Table Bloat Analysis (Database: {actual_db_name}, {', '.join(title_parts)})"
+            
+        return format_table_data(bloat_stats, title)
+        
+    except Exception as e:
+        logger.error(f"Failed to analyze table bloat: {e}")
+        return f"Error analyzing table bloat: {str(e)}"
+
+
+@mcp.tool()
+async def get_database_bloat_overview(database_name: str = None, limit: int = 20) -> str:
+    """
+    [Tool Purpose]: Provide database-wide bloat overview and summary statistics
+    
+    [Exact Functionality]:
+    - Summarize bloat statistics across all schemas
+    - Identify schemas and tables with highest bloat ratios
+    - Calculate total estimated bloat size per schema
+    - Show aggregate dead tuple counts and maintenance status
+    
+    [Required Use Cases]:
+    - When user requests "database bloat overview", "bloat summary", etc.
+    - When getting high-level view of database storage efficiency
+    - When planning database maintenance activities
+    - When investigating overall database performance issues
+    
+    [Strictly Prohibited Use Cases]:
+    - Requests for automatic maintenance operations
+    - Requests for bloat cleanup or removal
+    - Requests for schema or database restructuring
+    
+    Args:
+        database_name: Target database name (uses default database from POSTGRES_DB env var if omitted)
+        limit: Maximum number of schemas to show (1-50, default: 10)
+    
+    Returns:
+        Database-wide bloat summary by schema with totals and recommendations
+    """
+    try:
+        # Validate and constrain limit
+        limit = max(1, min(limit, 50))
+        
+        query = """
+        SELECT 
+            schemaname as schema_name,
+            COUNT(*) as total_tables,
+            COUNT(CASE WHEN n_dead_tup > 0 THEN 1 END) as tables_with_bloat,
+            SUM(n_dead_tup) as total_dead_tuples,
+            SUM(n_live_tup) as total_live_tuples,
+            CASE 
+                WHEN SUM(n_live_tup + n_dead_tup) = 0 THEN 0
+                ELSE round(100.0 * SUM(n_dead_tup) / SUM(n_live_tup + n_dead_tup), 2)
+            END as overall_bloat_percent,
+            pg_size_pretty(
+                SUM(
+                    pg_relation_size(schemaname||'.'||relname) * 
+                    CASE 
+                        WHEN (n_live_tup + n_dead_tup) = 0 THEN 0
+                        ELSE n_dead_tup::float / (n_live_tup + n_dead_tup)
+                    END
+                )::bigint
+            ) as estimated_total_bloat,
+            pg_size_pretty(SUM(pg_total_relation_size(schemaname||'.'||relname))::bigint) as total_schema_size,
+            COUNT(CASE WHEN last_vacuum IS NULL AND last_autovacuum IS NULL THEN 1 END) as never_vacuumed_tables
+        FROM pg_stat_user_tables
+        GROUP BY schemaname
+        HAVING SUM(n_dead_tup) > 0
+        ORDER BY 
+            CASE 
+                WHEN SUM(n_live_tup + n_dead_tup) = 0 THEN 0
+                ELSE 100.0 * SUM(n_dead_tup) / SUM(n_live_tup + n_dead_tup)
+            END DESC
+        LIMIT $1
+        """
+        
+        bloat_overview = await execute_query(query, [limit], database=database_name)
+        
+        # Get actual database name for clarity
+        if not database_name:
+            actual_db_name = await get_current_database_name(database_name)
+        else:
+            actual_db_name = database_name
+        
+        if not bloat_overview:
+            return f"No schemas found with table bloat (Database: {actual_db_name})"
+        
+        # Always include actual database name in title for clarity
+        title = f"Database Bloat Overview (Database: {actual_db_name})"
+            
+        return format_table_data(bloat_overview, title)
+        
+    except Exception as e:
+        logger.error(f"Failed to get database bloat overview: {e}")
+        return f"Error getting database bloat overview: {str(e)}"
 
 
 @mcp.tool()

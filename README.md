@@ -12,6 +12,7 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 - ✅ **Schema Analysis**: Detailed table structure with columns, constraints, indexes, and relationships
 - ✅ **Performance Analysis**: Slow query identification and index usage analysis with version-aware query optimization
 - ✅ **Capacity Management**: Database and table size analysis
+- ✅ **Bloat Analysis**: Table bloat monitoring and dead tuple analysis with maintenance recommendations
 - ✅ **Configuration Retrieval**: PostgreSQL configuration parameter verification
 - ✅ **Database Performance Statistics**: Comprehensive transaction, I/O, and buffer cache analysis
 - ✅ **I/O Performance Monitoring**: Version-aware I/O statistics (comprehensive on PG16+, basic on PG12-15)
@@ -105,6 +106,11 @@ http://localhost:3003/
 | `get_database_size_info` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_database_size()` |
 | `get_table_size_info` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_total_relation_size()` |
 | `get_vacuum_analyze_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
+| `get_current_database_info` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_database`, `current_database()` |
+| `get_table_bloat_analysis` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
+| `get_database_bloat_overview` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
+| `get_table_bloat_analysis` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
+| `get_database_bloat_overview` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
 | `get_lock_monitoring` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_locks`, `pg_stat_activity` |
 | `get_wal_status` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_current_wal_lsn()` |
 | `get_database_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_database` |
@@ -445,6 +451,39 @@ SET track_io_timing = 'on';
 - **get_vacuum_analyze_stats**
   - "Show recent VACUUM and ANALYZE operations."
   - "List tables needing VACUUM."
+- **get_current_database_info**
+  - "What database am I connected to?"
+  - "Show current database information and connection details."
+  - "Display database encoding, collation, and size information."
+  - 📋 **Features**: Database name, encoding, collation, size, connection limits
+  - 🔧 **PostgreSQL 12-17**: Fully compatible, no extensions required
+- **get_table_bloat_analysis**
+  - "Analyze table bloat in the current database."
+  - "Show dead tuple ratios and bloat estimates for user_logs table pattern."
+  - "Find tables with high bloat that need VACUUM maintenance."
+  - "Analyze bloat in specific schema with minimum 100 dead tuples."
+  - 📋 **Features**: Dead tuple ratios, bloat size estimates, VACUUM recommendations, pattern filtering
+  - 🔧 **PostgreSQL 12-17**: Fully compatible, no extensions required
+  - 💡 **Usage**: Extension-Independent approach using pg_stat_user_tables
+- **get_database_bloat_overview**
+  - "Show database-wide bloat summary by schema."
+  - "Get high-level view of storage efficiency across all schemas."
+  - "Identify schemas requiring maintenance attention."
+  - 📋 **Features**: Schema-level aggregation, total bloat estimates, maintenance status
+  - 🔧 **PostgreSQL 12-17**: Fully compatible, no extensions required
+- **get_table_bloat_analysis**
+  - "Analyze table bloat in the public schema."
+  - "Show tables with high dead tuple ratios in ecommerce database."
+  - "Find tables requiring VACUUM maintenance."
+  - "Check bloat for tables with more than 5000 dead tuples."
+  - 📋 **Features**: Dead tuple ratios, estimated bloat size, VACUUM recommendations
+  - ⚠️ **Required**: Specify `database_name` for cross-database analysis
+- **get_database_bloat_overview**
+  - "Show database-wide bloat summary by schema."
+  - "Get bloat overview for inventory database."
+  - "Identify schemas with highest bloat ratios."
+  - "Database maintenance planning with bloat statistics."
+  - 📋 **Features**: Schema-level aggregation, maintenance priorities, size recommendations
 - **get_lock_monitoring**
   - "Show all current locks and blocked sessions."
   - "Show only blocked sessions with granted=false filter."

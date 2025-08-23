@@ -28,46 +28,49 @@
 
 ### 📊 Server Information & Status
 1. **get_server_info**: PostgreSQL server information and extension status
-2. **get_active_connections**: Current active connections and session information
-3. **get_postgresql_config**: PostgreSQL configuration parameters
+2. **get_current_database_info**: Current database connection details and properties
+3. **get_active_connections**: Current active connections and session information
+4. **get_postgresql_config**: PostgreSQL configuration parameters
 
 ### 🗄️ Structure Exploration
-4. **get_database_list**: All database list and size information
-5. **get_table_list**: Table list and size information  
-6. **get_table_schema_info**: Detailed table schema with columns, constraints, indexes, and relationships
-7. **get_database_schema_info**: Database schema (namespace) information with objects, permissions, and statistics
-8. **get_table_relationships**: Table relationship analysis with foreign key dependencies and cross-schema connections
-9. **get_user_list**: Database user list and permissions
+5. **get_database_list**: All database list and size information
+6. **get_table_list**: Table list and size information  
+7. **get_table_schema_info**: Detailed table schema with columns, constraints, indexes, and relationships
+8. **get_database_schema_info**: Database schema (namespace) information with objects, permissions, and statistics
+9. **get_table_relationships**: Table relationship analysis with foreign key dependencies and cross-schema connections
+10. **get_user_list**: Database user list and permissions
 
 ### ⚡ Performance Monitoring
-8. **get_pg_stat_statements_top_queries**: Slow query analysis based on performance statistics
-9. **get_pg_stat_monitor_recent_queries**: Real-time query monitoring
-10. **get_index_usage_stats**: Index usage rate and efficiency analysis
+11. **get_pg_stat_statements_top_queries**: Slow query analysis based on performance statistics
+12. **get_pg_stat_monitor_recent_queries**: Real-time query monitoring
+13. **get_index_usage_stats**: Index usage rate and efficiency analysis
 
 ### 💾 Capacity Management
-11. **get_database_size_info**: Database capacity analysis
-12. **get_table_size_info**: Table and index size analysis
-13. **get_vacuum_analyze_stats**: VACUUM/ANALYZE status and history
+14. **get_database_size_info**: Database capacity analysis
+15. **get_table_size_info**: Table and index size analysis
+16. **get_vacuum_analyze_stats**: VACUUM/ANALYZE status and history
+17. **get_table_bloat_analysis**: Table bloat monitoring with dead tuple analysis
+18. **get_database_bloat_overview**: Database-wide bloat summary by schema
 
 ### 🔒 Lock & Deadlock Monitoring
-14. **get_lock_monitoring**: Current locks and blocked sessions analysis
+19. **get_lock_monitoring**: Current locks and blocked sessions analysis
 
 ### 📝 WAL & Replication Monitoring
-15. **get_wal_status**: WAL status and archiving information
-16. **get_replication_status**: Replication connections and lag monitoring
+20. **get_wal_status**: WAL status and archiving information
+21. **get_replication_status**: Replication connections and lag monitoring
 
 ### 📈 Database Performance Statistics
-17. **get_database_stats**: Comprehensive database-wide performance metrics
-18. **get_bgwriter_stats**: Background writer and checkpoint performance analysis
-19. **get_all_tables_stats**: Complete table statistics (including system tables)
-20. **get_user_functions_stats**: User-defined function performance analysis
+22. **get_database_stats**: Comprehensive database-wide performance metrics
+23. **get_bgwriter_stats**: Background writer and checkpoint performance analysis
+24. **get_all_tables_stats**: Complete table statistics (including system tables)
+25. **get_user_functions_stats**: User-defined function performance analysis
 
 ### 💿 I/O Performance Analysis
-20. **get_table_io_stats**: Table I/O statistics (disk reads vs buffer cache hits)
-21. **get_index_io_stats**: Index I/O performance and buffer efficiency analysis
+26. **get_table_io_stats**: Table I/O statistics (disk reads vs buffer cache hits)
+27. **get_index_io_stats**: Index I/O performance and buffer efficiency analysis
 
 ### 🔄 Replication Monitoring
-22. **get_database_conflicts_stats**: Query conflicts in standby/replica environments
+28. **get_database_conflicts_stats**: Query conflicts in standby/replica environments
 
 ## Sample Prompts
 
@@ -85,6 +88,8 @@
 
 ### 🔍 Server Health Check
 - "Check PostgreSQL server status."
+- "What database am I connected to?"
+- "Show current database connection details."
 - "Verify if extensions are installed."
 - "Show current active connection count."
 - "Display PostgreSQL version and configuration."
@@ -102,6 +107,8 @@
 - "Show tables that need VACUUM."
 - "Analyze disk usage by database."
 - "Display table and index sizes."
+- "Analyze table bloat and dead tuples."
+- "Show database-wide bloat summary."
 
 ### 🗄️ Structure Analysis
 - "List all databases with owners."
@@ -238,6 +245,13 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 - "Check what MCP tools are available on this PostgreSQL version."
 - "Displays feature availability matrix and upgrade recommendations."
 
+**get_current_database_info**
+- "What database am I connected to?"
+- "Show current database information and properties."
+- "Display database encoding, collation, and connection limits."
+- "Get current database size and configuration details."
+- "Show connection context and database properties."
+
 **get_active_connections**
 - "Show all active connections."
 - "List current sessions with database and user."
@@ -320,6 +334,22 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 - "Review VACUUM and ANALYZE history for all tables."
 - "Check maintenance status in specific database."
 - "Find tables needing maintenance (check last_vacuum dates)."
+
+**get_table_bloat_analysis**
+- "Analyze table bloat in the public schema."
+- "Show tables with high dead tuple ratios in ecommerce database."
+- "Find tables requiring VACUUM maintenance."
+- "Check bloat for tables with more than 5000 dead tuples."
+- "Identify bloated tables in inventory database public schema."
+- "Show estimated bloat sizes and VACUUM recommendations."
+
+**get_database_bloat_overview**
+- "Show database-wide bloat summary by schema."
+- "Get bloat overview for inventory database."
+- "Identify schemas with highest bloat ratios."
+- "Database maintenance planning with bloat statistics."
+- "Compare bloat across all schemas in ecommerce database."
+- "Show total estimated bloat and schema sizes."
 
 **get_lock_monitoring**
 - "Show all current locks and blocked sessions."

@@ -18,6 +18,24 @@ POSTGRES_CONFIG = {
 }
 
 
+async def get_current_database_name(database: str = None) -> str:
+    """Get the name of the currently connected database.
+    
+    Args:
+        database: Database name to connect to. If None, uses default from config.
+        
+    Returns:
+        Current database name as string
+    """
+    try:
+        query = "SELECT current_database() as database_name"
+        result = await execute_query(query, [], database=database)
+        return result[0]['database_name'] if result else "unknown"
+    except Exception as e:
+        logger.error(f"Failed to get current database name: {e}")
+        return "unknown"
+
+
 async def get_db_connection(database: str = None) -> asyncpg.Connection:
     """Create PostgreSQL database connection.
     
