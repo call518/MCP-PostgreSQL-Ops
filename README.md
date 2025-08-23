@@ -171,10 +171,10 @@ http://localhost:3003/
       "args": ["--python", "3.11", "mcp-postgresql-ops"],
       "env": {
         "POSTGRES_HOST": "127.0.0.1",
-        "POSTGRES_PORT": "5432",
+        "POSTGRES_PORT": "15432",
         "POSTGRES_USER": "postgres",
-        "POSTGRES_PASSWORD": "passwd",
-        "POSTGRES_DB": "testdb"
+        "POSTGRES_PASSWORD": "changeme!@34",
+        "POSTGRES_DB": "ecommerce"
       }
     }
   }
@@ -198,10 +198,10 @@ http://localhost:3003/
       "cwd": "/path/to/MCP-PostgreSQL-Ops",
       "env": {
         "POSTGRES_HOST": "127.0.0.1",
-        "POSTGRES_PORT": "5432",
+        "POSTGRES_PORT": "15432",
         "POSTGRES_USER": "postgres",
-        "POSTGRES_PASSWORD": "passwd",
-        "POSTGRES_DB": "testdb"
+        "POSTGRES_PASSWORD": "changeme!@34",
+        "POSTGRES_DB": "ecommerce"
       }
     }
   }
@@ -258,7 +258,7 @@ python -m src.mcp_postgresql_ops.mcp_main \
 | `POSTGRES_PORT` | PostgreSQL server port number | `5432` | `15432` |
 | `POSTGRES_USER` | PostgreSQL connection username (needs read permissions) | `postgres` | `postgres` |
 | `POSTGRES_PASSWORD` | PostgreSQL user password (supports special characters) | `changeme!@34` | `changeme!@34` |
-| `POSTGRES_DB` | Default database name for connections | `testdb` | `testdb` |
+| `POSTGRES_DB` | Default database name for connections | `testdb` | `ecommerce` |
 | `POSTGRES_MAX_CONNECTIONS` | PostgreSQL max_connections configuration parameter | `200` | `200` |
 | `DOCKER_EXTERNAL_PORT_OPENWEBUI` | Host port mapping for Open WebUI container | `8080` | `3003` |
 | `DOCKER_EXTERNAL_PORT_MCP_SERVER` | Host port mapping for MCP server container | `8080` | `18003` |
