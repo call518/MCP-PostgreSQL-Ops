@@ -249,6 +249,37 @@ uvx --python 3.11 mcp-postgresql-ops
   --log-level DEBUG
 ```
 
+### (Option) Configure Multiple PostgreSQL Instances
+
+```json
+{
+  "mcpServers": {
+    "postgresql-airflow": {
+      "command": "uvx",
+      "args": ["--python", "3.11", "mcp-postgresql-ops"],
+      "env": {
+        "POSTGRES_HOST": "127.0.0.1",
+        "POSTGRES_PORT": "65432",
+        "POSTGRES_USER": "airflow",
+        "POSTGRES_PASSWORD": "airflow",
+        "POSTGRES_DB": "airflow"
+      }
+    },
+    "postgresql-docker": {
+      "command": "uvx",
+      "args": ["--python", "3.11", "mcp-postgresql-ops"],
+      "env": {
+        "POSTGRES_HOST": "127.0.0.1",
+        "POSTGRES_PORT": "15432",
+        "POSTGRES_USER": "postgres",
+        "POSTGRES_PASSWORD": "changeme!@34",
+        "POSTGRES_DB": "ecommerce"
+      }
+    }
+  }
+}
+```
+
 #### /w Local Source
 
 ```bash
