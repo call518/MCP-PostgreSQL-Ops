@@ -9,25 +9,21 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 
 ## Features
 
-- ✅ **Version Compatibility**: Transparent PostgreSQL version support (12-17) - automatically detects your PostgreSQL version and adapts functionality accordingly with zero configuration
-- ✅ **PostgreSQL Monitoring**: Performance analysis based on pg_stat_statements and pg_stat_monitor with full backward compatibility
-- ✅ **Structure Exploration**: Database, table, and user listing with detailed schema information
-- ✅ **Schema Analysis**: Detailed table structure with columns, constraints, indexes, and relationships
-- ✅ **Performance Analysis**: Slow query identification and index usage analysis with version-aware query optimization
-- ✅ **Capacity Management**: Database and table size analysis
-- ✅ **Bloat Analysis**: Table bloat monitoring and dead tuple analysis with maintenance recommendations
-- ✅ **VACUUM/Autovacuum Analysis**: Comprehensive maintenance operation monitoring, effectiveness analysis, and real-time status tracking
-- ✅ **Configuration Retrieval**: PostgreSQL configuration parameter verification
-- ✅ **Database Performance Statistics**: Comprehensive transaction, I/O, and buffer cache analysis
-- ✅ **I/O Performance Monitoring**: Version-aware I/O statistics (comprehensive on PG16+, basic on PG12-15)
-- ✅ **Background Process Monitoring**: Version-aware checkpoint and background writer analysis (split on PG15+)
-- ✅ **Table Statistics Monitoring**: Version-aware comprehensive table usage and maintenance statistics (enhanced vacuum tracking on PG13+)
-- ✅ **Replication Monitoring**: Standby server conflict detection and replication lag analysis with version-compatible WAL status tracking
-- ✅ **Function Performance Analysis**: User-defined function execution statistics
-- ✅ **Query Performance Analysis**: Version-compatible pg_stat_statements integration (PG12: total_time mapping, PG13+: native columns)
-- ✅ **Safe Read-Only**: All operations are read-only and safe
+- ✅ **Universal PostgreSQL Support**: Automatic version detection and compatibility (PostgreSQL 12-17) with zero configuration
+- ✅ **Comprehensive Database Monitoring**: Performance analysis, bloat detection, and maintenance recommendations
+- ✅ **Smart Query Analysis**: Slow query identification with `pg_stat_statements` and `pg_stat_monitor` integration
+- ✅ **Schema & Relationship Discovery**: Database structure exploration with detailed relationship mapping
+- ✅ **VACUUM & Autovacuum Intelligence**: Real-time maintenance monitoring and effectiveness analysis
+- ✅ **Multi-Database Operations**: Seamless cross-database analysis and monitoring
+- ✅ **Enterprise-Ready**: Safe read-only operations with RDS/Aurora compatibility
+- ✅ **Developer-Friendly**: Simple codebase for easy customization and tool extension
 
-- 🛠️ **Easy Customization**: Simple and clean codebase makes it very easy to add new tools or customize existing ones
+### 🔧 **Advanced Capabilities**
+- Version-aware I/O statistics (enhanced on PostgreSQL 16+)
+- Real-time connection and lock monitoring
+- Background process and checkpoint analysis
+- Replication status and WAL monitoring
+- Database capacity and bloat analysis
 
 ## Tool Usage Examples
 
