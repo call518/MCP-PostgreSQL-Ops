@@ -13,24 +13,24 @@ A professional MCP server for PostgreSQL database operations, monitoring, and ma
 
 ## Features
 
-- ✅ **Zero Configuration**: Works with PostgreSQL 12-17 out-of-the-box with automatic version detection
-- ✅ **Natural Language**: Ask questions like "Show me slow queries" or "Analyze table bloat"
-- ✅ **Production Safe**: Read-only operations, RDS/Aurora compatible with regular user permissions
-- ✅ **Extension Enhanced**: Optional `pg_stat_statements` and `pg_stat_monitor` for advanced query analytics
-- ✅ **Comprehensive Database Monitoring**: Performance analysis, bloat detection, and maintenance recommendations
-- ✅ **Smart Query Analysis**: Slow query identification with `pg_stat_statements` and `pg_stat_monitor` integration
-- ✅ **Schema & Relationship Discovery**: Database structure exploration with detailed relationship mapping
-- ✅ **VACUUM & Autovacuum Intelligence**: Real-time maintenance monitoring and effectiveness analysis
-- ✅ **Multi-Database Operations**: Seamless cross-database analysis and monitoring
-- ✅ **Enterprise-Ready**: Safe read-only operations with RDS/Aurora compatibility
-- ✅ **Developer-Friendly**: Simple codebase for easy customization and tool extension
+- ✅ **Zero Configuration**: Works with PostgreSQL 12-17 out-of-the-box with automatic version detection.
+- ✅ **Natural Language**: Ask questions like "Show me slow queries" or "Analyze table bloat."
+- ✅ **Production Safe**: Read-only operations, RDS/Aurora compatible with regular user permissions.
+- ✅ **Extension Enhanced**: Optional `pg_stat_statements` and `pg_stat_monitor` for advanced query analytics.
+- ✅ **Comprehensive Database Monitoring**: Performance analysis, bloat detection, and maintenance recommendations.
+- ✅ **Smart Query Analysis**: Slow query identification with `pg_stat_statements` and `pg_stat_monitor` integration.
+- ✅ **Schema & Relationship Discovery**: Database structure exploration with detailed relationship mapping.
+- ✅ **VACUUM & Autovacuum Intelligence**: Real-time maintenance monitoring and effectiveness analysis.
+- ✅ **Multi-Database Operations**: Seamless cross-database analysis and monitoring.
+- ✅ **Enterprise-Ready**: Safe read-only operations with RDS/Aurora compatibility.
+- ✅ **Developer-Friendly**: Simple codebase for easy customization and tool extension.
 
 ### 🔧 **Advanced Capabilities**
-- Version-aware I/O statistics (enhanced on PostgreSQL 16+)
-- Real-time connection and lock monitoring
-- Background process and checkpoint analysis
-- Replication status and WAL monitoring
-- Database capacity and bloat analysis
+- Version-aware I/O statistics (enhanced on PostgreSQL 16+).
+- Real-time connection and lock monitoring.
+- Background process and checkpoint analysis.
+- Replication status and WAL monitoring.
+- Database capacity and bloat analysis.
 
 ## Tool Usage Examples
 
