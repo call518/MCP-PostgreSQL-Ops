@@ -39,10 +39,6 @@ A professional MCP server for PostgreSQL database server operations, monitoring,
 
 ---
 
-![MCP-PostgreSQL-Ops Usage Screenshot](img/screenshot-004.png)
-
----
-
 ![MCP-PostgreSQL-Ops Usage Screenshot](img/screenshot-005.png)
 
 ---
