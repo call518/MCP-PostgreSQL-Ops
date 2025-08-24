@@ -5,11 +5,18 @@
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/call518/MCP-PostgreSQL-Ops)
 [![BuyMeACoffee](https://raw.githubusercontent.com/pachadotdev/buymeacoffee-badges/main/bmc-donate-yellow.svg)](https://www.buymeacoffee.com/call518)
 
-A professional MCP server for PostgreSQL database server operations, monitoring, and management. Most features work independently, but advanced performance analysis capabilities are available when the `pg_stat_statements` and (optionally) `pg_stat_monitor` extensions are installed.
+## Overview
+
+A professional MCP server for PostgreSQL database operations, monitoring, and management. Supports PostgreSQL 12-17 with comprehensive database analysis, performance monitoring, and intelligent maintenance recommendations through natural language queries. Most features work independently, but advanced query analysis capabilities are enhanced when `pg_stat_statements` and (optionally) `pg_stat_monitor` extensions are installed.
+
+---
 
 ## Features
 
-- ✅ **Universal PostgreSQL Support**: Automatic version detection and compatibility (PostgreSQL 12-17) with zero configuration
+- ✅ **Zero Configuration**: Works with PostgreSQL 12-17 out-of-the-box with automatic version detection
+- ✅ **Natural Language**: Ask questions like "Show me slow queries" or "Analyze table bloat"
+- ✅ **Production Safe**: Read-only operations, RDS/Aurora compatible with regular user permissions
+- ✅ **Extension Enhanced**: Optional `pg_stat_statements` and `pg_stat_monitor` for advanced query analytics
 - ✅ **Comprehensive Database Monitoring**: Performance analysis, bloat detection, and maintenance recommendations
 - ✅ **Smart Query Analysis**: Slow query identification with `pg_stat_statements` and `pg_stat_monitor` integration
 - ✅ **Schema & Relationship Discovery**: Database structure exploration with detailed relationship mapping
