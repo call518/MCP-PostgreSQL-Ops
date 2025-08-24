@@ -254,26 +254,26 @@ uvx --python 3.11 mcp-postgresql-ops
 ```json
 {
   "mcpServers": {
-    "postgresql-airflow": {
+    "Postgresql-A": {
       "command": "uvx",
       "args": ["--python", "3.11", "mcp-postgresql-ops"],
       "env": {
-        "POSTGRES_HOST": "127.0.0.1",
-        "POSTGRES_PORT": "65432",
-        "POSTGRES_USER": "airflow",
-        "POSTGRES_PASSWORD": "airflow",
-        "POSTGRES_DB": "airflow"
+        "POSTGRES_HOST": "a.foo.com",
+        "POSTGRES_PORT": "5432",
+        "POSTGRES_USER": "postgres",
+        "POSTGRES_PASSWORD": "postgres",
+        "POSTGRES_DB": "postgres"
       }
     },
-    "postgresql-docker": {
+    "Postgresql-B": {
       "command": "uvx",
       "args": ["--python", "3.11", "mcp-postgresql-ops"],
       "env": {
-        "POSTGRES_HOST": "127.0.0.1",
-        "POSTGRES_PORT": "15432",
+        "POSTGRES_HOST": "b.bar.com",
+        "POSTGRES_PORT": "5432",
         "POSTGRES_USER": "postgres",
-        "POSTGRES_PASSWORD": "changeme!@34",
-        "POSTGRES_DB": "ecommerce"
+        "POSTGRES_PASSWORD": "postgres",
+        "POSTGRES_DB": "postgres"
       }
     }
   }
