@@ -219,8 +219,8 @@ The `create-test-data.sql` script is executed by the `postgres-init-extensions` 
     "postgresql-ops": {
       "command": "uv",
       "args": ["run", "python", "-m", "src.mcp_postgresql_ops.mcp_main"],
-      "cwd": "/path/to/MCP-PostgreSQL-Ops",
       "env": {
+        "PYTHONPATH": "/path/to/MCP-PostgreSQL-Ops",
         "POSTGRES_HOST": "127.0.0.1",
         "POSTGRES_PORT": "15432",
         "POSTGRES_USER": "postgres",
