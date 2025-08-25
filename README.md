@@ -46,6 +46,10 @@ A professional MCP server for PostgreSQL database operations, monitoring, and ma
 
 ---
 
+[![Stargazers repo roster for @call518/MCP-Airflow-API](https://reporoster.com/stars/call518/MCP-Airflow-API)](https://github.com/call518/MCP-Airflow-API/stargazers)
+
+---
+
 ## ⭐ Quickstart (5 minutes)
 
 > **Note:** The `postgresql` container included in `docker-compose.yml` is intended for quickstart testing purposes only. You can connect to your own PostgreSQL instance by adjusting the environment variables as needed.
