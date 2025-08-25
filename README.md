@@ -9,8 +9,6 @@
 
 A professional MCP server for PostgreSQL database operations, monitoring, and management. Supports PostgreSQL 12-17 with comprehensive database analysis, performance monitoring, and intelligent maintenance recommendations through natural language queries. Most features work independently, but advanced query analysis capabilities are enhanced when `pg_stat_statements` and (optionally) `pg_stat_monitor` extensions are installed.
 
-[![Stargazers repo roster for @call518/MCP-PostgreSQL-Ops](https://reporoster.com/stars/call518/MCP-PostgreSQL-Ops)](https://github.com/call518/MCP-PostgreSQL-Ops/stargazers)
-
 ---
 
 ## Features
