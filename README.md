@@ -819,6 +819,6 @@ Freely use, modify, and distribute under the **MIT License**.
 
 **Other MCP servers by the same author:**
 
-- [MCP-Ambari-API](https://github.com/call518/MCP-Ambari-API)
 - [MCP-Airflow-API](https://github.com/call518/MCP-Airflow-API)
+- [MCP-Ambari-API](https://github.com/call518/MCP-Ambari-API)
 - [LogSentinelAI - LLB-Based Log Analyzer](https://github.com/call518/LogSentinelAI)
