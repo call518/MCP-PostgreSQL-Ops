@@ -46,7 +46,7 @@ A professional MCP server for PostgreSQL database operations, monitoring, and ma
 
 ---
 
-[![Stargazers repo roster for @call518/MCP-Airflow-API](https://reporoster.com/stars/call518/MCP-Airflow-API)](https://github.com/call518/MCP-Airflow-API/stargazers)
+[![Stargazers repo roster for @call518/MCP-PostgreSQL-Ops](https://reporoster.com/stars/call518/MCP-PostgreSQL-Ops)](https://github.com/call518/MCP-PostgreSQL-Ops/stargazers)
 
 ---
 
