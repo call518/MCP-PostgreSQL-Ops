@@ -1,0 +1,17 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 🔒 Security Issues
+    url: https://github.com/call518/MCP-PostgreSQL-Ops/security/advisories/new
+    about: Please report security vulnerabilities privately through GitHub Security Advisories
+  - name: 💬 GitHub Discussions
+    url: https://github.com/call518/MCP-PostgreSQL-Ops/discussions
+    about: Ask questions, share usage examples, and discuss PostgreSQL monitoring strategies with the community
+  - name: 📖 Documentation & Setup Guide
+    url: https://github.com/call518/MCP-PostgreSQL-Ops#readme
+    about: Check the README for installation instructions, compatibility matrix, and comprehensive usage examples
+  - name: 🧪 MCP Inspector Testing
+    url: https://github.com/call518/MCP-PostgreSQL-Ops#-quickstart-5-minutes
+    about: Use MCP Inspector for local testing and debugging of PostgreSQL monitoring tools
+  - name: 🗂️ Tool Compatibility Matrix
+    url: https://github.com/call518/MCP-PostgreSQL-Ops#tool-compatibility-matrix
+    about: Check PostgreSQL version compatibility and extension requirements for specific monitoring tools
