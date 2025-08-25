@@ -802,7 +802,7 @@ We're always excited to welcome new contributors! Whether you're fixing a typo, 
 
 ---
 
-## Example: MCPO Swagger APIs
+## MCPO Swagger Docs
 
 > [MCPO Swagger URL] http://localhost:8003/postgresql-ops/docs
 
