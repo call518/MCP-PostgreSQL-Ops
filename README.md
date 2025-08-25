@@ -105,7 +105,7 @@ http://localhost:3003/
 1. Enter the `postgresql-ops` Tool address (e.g., `http://localhost:8003/postgresql-ops`) to connect MCP Tools.
 1. Setup Ollama or OpenAI.
 
-### 5. **Setup Complete!**
+### 5. Setup Complete!
 
 **Congratulations!** Your MCP PostgreSQL Operations server is now ready for use. You can start exploring your databases with natural language queries.
 
