@@ -63,12 +63,12 @@ git clone https://github.com/call518/MCP-PostgreSQL-Ops.git
 cd MCP-PostgreSQL-Ops
 
 ### Check and modify .env file
-```bash
 cp .env.example .env
+vim .env
 ```
 
-### No need to modify defaults, but if using your own PostgreSQL server, edit below:
 ```bash
+### No need to modify defaults, but if using your own PostgreSQL server, edit below:
 POSTGRES_HOST=host.docker.internal
 POSTGRES_PORT=15432  # External port for host access (mapped to internal 5432)
 POSTGRES_USER=postgres
@@ -77,7 +77,6 @@ POSTGRES_DB=ecommerce # Default connection DB. Superusers can access all DBs.
 ```
 
 > **Note**: `PGDATA=/data/db` is preconfigured for the Percona PostgreSQL Docker image, which requires this specific path for proper write permissions.
-```
 
 ### 2. Start Demo Containers
 
