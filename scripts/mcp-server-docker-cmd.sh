@@ -22,5 +22,8 @@ echo "  MCP_LOG_LEVEL: ${MCP_LOG_LEVEL}"
 echo "  PGSQL_VERSION: ${PGSQL_VERSION}"
 echo "  POSTGRES_HOST: ${POSTGRES_HOST}"
 echo "  POSTGRES_PORT: ${POSTGRES_PORT}"
+echo "  POSTGRES_USER: ${POSTGRES_USER}"
+echo "  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}"
+echo "  POSTGRES_DB: ${POSTGRES_DB}"
 
 python -m mcp_postgresql_ops.mcp_main --type ${FASTMCP_TYPE} --host ${FASTMCP_HOST} --port ${FASTMCP_PORT}
