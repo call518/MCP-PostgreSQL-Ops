@@ -70,7 +70,7 @@ cp .env.example .env
 ### No need to modify defaults, but if using your own PostgreSQL server, edit below:
 ```bash
 POSTGRES_HOST=host.docker.internal
-POSTGRES_PORT=15432
+POSTGRES_PORT=15432  # External port for host access (mapped to internal 5432)
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=changeme!@34
 POSTGRES_DB=ecommerce # Default connection DB. Superusers can access all DBs.
@@ -336,8 +336,14 @@ python -m src.mcp_postgresql_ops.mcp_main \
 | `DOCKER_EXTERNAL_PORT_OPENWEBUI` | Host port mapping for Open WebUI container | `8080` | `3003` |
 | `DOCKER_EXTERNAL_PORT_MCP_SERVER` | Host port mapping for MCP server container | `8080` | `18003` |
 | `DOCKER_EXTERNAL_PORT_MCPO_PROXY` | Host port mapping for MCPO proxy container | `8000` | `8003` |
+| `DOCKER_INTERNAL_PORT_POSTGRESQL` | PostgreSQL container internal port | `5432` | `5432` |
 
 **Note**: `POSTGRES_DB` serves as the default target database for operations when no specific database is specified. In Docker environments, if set to a non-default name, this database will be automatically created during initial PostgreSQL startup.
+
+**Port Configuration**: The built-in PostgreSQL container uses port mapping `15432:5432` where:
+- `POSTGRES_PORT=15432`: External port for host access and MCP server connections
+- `DOCKER_INTERNAL_PORT_POSTGRESQL=5432`: Internal container port (PostgreSQL default)
+- When using external PostgreSQL servers, set `POSTGRES_PORT` to match your server's actual port
 
 ---
 
