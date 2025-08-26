@@ -10,7 +10,9 @@ echo "📁 Working directory: $(pwd)"
 # Load environment variables if .env exists
 if [ -f ".env" ]; then
     echo "📄 Loading environment from .env file"
-    export $(cat .env | grep -v '^#' | xargs)
+    set -o allexport
+    source .env
+    set +o allexport
 fi
 
 # Set default log level for development

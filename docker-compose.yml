@@ -2,6 +2,9 @@ services:
   open-webui:
     container_name: mcp-postgresql-ops-open-webui
     image: ghcr.io/open-webui/open-webui:main
+    depends_on:
+      postgres-init-extensions:
+        condition: service_completed_successfully
     ports:
       - "${DOCKER_EXTERNAL_PORT_OPENWEBUI}:8080"
     environment:
