@@ -91,6 +91,26 @@ docker-compose up -d
 # docker-compose -f docker-compose.custom-db.yml up -d
 ```
 
+> **⏰ Wait for Environment Setup**: The initial environment setup takes a few minutes as containers are started in sequence:
+> 1. **PostgreSQL** container starts first with database initialization
+> 2. **PostgreSQL Extensions** container installs extensions and creates comprehensive test data (~83K records)
+> 3. **MCP Server** and **MCPO Proxy** containers start after PostgreSQL is ready
+> 4. **OpenWebUI** container starts last and may take additional time to load the web interface
+> 
+> **💡 Tip**: Wait 2-3 minutes after running `docker-compose up -d` before accessing OpenWebUI to ensure all services are fully initialized.
+
+**🔍 Check Container Status** (Optional):
+```bash
+# Monitor container startup progress
+docker-compose logs -f
+
+# Check if all containers are running
+docker-compose ps
+
+# Verify PostgreSQL is ready
+docker-compose logs postgres | grep "ready to accept connections"
+```
+
 ### 3. Access to OpenWebUI
 
 http://localhost:3003/
