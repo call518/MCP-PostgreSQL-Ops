@@ -281,7 +281,7 @@ uvx --python 3.11 mcp-postgresql-ops \
 uvx --python 3.11 mcp-postgresql-ops
   --type streamable-http \
   --host 127.0.0.1 \
-  --port 8080 \
+  --port 8000 \
   --log-level DEBUG
 ```
 
@@ -329,7 +329,7 @@ PYTHONPATH=/path/to/MCP-PostgreSQL-Ops
 python -m src.mcp_postgresql_ops.mcp_main \
   --type streamable-http \
   --host 127.0.0.1 \
-  --port 8080 \
+  --port 8000 \
   --log-level DEBUG
 ```
 
@@ -343,7 +343,7 @@ python -m src.mcp_postgresql_ops.mcp_main \
 | `MCP_LOG_LEVEL` | Server logging verbosity (DEBUG, INFO, WARNING, ERROR) | `INFO` | `INFO` |
 | `FASTMCP_TYPE` | MCP transport protocol (stdio for CLI, streamable-http for web) | `stdio` | `streamable-http` |
 | `FASTMCP_HOST` | HTTP server bind address (0.0.0.0 for all interfaces) | `127.0.0.1` | `0.0.0.0` |
-| `FASTMCP_PORT` | HTTP server port for MCP communication | `8080` | `8080` |
+| `FASTMCP_PORT` | HTTP server port for MCP communication | `8080` | `8000` |
 | `PGSQL_VERSION` | PostgreSQL major version for Docker image selection | `17` | `17` |
 | `PGDATA` | PostgreSQL data directory inside Docker container (**Do not modify**) | `/var/lib/postgresql/data` | `/data/db` |
 | `POSTGRES_HOST` | PostgreSQL server hostname or IP address | `127.0.0.1` | `host.docker.internal` |

@@ -3600,7 +3600,7 @@ def main(argv: Optional[list] = None) -> None:
         "--port",
         dest="port",
         type=int,
-        help="Port number for streamable-http transport. Default: 8080",
+        help="Port number for streamable-http transport. Default: 8000",
         default=None
     )
     
@@ -3632,7 +3632,7 @@ def main(argv: Optional[list] = None) -> None:
         # Priority: CLI arguments > environment variables > defaults
         transport_type = args.transport_type or os.getenv("FASTMCP_TYPE", "stdio")
         host = args.host or os.getenv("FASTMCP_HOST", "127.0.0.1") 
-        port = args.port or int(os.getenv("FASTMCP_PORT", "8080"))
+        port = args.port or int(os.getenv("FASTMCP_PORT", "8000"))
         
         # Debug logging for environment variables
         logger.debug(f"Environment variables - POSTGRES_HOST: {os.getenv('POSTGRES_HOST')}, POSTGRES_PORT: {os.getenv('POSTGRES_PORT')}")

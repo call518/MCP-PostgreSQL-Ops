@@ -19,7 +19,7 @@ services:
     container_name: mcp-postgresql-ops-mcp-server
     image: call518/mcp-server-postgresql-ops:1.0.0
     ports:
-      - "${DOCKER_EXTERNAL_PORT_MCP_SERVER}:8080" ### (WARNING) Must be same with port number of 'FASTMCP_PORT', 'mcp-config.json' and 'mcp-config.json.http'
+      - "${DOCKER_EXTERNAL_PORT_MCP_SERVER}:8000" ### (WARNING) Must be same with port number of 'FASTMCP_PORT', 'mcp-config.json' and 'mcp-config.json.http'
     environment:
       - PYTHONPATH=${PYTHONPATH}
       - FASTMCP_TYPE=${FASTMCP_TYPE}
