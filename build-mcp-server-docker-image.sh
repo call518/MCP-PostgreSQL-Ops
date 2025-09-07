@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euo pipefail
+set -eo pipefail
 
 Dockerfile_PATH="./Dockerfile.MCP-Server"
 IMAGE_NAME="call518/mcp-server-postgresql-ops"

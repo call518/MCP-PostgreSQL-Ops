@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euo pipefail
+set -eo pipefail
 
 # Run MCP Inspector with published package from PyPI
 cd "$(dirname "$0")/.."

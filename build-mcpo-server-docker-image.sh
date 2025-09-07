@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euo pipefail
+set -eo pipefail
 
 Dockerfile_PATH="./Dockerfile.MCPO-Proxy"
 IMAGE_NAME="call518/mcpo-proxy-postgresql-ops"

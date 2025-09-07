@@ -409,7 +409,7 @@ mcp-postgresql-ops \
 | `FASTMCP_TYPE` | MCP transport protocol (stdio for CLI, streamable-http for web) | `stdio` | `streamable-http` |
 | `FASTMCP_HOST` | HTTP server bind address (0.0.0.0 for all interfaces) | `127.0.0.1` | `0.0.0.0` |
 | `FASTMCP_PORT` | HTTP server port for MCP communication | `8000` | `8000` |
-| `REMOTE_AUTH_ENABLE` | Enable Bearer token authentication for streamable-http mode | `false` | `false` |
+| `REMOTE_AUTH_ENABLE` | Enable Bearer token authentication for streamable-http mode (Default: `false` if undefined/null/empty) | `false` | `false` |
 | `REMOTE_SECRET_KEY` | Secret key for Bearer token authentication (required when auth enabled) | - | `your-secret-key-here` |
 | `PGSQL_VERSION` | PostgreSQL major version for Docker image selection | `17` | `17` |
 | `PGDATA` | PostgreSQL data directory inside Docker container (**Do not modify**) | `/var/lib/postgresql/data` | `/data/db` |
@@ -936,6 +936,8 @@ We're always excited to welcome new contributors! Whether you're fixing a typo, 
 ### Bearer Token Authentication
 
 For `streamable-http` mode, this MCP server supports Bearer token authentication to secure remote access. This is especially important when running the server in production environments.
+
+> **Default Policy**: `REMOTE_AUTH_ENABLE` defaults to `false` if undefined, null, or empty. This ensures backward compatibility and prevents startup errors when the variable is not set.
 
 #### Configuration
 
