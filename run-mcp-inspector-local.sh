@@ -21,4 +21,5 @@ echo "   PostgreSQL Host: ${POSTGRES_HOST:-localhost}:${POSTGRES_PORT:-5432}"
 
 npx -y @modelcontextprotocol/inspector \
     -e PYTHONPATH='./src' \
+    -e FASTMCP_TYPE='stdio' \
     -- uv run python -m mcp_postgresql_ops
