@@ -247,6 +247,45 @@ The `create-test-data.sql` script is executed by the `postgres-init-extensions` 
 "Show all relationships for customers table in ecommerce database as a Mermaid diagram."
 ![Claude Desktop Integration](img/screenshot-claude-desktop-mermaid-diagram.png)
 
+---
+
+## Installation
+
+### From PyPI (Recommended)
+
+```bash
+# Install the package
+pip install mcp-postgresql-ops
+
+# Or with uv (faster)
+uv add mcp-postgresql-ops
+
+# Verify installation
+mcp-postgresql-ops --help
+```
+
+### From Source
+
+```bash
+# Clone the repository
+git clone https://github.com/call518/MCP-PostgreSQL-Ops.git
+cd MCP-PostgreSQL-Ops
+
+# Install with uv (recommended)
+uv sync
+uv run mcp-postgresql-ops --help
+
+# Or with pip
+pip install -e .
+mcp-postgresql-ops --help
+```
+
+---
+
+## MCP Configuration
+
+### Claude Desktop Configuration
+
 (Optional) Run with Local Source:
 
 ```json
@@ -254,9 +293,8 @@ The `create-test-data.sql` script is executed by the `postgres-init-extensions` 
   "mcpServers": {
     "postgresql-ops": {
       "command": "uv",
-      "args": ["run", "python", "-m", "src.mcp_postgresql_ops.mcp_main"],
+      "args": ["run", "python", "-m", "mcp_postgresql_ops"],
       "env": {
-        "PYTHONPATH": "/path/to/MCP-PostgreSQL-Ops",
         "POSTGRES_HOST": "127.0.0.1",
         "POSTGRES_PORT": "15432",
         "POSTGRES_USER": "postgres",
@@ -319,14 +357,30 @@ uvx --python 3.11 mcp-postgresql-ops
 #### /w Local Source
 
 ```bash
-# Stdio mode
-PYTHONPATH=/path/to/MCP-PostgreSQL-Ops
-python -m src.mcp_postgresql_ops.mcp_main \
+# Method 1: Module execution (for development, requires PYTHONPATH)
+PYTHONPATH=/path/to/MCP-PostgreSQL-Ops/src
+python -m mcp_postgresql_ops \
   --type stdio
 
-# HTTP mode
-PYTHONPATH=/path/to/MCP-PostgreSQL-Ops
-python -m src.mcp_postgresql_ops.mcp_main \
+# Method 2: Direct script (after uv installation in project directory)
+uv run mcp-postgresql-ops \
+  --type stdio
+
+# Method 3: Installed package script (after pip/uv install)
+mcp-postgresql-ops \
+  --type stdio
+
+# HTTP mode examples:
+# Development mode
+PYTHONPATH=/path/to/MCP-PostgreSQL-Ops/src
+python -m mcp_postgresql_ops \
+  --type streamable-http \
+  --host 127.0.0.1 \
+  --port 8000 \
+  --log-level DEBUG
+
+# Production mode (after installation)
+mcp-postgresql-ops \
   --type streamable-http \
   --host 127.0.0.1 \
   --port 8000 \
@@ -350,11 +404,11 @@ python -m src.mcp_postgresql_ops.mcp_main \
 
 | Variable | Description | Default | Project Default |
 |----------|-------------|---------|-----------------|
-| `PYTHONPATH` | Python module search path for MCP server imports | - | `/app/src` |
+| `PYTHONPATH` | Python module search path (only needed for development mode) | - | `/app/src` |
 | `MCP_LOG_LEVEL` | Server logging verbosity (DEBUG, INFO, WARNING, ERROR) | `INFO` | `INFO` |
 | `FASTMCP_TYPE` | MCP transport protocol (stdio for CLI, streamable-http for web) | `stdio` | `streamable-http` |
 | `FASTMCP_HOST` | HTTP server bind address (0.0.0.0 for all interfaces) | `127.0.0.1` | `0.0.0.0` |
-| `FASTMCP_PORT` | HTTP server port for MCP communication | `8080` | `8000` |
+| `FASTMCP_PORT` | HTTP server port for MCP communication | `8000` | `8000` |
 | `REMOTE_AUTH_ENABLE` | Enable Bearer token authentication for streamable-http mode | `false` | `false` |
 | `REMOTE_SECRET_KEY` | Secret key for Bearer token authentication (required when auth enabled) | - | `your-secret-key-here` |
 | `PGSQL_VERSION` | PostgreSQL major version for Docker image selection | `17` | `17` |
@@ -807,11 +861,23 @@ SET track_io_timing = 'on';
 ### Testing & Development
 
 ```bash
-# Test with MCP Inspector
+# Clone and setup for development
+git clone https://github.com/call518/MCP-PostgreSQL-Ops.git
+cd MCP-PostgreSQL-Ops
+uv sync
+
+# Test with MCP Inspector (loads .env automatically)
 ./scripts/run-mcp-inspector-local.sh
 
-# Direct execution for debugging
-python -m src.mcp_postgresql_ops.mcp_main --log-level DEBUG
+# Direct execution methods:
+# 1. Using uv run (recommended for development)
+uv run mcp-postgresql-ops --log-level DEBUG
+
+# 2. Module execution (requires PYTHONPATH)
+PYTHONPATH=src python -m mcp_postgresql_ops --log-level DEBUG
+
+# 3. After installation
+mcp-postgresql-ops --log-level DEBUG
 
 # Test version compatibility (requires different PostgreSQL versions)
 # Modify POSTGRES_HOST in .env to point to different versions
@@ -884,7 +950,11 @@ REMOTE_SECRET_KEY=your-secure-secret-key-here
 **Or via CLI:**
 
 ```bash
-python -m mcp_postgresql_ops.mcp_main --type streamable-http --auth-enable --secret-key your-secure-secret-key-here
+# Module method
+python -m mcp_postgresql_ops --type streamable-http --auth-enable --secret-key your-secure-secret-key-here
+
+# Script method
+mcp-postgresql-ops --type streamable-http --auth-enable --secret-key your-secure-secret-key-here
 ```
 
 #### Security Levels

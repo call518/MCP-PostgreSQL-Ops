@@ -15,6 +15,15 @@ import argparse
 import logging
 import os
 import sys
+
+# Prevent direct execution of this module
+if __name__ == "__main__":
+    print("Error: Please use one of the following standard execution methods:")
+    print("  1. python -m mcp_postgresql_ops")
+    print("  2. mcp-postgresql-ops")
+    print()
+    print("Direct execution of mcp_main.py is not supported.")
+    sys.exit(1)
 from typing import Any, Optional
 from fastmcp import FastMCP
 from fastmcp.server.auth import StaticTokenVerifier
@@ -3725,12 +3734,3 @@ def main(argv: Optional[list] = None) -> None:
     except Exception as e:
         logger.error(f"Failed to start server: {e}")
         sys.exit(1)
-
-
-if __name__ == "__main__":
-    """Entrypoint for MCP PostgreSQL Operations server.
-
-    Supports optional CLI arguments while remaining backward-compatible 
-    with stdio launcher expectations.
-    """
-    main()

@@ -17,20 +17,6 @@ services:
     image: call518/mcp-server-postgresql-ops:1.0.0
     ports:
       - "${DOCKER_EXTERNAL_PORT_MCP_SERVER}:8000" ### (WARNING) Must be same with port number of 'FASTMCP_PORT', 'mcp-config.json' and 'mcp-config.json.http'
-    environment:
-      - PYTHONPATH=${PYTHONPATH}
-      - FASTMCP_TYPE=${FASTMCP_TYPE}
-      - FASTMCP_HOST=${FASTMCP_HOST}
-      - FASTMCP_PORT=${FASTMCP_PORT}
-      - MCP_LOG_LEVEL=${MCP_LOG_LEVEL}
-      - REMOTE_AUTH_ENABLE=${REMOTE_AUTH_ENABLE}
-      - REMOTE_SECRET_KEY=${REMOTE_SECRET_KEY}
-      - PGSQL_VERSION=${PGSQL_VERSION}
-      - POSTGRES_HOST=${POSTGRES_HOST}
-      - POSTGRES_PORT=${POSTGRES_PORT}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
     volumes:
       - ./src:/app/src
       - ./scripts:/app/scripts

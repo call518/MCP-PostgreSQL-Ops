@@ -23,4 +23,4 @@ echo "   Log Level: $MCP_LOG_LEVEL"
 echo "   PostgreSQL Host: ${POSTGRES_HOST:-localhost}:${POSTGRES_PORT:-5432}"
 
 npx -y @modelcontextprotocol/inspector \
-  -- uv run python -m src.mcp_postgresql_ops.mcp_main
+  -- uv run python -m mcp_postgresql_ops

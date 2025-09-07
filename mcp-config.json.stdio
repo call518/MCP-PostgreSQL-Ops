@@ -2,7 +2,7 @@
   "mcpServers": {
     "postgresql-ops": {
       "command": "python",
-      "args": ["-m", "mcp_postgresql_ops.mcp_main"],
+      "args": ["-m", "mcp_postgresql_ops"],
       "env": {
         "PYTHONPATH": "/app/src",
         "POSTGRES_HOST": "host.docker.internal",
