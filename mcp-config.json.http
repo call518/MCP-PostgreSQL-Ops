@@ -2,7 +2,10 @@
   "mcpServers": {
     "postgresql-ops": {
       "type": "streamable-http",
-      "url": "http://host.docker.internal:18003/mcp"
+      "url": "http://host.docker.internal:18003/mcp",
+      "headers": {
+        "Authorization": "Bearer my-test-secret-key-12345"
+      }
     }
   }
 }

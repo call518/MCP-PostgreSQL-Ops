@@ -17,6 +17,7 @@ import os
 import sys
 from typing import Any, Optional
 from fastmcp import FastMCP
+from fastmcp.server.auth import StaticTokenVerifier
 from .functions import (
     execute_query,
     execute_single_query,
@@ -50,9 +51,37 @@ logging.basicConfig(
 )
 
 # =============================================================================
+# Authentication Setup
+# =============================================================================
+
+# Check environment variables for authentication early
+_auth_enable = os.environ.get("REMOTE_AUTH_ENABLE", "false").lower() == "true"
+_secret_key = os.environ.get("REMOTE_SECRET_KEY", "")
+
+# Initialize the main MCP instance with authentication if configured
+if _auth_enable and _secret_key:
+    logger.info("Initializing MCP instance with Bearer token authentication (from environment)")
+    
+    # Create token configuration
+    tokens = {
+        _secret_key: {
+            "client_id": "postgresql-ops-client",
+            "user": "admin",
+            "scopes": ["read", "write"],
+            "description": "PostgreSQL Operations access token"
+        }
+    }
+    
+    auth = StaticTokenVerifier(tokens=tokens)
+    mcp = FastMCP("mcp-postgresql-ops", auth=auth)
+    logger.info("MCP instance initialized with authentication")
+else:
+    logger.info("Initializing MCP instance without authentication")
+    mcp = FastMCP("mcp-postgresql-ops")
+
+# =============================================================================
 # Server initialization
 # =============================================================================
-mcp = FastMCP("mcp-postgresql-ops")
 
 # Prompt template path
 PROMPT_TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "prompt_template.md")
@@ -3603,6 +3632,17 @@ def main(argv: Optional[list] = None) -> None:
         help="Port number for streamable-http transport. Default: 8000",
         default=None
     )
+    parser.add_argument(
+        "--auth-enable",
+        dest="auth_enable",
+        action="store_true",
+        help="Enable Bearer token authentication for streamable-http mode. Default: False",
+    )
+    parser.add_argument(
+        "--secret-key",
+        dest="secret_key",
+        help="Secret key for Bearer token authentication. Required when auth is enabled.",
+    )
     
     try:
         args = parser.parse_args(argv)
@@ -3633,6 +3673,29 @@ def main(argv: Optional[list] = None) -> None:
         transport_type = args.transport_type or os.getenv("FASTMCP_TYPE", "stdio")
         host = args.host or os.getenv("FASTMCP_HOST", "127.0.0.1") 
         port = args.port or int(os.getenv("FASTMCP_PORT", "8000"))
+        
+        # Authentication settings
+        auth_enable = args.auth_enable or os.getenv("REMOTE_AUTH_ENABLE", "false").lower() in ("true", "1", "yes", "on")
+        secret_key = args.secret_key or os.getenv("REMOTE_SECRET_KEY", "")
+        
+        # Validation for streamable-http mode with authentication
+        if transport_type == "streamable-http":
+            if auth_enable:
+                if not secret_key:
+                    logger.error("ERROR: Authentication is enabled but no secret key provided.")
+                    logger.error("Please set REMOTE_SECRET_KEY environment variable or use --secret-key argument.")
+                    return
+                logger.info("Authentication enabled for streamable-http transport")
+            else:
+                logger.warning("WARNING: streamable-http mode without authentication enabled!")
+                logger.warning("This server will accept requests without Bearer token verification.")
+                logger.warning("Set REMOTE_AUTH_ENABLE=true and REMOTE_SECRET_KEY to enable authentication.")
+
+        # Note: MCP instance with authentication is already initialized at module level
+        # based on environment variables. CLI arguments will override if different.
+        if auth_enable != _auth_enable or secret_key != _secret_key:
+            logger.warning("CLI authentication settings differ from environment variables.")
+            logger.warning("Environment settings take precedence during module initialization.")
         
         # Debug logging for environment variables
         logger.debug(f"Environment variables - POSTGRES_HOST: {os.getenv('POSTGRES_HOST')}, POSTGRES_PORT: {os.getenv('POSTGRES_PORT')}")
