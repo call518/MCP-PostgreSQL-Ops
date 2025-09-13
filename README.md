@@ -57,7 +57,6 @@
 ### Flow Diagram of Quickstart/Tutorial
 
 ![Flow Diagram of Quickstart/Tutorial](img/MCP-Workflow-of-Quickstart-Tutorial.png)
-
 ### 1. Environment Setup
 
 > **Note**: While superuser privileges provide access to all databases and system information, the MCP server also works with regular user permissions for basic monitoring tasks.

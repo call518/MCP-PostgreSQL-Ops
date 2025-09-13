@@ -24,6 +24,8 @@ services:
       - ./src:/app/src
       - ./scripts:/app/scripts
       - ./.env:/app/.env:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
 
   mcpo-proxy:
@@ -35,6 +37,8 @@ services:
       - "${DOCKER_EXTERNAL_PORT_MCPO_PROXY}:8000"
     volumes:
       - ./mcp-config.json.http:/app/config/mcp-config.json
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
 
 #------------------------------------------------------
@@ -52,6 +56,8 @@ services:
       - "${POSTGRES_PORT}:${DOCKER_INTERNAL_PORT_POSTGRESQL}"
     volumes:
       - postgresql-data:${PGDATA}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     command:
       - "-c"
       - "port=${DOCKER_INTERNAL_PORT_POSTGRESQL}"
@@ -96,6 +102,8 @@ services:
         /scripts/create-test-data.sh
     volumes:
       - ./scripts:/scripts:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: no
 
 volumes:
