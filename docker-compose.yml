@@ -27,12 +27,19 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 8000 && sleep 5"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
 
   mcpo-proxy:
     image: call518/mcpo-proxy-postgresql-ops:1.0.2
     container_name: mcp-postgresql-ops-mcpo-proxy
     depends_on:
-      - mcp-server
+      mcp-server:
+        condition: service_healthy
     ports:
       - "${DOCKER_EXTERNAL_PORT_MCPO_PROXY}:8000"
     volumes:
