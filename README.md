@@ -6,7 +6,7 @@
 
 ---
 
-## DeepWiki - Architecture & Internal
+## Architecture & Internal (DeepWiki)
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/call518/MCP-PostgreSQL-Ops)
 
