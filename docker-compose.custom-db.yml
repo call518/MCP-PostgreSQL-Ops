@@ -1,5 +1,6 @@
 services:
   open-webui:
+    env_file: .env
     container_name: mcp-postgresql-ops-open-webui
     image: ghcr.io/open-webui/open-webui:main
     ports:
@@ -13,6 +14,7 @@ services:
     restart: unless-stopped
 
   mcp-server:
+    env_file: .env
     container_name: mcp-postgresql-ops-mcp-server
     image: call518/mcp-server-postgresql-ops:1.0.0
     ports:
@@ -32,6 +34,7 @@ services:
       start_period: 10s
 
   mcpo-proxy:
+    env_file: .env
     image: call518/mcpo-proxy-postgresql-ops:1.0.2
     container_name: mcp-postgresql-ops-mcpo-proxy
     depends_on:
