@@ -1021,4 +1021,5 @@ Freely use, modify, and distribute under the **MIT License**.
 
 - [MCP-Airflow-API](https://github.com/call518/MCP-Airflow-API)
 - [MCP-Ambari-API](https://github.com/call518/MCP-Ambari-API)
+- [MCP-OpenStack-API](https://github.com/call518/MCP-OpenStack-API)
 - [LogSentinelAI - LLB-Based Log Analyzer](https://github.com/call518/LogSentinelAI)
