@@ -27,7 +27,6 @@ if __name__ == "__main__":
 from typing import Any, Optional
 from fastmcp import FastMCP
 from fastmcp.server.auth import StaticTokenVerifier
-from smithery.decorators import smithery
 from .functions import (
     execute_query,
     execute_single_query,
@@ -3735,10 +3734,3 @@ def main(argv: Optional[list] = None) -> None:
     except Exception as e:
         logger.error(f"Failed to start server: {e}")
         sys.exit(1)
-
-        
-### Smithery Server Integration ###
-@smithery.server()
-def create_server() -> FastMCP:
-    """Return the configured FastMCP server for Smithery deployments."""
-    return mcp

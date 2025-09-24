@@ -9,7 +9,6 @@ dependencies = [
     "fastmcp>=2.12.3",
     "asyncpg>=0.29.0",
     "psycopg2-binary>=2.9.7",
-    "smithery>=0.2.4"
 ]
 
 [project.optional-dependencies]
@@ -30,6 +29,3 @@ where = ["src"]
 
 [tool.setuptools.package-dir]
 "" = "src"
-
-[tool.smithery]
-server = "mcp_postgresql_ops.mcp_main:create_server"
