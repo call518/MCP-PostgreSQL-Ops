@@ -7,7 +7,7 @@
 ### Prerequisites
 
 - PostgreSQL 12+ (for testing)
-- Python 3.11+
+- Python 3.12
 - UV package manager
 - Git
 

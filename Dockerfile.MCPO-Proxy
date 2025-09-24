@@ -1,6 +1,6 @@
 FROM rockylinux:9.3
 
-ARG PYTHON_VERSION=3.11
+ARG PYTHON_VERSION=3.12
 
 RUN mkdir -p /app/config
 
@@ -14,7 +14,7 @@ RUN dnf install -y epel-release \
 RUN pip install \
         'uv>=0.8.5' \
         'mcpo>=0.0.17' \
-        'fastmcp>=2.11.1' \
+        'fastmcp>=2.12.3' \
         'aiohttp>=3.12.0'
 
 CMD ["mcpo", "--host", "0.0.0.0", "--port", "8000", "--config", "/app/config/mcp-config.json", "--hot-reload"]

@@ -8,7 +8,7 @@ echo "=== Building Docker image Name: ${IMAGE_NAME} ==="
 
 # CUSTOM_TAG="${1:-latest}"
 TAGs="
-1.0.0
+1.0.3
 latest
 "
 

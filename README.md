@@ -238,7 +238,7 @@ The `create-test-data.sql` script is executed by the `postgres-init-extensions` 
   "mcpServers": {
     "postgresql-ops": {
       "command": "uvx",
-      "args": ["--python", "3.11", "mcp-postgresql-ops"],
+      "args": ["--python", "3.12", "mcp-postgresql-ops"],
       "env": {
         "POSTGRES_HOST": "127.0.0.1",
         "POSTGRES_PORT": "15432",
@@ -322,11 +322,11 @@ mcp-postgresql-ops --help
 
 ```bash
 # Stdio mode
-uvx --python 3.11 mcp-postgresql-ops \
+uvx --python 3.12 mcp-postgresql-ops \
   --type stdio
 
 # HTTP mode
-uvx --python 3.11 mcp-postgresql-ops
+uvx --python 3.12 mcp-postgresql-ops
   --type streamable-http \
   --host 127.0.0.1 \
   --port 8000 \
@@ -340,7 +340,7 @@ uvx --python 3.11 mcp-postgresql-ops
   "mcpServers": {
     "Postgresql-A": {
       "command": "uvx",
-      "args": ["--python", "3.11", "mcp-postgresql-ops"],
+      "args": ["--python", "3.12", "mcp-postgresql-ops"],
       "env": {
         "POSTGRES_HOST": "a.foo.com",
         "POSTGRES_PORT": "5432",
@@ -351,7 +351,7 @@ uvx --python 3.11 mcp-postgresql-ops
     },
     "Postgresql-B": {
       "command": "uvx",
-      "args": ["--python", "3.11", "mcp-postgresql-ops"],
+      "args": ["--python", "3.12", "mcp-postgresql-ops"],
       "env": {
         "POSTGRES_HOST": "b.bar.com",
         "POSTGRES_PORT": "5432",
@@ -471,7 +471,7 @@ Then restart PostgreSQL and run the CREATE EXTENSION commands above.
 
 ### Minimum Requirements
 - PostgreSQL 12+ (tested with PostgreSQL 17)
-- Python 3.11
+- Python 3.12
 - Network access to PostgreSQL server
 - Read permissions on system catalogs
 

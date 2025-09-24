@@ -3,10 +3,10 @@ name = "mcp-postgresql-ops"
 version = "0.0.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 authors = [{ name = "JungJungIn", email = "call518@gmail.com" }]
 dependencies = [
-    "fastmcp>=2.11.1",
+    "fastmcp>=2.12.3",
     "asyncpg>=0.29.0",
     "psycopg2-binary>=2.9.7"
 ]
