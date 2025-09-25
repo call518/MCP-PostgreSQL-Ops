@@ -1017,6 +1017,159 @@ When authentication fails, the server returns:
 
 ---
 
+## 🚀 Adding Custom Tools
+
+This MCP server is designed for easy extensibility. Follow these 4 simple steps to add your own custom tools:
+
+### Step-by-Step Guide
+
+#### 1. **Add Helper Functions (Optional)**
+
+Add reusable data functions to `src/mcp_postgresql_ops/functions.py`:
+
+```python
+async def get_your_custom_data(target_database: str = None, limit: int = 20) -> List[Dict[str, Any]]:
+    """Your custom data retrieval function."""
+    try:
+        # Example implementation - adapt to your PostgreSQL needs
+        query = """
+        SELECT 
+            schemaname,
+            tablename,
+            attname as column_name,
+            n_distinct,
+            most_common_vals,
+            most_common_freqs
+        FROM pg_stats 
+        WHERE schemaname NOT IN ('information_schema', 'pg_catalog')
+        ORDER BY schemaname, tablename, attname
+        LIMIT $1
+        """
+        
+        results = await execute_query(query, [limit], database=target_database)
+        return results
+        
+    except Exception as e:
+        logger.error(f"Failed to get custom data: {e}")
+        raise
+```
+
+#### 2. **Create Your MCP Tool**
+
+Add your tool function to `src/mcp_postgresql_ops/mcp_main.py`:
+
+```python
+@mcp.tool()
+async def get_your_custom_analysis(limit: int = 50, database_name: Optional[str] = None) -> str:
+    """
+    [Tool Purpose]: Brief description of what your tool does
+    
+    [Exact Functionality]:
+    - Feature 1: Data aggregation and analysis
+    - Feature 2: Database monitoring and insights
+    - Feature 3: Performance metrics and reporting
+    
+    [Required Use Cases]:
+    - When user asks "your specific analysis request"
+    - Your PostgreSQL-specific monitoring needs
+    
+    Args:
+        limit: Maximum results (1-100)
+        database_name: Target database name (optional, uses default if not specified)
+    
+    Returns:
+        Formatted analysis results
+    """
+    try:
+        # Always validate input limits
+        limit = max(1, min(limit, 100))
+        
+        # Get your custom data
+        results = await get_your_custom_data(target_database=database_name, limit=limit)
+        
+        if not results:
+            return "No data found for custom analysis."
+        
+        # Format and return results
+        return format_table_data(results, f"Custom Analysis Results (Top {len(results)})")
+        
+    except Exception as e:
+        logger.error(f"Failed to get custom analysis: {e}")
+        return f"Error: {str(e)}"
+```
+
+#### 3. **Update Imports**
+
+Add your helper function to the imports section in `src/mcp_postgresql_ops/mcp_main.py` (around line 30):
+
+```python
+from .functions import (
+    execute_query,
+    execute_single_query,
+    format_table_data,
+    format_bytes,
+    format_duration,
+    get_server_version,
+    check_extension_exists,
+    get_pg_stat_statements_data,
+    get_pg_stat_monitor_data,
+    sanitize_connection_info,
+    read_prompt_template,
+    parse_prompt_sections,
+    get_current_database_name,
+    POSTGRES_CONFIG,
+    get_your_custom_data,  # Add your new function here
+)
+```
+
+#### 4. **Update Prompt Template (Recommended)**
+
+Add your tool description to `src/mcp_postgresql_ops/prompt_template.md` for better natural language recognition:
+
+```markdown
+### **Your Custom Analysis Tool**
+
+### X. **get_your_custom_analysis**
+**Purpose**: Brief description of what your tool does
+**Usage**: "Show me your custom analysis" or "Get custom analysis for database_name"
+**Features**: Data aggregation, database monitoring, performance metrics
+**Optional**: `database_name` parameter for specific database analysis
+**Limit**: Results limited to 1-100 records for performance
+```
+
+#### 5. **Test Your Tool**
+
+```bash
+# Local testing with MCP Inspector
+./scripts/run-mcp-inspector-local.sh
+
+# Or test with Docker stack
+docker-compose up -d
+docker-compose logs -f mcp-server
+
+# Test with natural language queries:
+# "Show me your custom analysis"
+# "Get custom analysis for ecommerce database"
+# "Analyze custom data with limit 25"
+```
+
+### Important Notes
+
+- **Multi-Database Support**: All tools support the optional `database_name` parameter to target specific databases
+- **Input Validation**: Always validate `limit` parameters with `max(1, min(limit, 100))`
+- **Error Handling**: Return user-friendly error messages instead of raising exceptions
+- **Logging**: Use `logger.error()` for debugging while returning clean error messages to users
+- **PostgreSQL Compatibility**: Your custom queries should work across PostgreSQL 12-17
+- **Extension Dependencies**: If your tool requires specific extensions, check availability with `check_extension_exists()`
+
+### Advanced Patterns
+
+For version-aware queries or extension-dependent features, see existing tools like `get_pg_stat_statements_top_queries` for reference patterns.
+
+That's it! Your custom tool is ready to use with natural language queries through any MCP client.
+
+---
+
 ## License
 Freely use, modify, and distribute under the **MIT License**.
 
