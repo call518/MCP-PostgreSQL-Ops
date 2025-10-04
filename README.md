@@ -243,7 +243,7 @@ The `create-test-data.sql` script is executed by the `postgres-init-extensions` 
 ```json
 {
   "mcpServers": {
-    "postgresql-ops": {
+    "mcp-postgresql-ops": {
       "command": "uvx",
       "args": ["--python", "3.12", "mcp-postgresql-ops"],
       "env": {
@@ -308,7 +308,7 @@ mcp-postgresql-ops --help
 ```json
 {
   "mcpServers": {
-    "postgresql-ops": {
+    "mcp-postgresql-ops": {
       "command": "uv",
       "args": ["run", "python", "-m", "mcp_postgresql_ops"],
       "env": {
@@ -989,7 +989,7 @@ When authentication is enabled, MCP clients must include the Bearer token in the
 ```json
 {
   "mcpServers": {
-    "postgresql-ops": {
+    "mcp-postgresql-ops": {
       "type": "streamable-http",
       "url": "http://your-server:8000/mcp",
       "headers": {

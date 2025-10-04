@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "postgresql-ops": {
+    "mcp-postgresql-ops": {
       "command": "python",
       "args": ["-m", "mcp_postgresql_ops"],
       "env": {
