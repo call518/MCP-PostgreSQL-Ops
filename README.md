@@ -136,6 +136,8 @@ http://localhost:3003/
 
 ### 4. Registering the Tool in OpenWebUI
 
+> 📌 **Note**: Web-UI configuration instructions are based on OpenWebUI **v0.6.22**. Menu locations and settings may differ in newer versions.
+
 1. logging in to OpenWebUI with an admin account
 1. go to "Settings" → "Tools" from the top menu.
 1. Enter the `postgresql-ops` Tool address (e.g., `http://localhost:8003/postgresql-ops`) to connect MCP Tools.
