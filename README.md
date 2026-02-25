@@ -965,17 +965,17 @@ For `streamable-http` mode, this MCP server supports Bearer token authentication
 ```bash
 # In .env file
 REMOTE_AUTH_ENABLE=true
-REMOTE_SECRET_KEY=your-secure-secret-key-here
+REMOTE_SECRET_KEY=my-test-secret-key-12345
 ```
 
 **Or via CLI:**
 
 ```bash
 # Module method
-python -m mcp_postgresql_ops --type streamable-http --auth-enable --secret-key your-secure-secret-key-here
+python -m mcp_postgresql_ops --type streamable-http --auth-enable --secret-key my-test-secret-key-12345
 
 # Script method
-mcp-postgresql-ops --type streamable-http --auth-enable --secret-key your-secure-secret-key-here
+mcp-postgresql-ops --type streamable-http --auth-enable --secret-key my-test-secret-key-12345
 ```
 
 #### Security Levels
@@ -995,7 +995,7 @@ When authentication is enabled, MCP clients must include the Bearer token in the
       "type": "streamable-http",
       "url": "http://your-server:8000/mcp",
       "headers": {
-        "Authorization": "Bearer your-secure-secret-key-here"
+        "Authorization": "Bearer my-test-secret-key-12345"
       }
     }
   }

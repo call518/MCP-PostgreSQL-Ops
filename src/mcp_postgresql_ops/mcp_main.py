@@ -63,30 +63,27 @@ logging.basicConfig(
 # Authentication Setup
 # =============================================================================
 
-# Check environment variables for authentication early
-_auth_enable = os.environ.get("REMOTE_AUTH_ENABLE", "false").lower() == "true"
-_secret_key = os.environ.get("REMOTE_SECRET_KEY", "")
+TRUTHY_VALUES = ("true", "1", "yes", "on")
 
-# Initialize the main MCP instance with authentication if configured
-if _auth_enable and _secret_key:
-    logger.info("Initializing MCP instance with Bearer token authentication (from environment)")
-    
-    # Create token configuration
+
+def _parse_bool_env(value: str) -> bool:
+    return value.strip().lower() in TRUTHY_VALUES
+
+
+def _build_static_token_auth(secret_key: str) -> StaticTokenVerifier:
     tokens = {
-        _secret_key: {
+        secret_key: {
             "client_id": "postgresql-ops-client",
-            "user": "admin",
             "scopes": ["read", "write"],
-            "description": "PostgreSQL Operations access token"
         }
     }
-    
-    auth = StaticTokenVerifier(tokens=tokens)
-    mcp = FastMCP("mcp-postgresql-ops", auth=auth)
-    logger.info("MCP instance initialized with authentication")
-else:
-    logger.info("Initializing MCP instance without authentication")
-    mcp = FastMCP("mcp-postgresql-ops")
+    return StaticTokenVerifier(tokens=tokens)
+
+
+# Initialize MCP instance once for decorator registration.
+# Runtime authentication is configured in main() before mcp.run().
+logger.info("Initializing MCP instance")
+mcp = FastMCP("mcp-postgresql-ops")
 
 # =============================================================================
 # Server initialization
@@ -3684,7 +3681,9 @@ def main(argv: Optional[list] = None) -> None:
         port = args.port or int(os.getenv("FASTMCP_PORT", "8000"))
         
         # Authentication settings
-        auth_enable = args.auth_enable or os.getenv("REMOTE_AUTH_ENABLE", "false").lower() in ("true", "1", "yes", "on")
+        auth_enable = args.auth_enable or _parse_bool_env(
+            os.getenv("REMOTE_AUTH_ENABLE", "false")
+        )
         secret_key = args.secret_key or os.getenv("REMOTE_SECRET_KEY", "")
         
         # Validation for streamable-http mode with authentication
@@ -3700,11 +3699,11 @@ def main(argv: Optional[list] = None) -> None:
                 logger.warning("This server will accept requests without Bearer token verification.")
                 logger.warning("Set REMOTE_AUTH_ENABLE=true and REMOTE_SECRET_KEY to enable authentication.")
 
-        # Note: MCP instance with authentication is already initialized at module level
-        # based on environment variables. CLI arguments will override if different.
-        if auth_enable != _auth_enable or secret_key != _secret_key:
-            logger.warning("CLI authentication settings differ from environment variables.")
-            logger.warning("Environment settings take precedence during module initialization.")
+        # Configure authentication provider before server startup.
+        if auth_enable:
+            mcp.auth = _build_static_token_auth(secret_key)
+        else:
+            mcp.auth = None
         
         # Debug logging for environment variables
         logger.debug(f"Environment variables - POSTGRES_HOST: {os.getenv('POSTGRES_HOST')}, POSTGRES_PORT: {os.getenv('POSTGRES_PORT')}")
