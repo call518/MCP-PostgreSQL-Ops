@@ -3621,9 +3621,9 @@ def main(argv: Optional[list] = None) -> None:
     parser.add_argument(
         "--type",
         dest="transport_type",
-        help="Transport type. Default: stdio",
+        help="Transport type. Default: env FASTMCP_TYPE or stdio",
         choices=["stdio", "streamable-http"],
-        default="stdio"
+        default=None,
     )
     parser.add_argument(
         "--host",
@@ -3638,11 +3638,20 @@ def main(argv: Optional[list] = None) -> None:
         help="Port number for streamable-http transport. Default: 8000",
         default=None
     )
-    parser.add_argument(
+    auth_group = parser.add_mutually_exclusive_group()
+    auth_group.add_argument(
         "--auth-enable",
         dest="auth_enable",
         action="store_true",
-        help="Enable Bearer token authentication for streamable-http mode. Default: False",
+        default=None,
+        help="Enable Bearer token authentication for streamable-http mode.",
+    )
+    auth_group.add_argument(
+        "--auth-disable",
+        dest="auth_enable",
+        action="store_false",
+        default=None,
+        help="Disable Bearer token authentication for streamable-http mode.",
     )
     parser.add_argument(
         "--secret-key",
@@ -3681,9 +3690,10 @@ def main(argv: Optional[list] = None) -> None:
         port = args.port or int(os.getenv("FASTMCP_PORT", "8000"))
         
         # Authentication settings
-        auth_enable = args.auth_enable or _parse_bool_env(
-            os.getenv("REMOTE_AUTH_ENABLE", "false")
-        )
+        if args.auth_enable is None:
+            auth_enable = _parse_bool_env(os.getenv("REMOTE_AUTH_ENABLE", "false"))
+        else:
+            auth_enable = args.auth_enable
         secret_key = args.secret_key or os.getenv("REMOTE_SECRET_KEY", "")
         
         # Validation for streamable-http mode with authentication
