@@ -1,0 +1,11 @@
+title = "README REDACTED 허용 (extend)"
+
+[extend]
+useDefault = true  # 기본 내장 rules 로드
+
+[[allowlists]]
+description = "README.md generic-api-key 예시"
+paths = ["README\\.md"]
+ruleIDs = ["generic-api-key"]
+regexes = ['''REDACTED''']
+regexTarget = "secret"
