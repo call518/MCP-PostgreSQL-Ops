@@ -1,0 +1,1259 @@
+{
+  "version": "1.0",
+  "metadata": {
+    "recorded_at": "2026-03-04T09:19:27.025223+00:00",
+    "server_url": "stdio://mcp-postgresql-ops",
+    "transport_type": "stdio",
+    "protocol_version": "2025-11-25",
+    "server_info": {
+      "name": "mcp-postgresql-ops",
+      "version": "3.0.2"
+    }
+  },
+  "interactions": [
+    {
+      "type": "jsonrpc_request",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 0,
+        "method": "initialize",
+        "params": {
+          "protocolVersion": "2025-11-25",
+          "capabilities": {},
+          "clientInfo": {
+            "name": "mcp-recorder",
+            "version": "0.1.0"
+          }
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 0,
+        "result": {
+          "protocolVersion": "2025-11-25",
+          "capabilities": {
+            "experimental": {},
+            "prompts": {
+              "listChanged": false
+            },
+            "resources": {
+              "subscribe": false,
+              "listChanged": false
+            },
+            "tools": {
+              "listChanged": true
+            },
+            "extensions": {
+              "io.modelcontextprotocol/ui": {}
+            }
+          },
+          "serverInfo": {
+            "name": "mcp-postgresql-ops",
+            "version": "3.0.2"
+          }
+        }
+      },
+      "response_is_sse": false,
+      "response_status": 200,
+      "latency_ms": 3079,
+      "http_method": null,
+      "http_path": null
+    },
+    {
+      "type": "notification",
+      "request": {
+        "jsonrpc": "2.0",
+        "method": "notifications/initialized"
+      },
+      "response": null,
+      "response_is_sse": false,
+      "response_status": 202,
+      "latency_ms": 0,
+      "http_method": null,
+      "http_path": null
+    },
+    {
+      "type": "jsonrpc_request",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/list",
+        "params": {}
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": {
+          "tools": [
+            {
+              "name": "get_lock_monitoring",
+              "description": "[Tool Purpose]: Monitor current locks and potential deadlocks in PostgreSQL\n\n[Exact Functionality]:\n- List all current locks held and waited for by sessions\n- Show blocked and blocking sessions, lock types, and wait status\n- Help diagnose lock contention and deadlock risk\n- Filter results by granted status, state, mode, lock type, or username\n\n[Required Use Cases]:\n- When user requests \"lock monitoring\", \"deadlock check\", \"blocked sessions\", etc.\n- When diagnosing performance issues due to locking\n- When checking for blocked or waiting queries\n- When filtering specific types of locks or users\n\n[Strictly Prohibited Use Cases]:\n- Requests for killing sessions or force-unlocking\n- Requests for lock configuration changes\n- Requests for historical lock data (only current state is shown)\n\nArgs:\n    database_name: Database name to analyze (uses default database if omitted)\n    granted: Filter by granted status (\"true\" or \"false\")\n    state: Filter by session state (\"active\", \"idle\", \"idle in transaction\", etc.)\n    mode: Filter by lock mode (\"AccessShareLock\", \"ExclusiveLock\", etc.)\n    locktype: Filter by lock type (\"relation\", \"transactionid\", \"virtualxid\", etc.)\n    username: Filter by specific username\n\nReturns:\n    Table-format information showing PID, user, database, lock type, relation, mode, granted, waiting, and blocked-by info",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {
+                  "database_name": {
+                    "default": null,
+                    "type": "string"
+                  },
+                  "granted": {
+                    "default": null,
+                    "type": "string"
+                  },
+                  "state": {
+                    "default": null,
+                    "type": "string"
+                  },
+                  "mode": {
+                    "default": null,
+                    "type": "string"
+                  },
+                  "locktype": {
+                    "default": null,
+                    "type": "string"
+                  },
+                  "username": {
+                    "default": null,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            },
+            {
+              "name": "get_wal_status",
+              "description": "[Tool Purpose]: Monitor WAL (Write Ahead Log) status and statistics\n\n[Exact Functionality]:\n- Show current WAL location and LSN information\n- Display WAL file generation rate and size statistics\n- Monitor WAL archiving status and lag\n- Provide WAL-related configuration and activity metrics\n\n[Required Use Cases]:\n- When user requests \"WAL status\", \"WAL monitoring\", \"log shipping status\", etc.\n- When diagnosing replication lag or WAL archiving issues\n- When monitoring database write activity and WAL generation\n\n[Strictly Prohibited Use Cases]:\n- Requests for WAL configuration changes\n- Requests for manual WAL switching or archiving\n- Requests for WAL file manipulation or cleanup\n\nReturns:\n    WAL status information including current LSN, WAL files, archiving status, and statistics",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {},
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            },
+            {
+              "name": "get_replication_status",
+              "description": "[Tool Purpose]: Monitor PostgreSQL replication status and statistics\n\n[Exact Functionality]:\n- Show current replication connections and their status\n- Display replication lag information for standbys\n- Monitor WAL sender and receiver processes\n- Provide replication slot information and statistics\n\n[Required Use Cases]:\n- When user requests \"replication status\", \"standby lag\", \"replication monitoring\", etc.\n- When diagnosing replication issues or performance problems\n- When checking replication slot usage and lag\n\n[Strictly Prohibited Use Cases]:\n- Requests for replication configuration changes\n- Requests for replication slot creation or deletion\n- Requests for failover or switchover operations\n\nReturns:\n    Replication status including connections, lag information, slots, and statistics",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {},
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            },
+            {
+              "name": "get_server_info",
+              "description": "[Tool Purpose]: Check basic information and connection status of PostgreSQL server\n\n[Exact Functionality]:\n- Retrieve PostgreSQL server version information\n- Display connection settings (with password masking)\n- Verify server accessibility\n- Check installation status of extensions (pg_stat_statements, pg_stat_monitor)\n\n[Required Use Cases]:\n- When user requests \"server info\", \"PostgreSQL status\", \"connection check\", etc.\n- When basic database server information is needed\n- When preliminary check is needed before using monitoring tools\n\n[Strictly Prohibited Use Cases]:\n- Requests for specific data or table information\n- Requests for performance statistics or monitoring data\n- Requests for configuration changes or administrative tasks\n\nReturns:\n    Comprehensive information including server version, connection info, and extension status",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {},
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            },
+            {
+              "name": "get_current_database_info",
+              "description": "[Tool Purpose]: Get information about the current database connection\n\n[Exact Functionality]:\n- Show the name of the currently connected database\n- Display database-specific information like encoding, locale, and size\n- Provide connection context for clarity in multi-database environments\n\n[Required Use Cases]:\n- When user asks \"what database am I connected to?\", \"current database\", etc.\n- When clarifying database context for analysis operations\n- When troubleshooting connection issues or confirming target database\n\n[Strictly Prohibited Use Cases]:\n- Requests for database structure changes or creation/deletion\n- Requests for user authentication or permission changes\n- Requests for configuration modifications\n\nArgs:\n    database_name: Target database to get info for (uses default connection if omitted)\n\nReturns:\n    Current database name and related information for connection clarity",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {
+                  "database_name": {
+                    "default": null,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            },
+            {
+              "name": "get_database_list",
+              "description": "[Tool Purpose]: Retrieve list of all databases and their basic information on PostgreSQL server\n\n[Exact Functionality]:\n- Retrieve list of all databases on the server\n- Display owner, encoding, and size information for each database\n- Include database connection limit information\n\n[Required Use Cases]:\n- When user requests \"database list\", \"DB list\", \"database info\", etc.\n- When need to check what databases exist on the server\n- When database size or owner information is needed\n\n[Strictly Prohibited Use Cases]:\n- Requests for tables or schemas inside specific databases\n- Requests for database creation or deletion\n- Requests related to user permissions or security\n\nReturns:\n    Table-format information including database name, owner, encoding, size, and connection limit",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {},
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            },
+            {
+              "name": "get_table_list",
+              "description": "[Tool Purpose]: Retrieve list of all tables and their information from specified database (or current DB)\n\n[Exact Functionality]:\n- Retrieve list of all tables in specified database\n- Display schema, owner, and size information for each table\n- Distinguish table types (regular tables, views, etc.)\n\n[Required Use Cases]:\n- When user requests \"table list\", \"table listing\", \"schema info\", etc.\n- When need to understand structure of specific database\n- When table size or owner information is needed\n\n[Strictly Prohibited Use Cases]:\n- Requests for data inside tables\n- Requests for table structure changes or creation/deletion\n- Requests for detailed column information of specific tables\n\nArgs:\n    database_name: Database name to query (uses currently connected database if omitted)\n\nReturns:\n    Table-format information including table name, schema, owner, type, and size",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {
+                  "database_name": {
+                    "default": null,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            },
+            {
+              "name": "get_user_list",
+              "description": "[Tool Purpose]: Retrieve list of all user accounts and permission information on PostgreSQL server\n\n[Exact Functionality]:\n- Retrieve list of all database user accounts\n- Display permission information for each user (superuser, database creation rights, etc.)\n- Include account creation date and expiration date information\n\n[Required Use Cases]:\n- When user requests \"user list\", \"account info\", \"permission check\", etc.\n- When user permission management or security inspection is needed\n- When account status overview is needed\n\n[Strictly Prohibited Use Cases]:\n- Requests for user password information\n- Requests for user creation, deletion, or permission changes\n- Requests for specific user sessions or activity history\n\nReturns:\n    Table-format information including username, superuser status, permissions, and account status",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {},
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            },
+            {
+              "name": "get_table_schema_info",
+              "description": "[Tool Purpose]: Retrieve detailed schema information for specific table or all tables in a database\n\n[Exact Functionality]:\n- Retrieve detailed column information including data types, constraints, defaults\n- Display primary keys, foreign keys, indexes, and other table constraints\n- Show table-level metadata such as size, row count estimates\n\n[Required Use Cases]:\n- When user requests \"table schema\", \"column info\", \"table structure\", etc.\n- When detailed table design information is needed for development\n- When analyzing database structure and relationships\n\n[Strictly Prohibited Use Cases]:\n- Requests for actual data inside tables\n- Requests for table structure changes or DDL operations\n- Requests for performance statistics (use other tools for that)\n\nArgs:\n    database_name: Database name to query (REQUIRED - specify which database to analyze)\n    table_name: Specific table name to analyze (if None, shows all tables)\n    schema_name: Schema name to search in (default: \"public\")\n\nReturns:\n    Detailed table schema information including columns, constraints, and metadata",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {
+                  "database_name": {
+                    "type": "string"
+                  },
+                  "table_name": {
+                    "default": null,
+                    "type": "string"
+                  },
+                  "schema_name": {
+                    "default": "public",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "database_name"
+                ],
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            },
+            {
+              "name": "get_database_schema_info",
+              "description": "[Tool Purpose]: Retrieve detailed information about database schemas (namespaces) and their contents\n\n[Exact Functionality]:\n- Show all schemas in a database with their owners and permissions\n- Display schema-level statistics including table count and total size\n- List all objects (tables, views, functions) within specific schema\n- Show schema access privileges and usage patterns\n\n[Required Use Cases]:\n- When user requests \"database schema info\", \"schema overview\", \"namespace structure\", etc.\n- When analyzing database organization and schema-level permissions\n- When exploring multi-schema database architecture\n\n[Strictly Prohibited Use Cases]:\n- Requests for actual data inside tables\n- Requests for schema structure changes or DDL operations\n- Requests for individual table details (use get_table_schema_info for that)\n\nArgs:\n    database_name: Database name to query (REQUIRED - specify which database to analyze)\n    schema_name: Specific schema name to analyze (if None, shows all schemas)\n\nReturns:\n    Detailed database schema information including objects, sizes, and permissions",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {
+                  "database_name": {
+                    "type": "string"
+                  },
+                  "schema_name": {
+                    "default": null,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "database_name"
+                ],
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            },
+            {
+              "name": "get_table_relationships",
+              "description": "[Tool Purpose]: Analyze table relationships including foreign keys, dependencies, and inheritance\n\n[Exact Functionality]:\n- Show foreign key relationships (inbound and outbound)\n- Display view dependencies and table references\n- Analyze inheritance and partition relationships\n- Identify orphaned tables and relationship patterns\n\n[Required Use Cases]:\n- When user requests \"table relationships\", \"foreign keys\", \"dependencies\", etc.\n- When analyzing database schema design and data model\n- When planning data migration or schema changes\n\n[Strictly Prohibited Use Cases]:\n- Requests for actual data inside tables\n- Requests for relationship modifications or DDL operations\n- Requests for performance statistics (use other tools for that)\n\nArgs:\n    database_name: Database name to query (REQUIRED - specify which database to analyze)\n    table_name: Specific table name to analyze (if None, shows database-wide relationship overview)\n    schema_name: Schema name to search in (default: \"public\")\n    relationship_type: Type of relationships to show (\"all\", \"foreign_keys\", \"dependencies\", \"inheritance\")\n\nReturns:\n    Detailed relationship information including foreign keys, dependencies, and metadata",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {
+                  "database_name": {
+                    "type": "string"
+                  },
+                  "table_name": {
+                    "default": null,
+                    "type": "string"
+                  },
+                  "schema_name": {
+                    "default": "public",
+                    "type": "string"
+                  },
+                  "relationship_type": {
+                    "default": "all",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "database_name"
+                ],
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            },
+            {
+              "name": "get_active_connections",
+              "description": "[Tool Purpose]: Retrieve all active connections and session information on current PostgreSQL server\n\n[Exact Functionality]:\n- Retrieve list of all currently active connected sessions\n- Display user, database, and client address for each connection\n- Include session status and currently executing query information\n\n[Required Use Cases]:\n- When user requests \"active connections\", \"current sessions\", \"connection status\", etc.\n- When server load or performance problem diagnosis is needed\n- When checking connection status of specific users or applications\n\n[Strictly Prohibited Use Cases]:\n- Requests for forceful connection termination or session management\n- Requests for detailed query history of specific sessions\n- Requests for connection security or authentication-related changes\n\nReturns:\n    Information including PID, username, database name, client address, status, and current query",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {},
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            },
+            {
+              "name": "get_pg_stat_statements_top_queries",
+              "description": "[Tool Purpose]: Analyze top queries that consumed the most time using pg_stat_statements extension\n\n[Exact Functionality]:\n- Retrieve top query list based on total execution time\n- Display call count, average execution time, and cache hit rate for each query\n- Support identification of queries requiring performance optimization\n\n[Required Use Cases]:\n- When user requests \"slow queries\", \"performance analysis\", \"top queries\", etc.\n- When database performance optimization is needed\n- When query performance monitoring or tuning is required\n\n[Strictly Prohibited Use Cases]:\n- When pg_stat_statements extension is not installed\n- Requests for query execution or data modification\n- Requests for statistics data reset or configuration changes\n\nArgs:\n    limit: Number of top queries to retrieve (default: 20, max: 100)\n    database_name: Database name to analyze (uses default database if omitted)\n\nReturns:\n    Performance statistics including query text, call count, total execution time, average execution time, and cache hit rate",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {
+                  "limit": {
+                    "default": 20,
+                    "type": "integer"
+                  },
+                  "database_name": {
+                    "default": null,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            },
+            {
+              "name": "get_pg_stat_monitor_recent_queries",
+              "description": "[Tool Purpose]: Analyze recently executed queries and detailed monitoring information using pg_stat_monitor extension\n\n[Exact Functionality]:\n- Retrieve detailed performance information of recently executed queries\n- Display client IP and time bucket information by execution period\n- Provide more detailed monitoring data than pg_stat_statements\n\n[Required Use Cases]:\n- When user requests \"recent queries\", \"detailed monitoring\", \"pg_stat_monitor\", etc.\n- When real-time query performance monitoring is needed\n- When client-specific or time-based query analysis is required\n\n[Strictly Prohibited Use Cases]:\n- When pg_stat_monitor extension is not installed\n- Requests for query execution or data modification\n- Requests for monitoring configuration changes or data reset\n\nArgs:\n    limit: Number of recent queries to retrieve (default: 20, max: 100)\n    database_name: Database name to analyze (uses default database if omitted)\n\nReturns:\n    Detailed monitoring information including query text, execution statistics, client info, and bucket time",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {
+                  "limit": {
+                    "default": 20,
+                    "type": "integer"
+                  },
+                  "database_name": {
+                    "default": null,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            },
+            {
+              "name": "get_database_size_info",
+              "description": "[Tool Purpose]: Analyze size information and storage usage status of all databases in PostgreSQL server\n\n[Exact Functionality]:\n- Retrieve disk usage for each database\n- Analyze overall server storage usage status\n- Provide database list sorted by size\n\n[Required Use Cases]:\n- When user requests \"database size\", \"disk usage\", \"storage space\", etc.\n- When capacity management or cleanup is needed\n- When resource usage status by database needs to be identified\n\n[Strictly Prohibited Use Cases]:\n- Requests for data deletion or cleanup operations\n- Requests for storage configuration changes\n- Requests related to backup or restore\n\nReturns:\n    Table-format information with database names and size information sorted by size",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {},
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            },
+            {
+              "name": "get_table_size_info",
+              "description": "[Tool Purpose]: Analyze size information and index usage of all tables in specified schema\n\n[Exact Functionality]:\n- Retrieve size information of all tables within schema\n- Analyze index size and total size per table\n- Provide table list sorted by size\n\n[Required Use Cases]:\n- When user requests \"table size\", \"schema capacity\", \"index usage\", etc.\n- When storage analysis of specific schema is needed\n- When resource usage status per table needs to be identified\n\n[Strictly Prohibited Use Cases]:\n- Requests for table data deletion or cleanup operations\n- Requests for index creation or deletion\n- Requests for table structure changes\n\nArgs:\n    schema_name: Schema name to analyze (default: \"public\")\n    database_name: Database name to analyze (uses default database if omitted)\n\nReturns:\n    Information sorted by size including table name, table size, index size, and total size",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {
+                  "schema_name": {
+                    "default": "public",
+                    "type": "string"
+                  },
+                  "database_name": {
+                    "default": null,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            },
+            {
+              "name": "get_postgresql_config",
+              "description": "[Tool Purpose]: Retrieve and analyze PostgreSQL server configuration parameter values\n\n[Exact Functionality]:\n- Retrieve all PostgreSQL configuration parameters (when config_name is not specified)\n- Retrieve current value and description of specific configuration parameter\n- Filter configurations by text pattern (when filter_text is specified)\n- Display whether configuration can be changed and if restart is required\n\n[Required Use Cases]:\n- When user requests \"PostgreSQL config\", \"config\", \"parameters\", etc.\n- When checking specific configuration values is needed\n- When searching for configurations containing specific text\n- When configuration status identification is needed for performance tuning\n\n[Strictly Prohibited Use Cases]:\n- Requests for configuration value changes or modifications\n- Requests for PostgreSQL restart or reload\n- Requests for system-level configuration changes\n\nArgs:\n    config_name: Specific configuration parameter name to retrieve (shows all configs if omitted)\n    filter_text: Text to filter configuration names or descriptions (optional)\n\nReturns:\n    Configuration information including parameter name, current value, unit, description, and changeability",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {
+                  "config_name": {
+                    "default": null,
+                    "type": "string"
+                  },
+                  "filter_text": {
+                    "default": null,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            },
+            {
+              "name": "get_index_usage_stats",
+              "description": "[Tool Purpose]: Analyze usage rate and performance statistics of all indexes in database\n\n[Exact Functionality]:\n- Analyze usage frequency and efficiency of all indexes\n- Identify unused indexes\n- Provide scan count and tuple return statistics per index\n\n[Required Use Cases]:\n- When user requests \"index usage rate\", \"index performance\", \"unnecessary indexes\", etc.\n- When database performance optimization is needed\n- When index cleanup or reorganization is required\n\n[Strictly Prohibited Use Cases]:\n- Requests for index creation or deletion\n- Requests for index reorganization or REINDEX execution\n- Requests for statistics reset\n\nArgs:\n    database_name: Database name to analyze (uses default database if omitted)\n\nReturns:\n    Index usage statistics including schema, table, index name, scans, and tuples read",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {
+                  "database_name": {
+                    "default": null,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            },
+            {
+              "name": "get_vacuum_analyze_stats",
+              "description": "[Tool Purpose]: Analyze VACUUM and ANALYZE execution history and statistics per table\n\n[Exact Functionality]:\n- Retrieve last VACUUM/ANALYZE execution time for each table\n- Provide Auto VACUUM/ANALYZE execution count statistics\n- Analyze table activity with tuple insert/update/delete statistics\n\n[Required Use Cases]:\n- When user requests \"VACUUM status\", \"ANALYZE history\", \"table statistics\", etc.\n- When database maintenance status overview is needed\n- When performance issues or statistics update status verification is required\n\n[Strictly Prohibited Use Cases]:\n- Requests for VACUUM or ANALYZE execution\n- Requests for Auto VACUUM configuration changes\n- Requests for forced statistics update\n\nArgs:\n    database_name: Database name to analyze (uses default database if omitted)\n\nReturns:\n    Schema name, table name, last VACUUM time, last ANALYZE time, and execution count statistics",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {
+                  "database_name": {
+                    "default": null,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            },
+            {
+              "name": "get_table_bloat_analysis",
+              "description": "[Tool Purpose]: Analyze table bloat based on dead tuple statistics and size information\n\n[Exact Functionality]:\n- Calculate bloat ratio based on dead tuples vs total tuples\n- Estimate bloat size in bytes and human-readable format\n- Show last VACUUM/AUTOVACUUM timestamps for maintenance tracking\n- Identify tables requiring VACUUM maintenance\n- Filter tables by name pattern using SQL LIKE or ILIKE matching\n- Sort results by bloat severity (dead tuple ratio and count)\n\n[Required Use Cases]:\n- When user requests \"table bloat\", \"bloat analysis\", \"dead tuples\", etc.\n- When identifying tables that need VACUUM maintenance\n- When investigating database storage efficiency and space usage\n- When troubleshooting performance issues related to table bloat\n- When analyzing specific table groups (e.g., tables with \"user\", \"log\", \"temp\" in names)\n\n[Strictly Prohibited Use Cases]:\n- Requests for automatic VACUUM execution\n- Requests for bloat removal or cleanup operations\n- Requests for table restructuring or data modification\n\nArgs:\n    database_name: Target database name (uses default database from POSTGRES_DB env var if omitted)\n    schema_name: Schema to analyze (analyzes all user schemas if omitted)\n    table_pattern: Table name pattern to filter (SQL LIKE pattern, e.g., 'user%', '%log%', 'temp_*')\n    min_dead_tuples: Minimum dead tuples to include in results (default: 1, shows all tables with any bloat)\n    limit: Maximum number of results to return (1-100, default: 20)\n\nReturns:\n    Table bloat analysis with bloat ratios, sizes, and maintenance recommendations",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {
+                  "database_name": {
+                    "default": null,
+                    "type": "string"
+                  },
+                  "schema_name": {
+                    "default": null,
+                    "type": "string"
+                  },
+                  "table_pattern": {
+                    "default": null,
+                    "type": "string"
+                  },
+                  "min_dead_tuples": {
+                    "default": 1,
+                    "type": "integer"
+                  },
+                  "limit": {
+                    "default": 20,
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            },
+            {
+              "name": "get_database_bloat_overview",
+              "description": "[Tool Purpose]: Provide database-wide bloat overview and summary statistics\n\n[Exact Functionality]:\n- Summarize bloat statistics across all schemas\n- Identify schemas and tables with highest bloat ratios\n- Calculate total estimated bloat size per schema\n- Show aggregate dead tuple counts and maintenance status\n\n[Required Use Cases]:\n- When user requests \"database bloat overview\", \"bloat summary\", etc.\n- When getting high-level view of database storage efficiency\n- When planning database maintenance activities\n- When investigating overall database performance issues\n\n[Strictly Prohibited Use Cases]:\n- Requests for automatic maintenance operations\n- Requests for bloat cleanup or removal\n- Requests for schema or database restructuring\n\nArgs:\n    database_name: Target database name (uses default database from POSTGRES_DB env var if omitted)\n    limit: Maximum number of schemas to show (1-50, default: 10)\n\nReturns:\n    Database-wide bloat summary by schema with totals and recommendations",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {
+                  "database_name": {
+                    "default": null,
+                    "type": "string"
+                  },
+                  "limit": {
+                    "default": 20,
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            },
+            {
+              "name": "get_autovacuum_status",
+              "description": "[Tool Purpose]: Analyze autovacuum configuration and current maintenance status for tables\n\n[Exact Functionality]:\n- Analyze autovacuum trigger conditions based on dead tuple thresholds\n- Calculate current dead tuple ratios vs autovacuum trigger points\n- Show autovacuum configuration settings per table\n- Identify tables requiring immediate autovacuum attention\n- Estimate next autovacuum execution likelihood\n\n[Required Use Cases]:\n- When user requests \"autovacuum status\", \"autovacuum configuration\", \"vacuum trigger analysis\", etc.\n- When planning autovacuum optimization and tuning\n- When troubleshooting autovacuum performance issues\n- When identifying tables with autovacuum problems\n\n[Strictly Prohibited Use Cases]:\n- Requests for autovacuum configuration changes\n- Requests for manual VACUUM execution\n- Requests for autovacuum process restart or control\n\nArgs:\n    database_name: Target database name (uses default database from POSTGRES_DB env var if omitted)\n    schema_name: Schema to analyze (analyzes all user schemas if omitted)\n    table_pattern: Table name pattern to filter (SQL LIKE pattern, e.g., 'user%', '%log%', 'temp_*')\n    limit: Maximum number of tables to analyze (1-100, default: 50)\n\nReturns:\n    Autovacuum configuration status with trigger analysis and maintenance recommendations",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {
+                  "database_name": {
+                    "default": null,
+                    "type": "string"
+                  },
+                  "schema_name": {
+                    "default": null,
+                    "type": "string"
+                  },
+                  "table_pattern": {
+                    "default": null,
+                    "type": "string"
+                  },
+                  "limit": {
+                    "default": 50,
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            },
+            {
+              "name": "get_autovacuum_activity",
+              "description": "[Tool Purpose]: Monitor recent autovacuum and autoanalyze activity patterns and execution history\n\n[Exact Functionality]:\n- Track recent autovacuum and autoanalyze execution patterns\n- Analyze autovacuum frequency and timing intervals\n- Show tables with most/least autovacuum activity\n- Calculate average time between autovacuum executions\n- Identify tables with irregular autovacuum patterns\n\n[Required Use Cases]:\n- When user requests \"autovacuum activity\", \"autovacuum history\", \"vacuum patterns\", etc.\n- When monitoring autovacuum performance and effectiveness\n- When troubleshooting autovacuum scheduling issues\n- When analyzing autovacuum workload distribution\n\n[Strictly Prohibited Use Cases]:\n- Requests for autovacuum process control or restart\n- Requests for autovacuum configuration modifications\n- Requests for manual vacuum scheduling\n\nArgs:\n    database_name: Target database name (uses default database from POSTGRES_DB env var if omitted)\n    schema_name: Schema to analyze (analyzes all user schemas if omitted)\n    hours_back: Time period to analyze in hours (default: 24, max: 168 for 7 days)\n    limit: Maximum number of tables to show (1-100, default: 50)\n\nReturns:\n    Recent autovacuum activity analysis with patterns and timing statistics",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {
+                  "database_name": {
+                    "default": null,
+                    "type": "string"
+                  },
+                  "schema_name": {
+                    "default": null,
+                    "type": "string"
+                  },
+                  "hours_back": {
+                    "default": 24,
+                    "type": "integer"
+                  },
+                  "limit": {
+                    "default": 50,
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            },
+            {
+              "name": "get_running_vacuum_operations",
+              "description": "[Tool Purpose]: Monitor currently running VACUUM and ANALYZE operations in real-time\n\n[Exact Functionality]:\n- Show all currently active VACUUM, ANALYZE, and REINDEX operations\n- Display operation progress, elapsed time, and process details\n- Identify blocking or long-running maintenance operations\n- Provide process IDs for operation tracking\n\n[Required Use Cases]:\n- When user requests \"running VACUUM\", \"active maintenance\", \"current VACUUM status\", etc.\n- When troubleshooting slow or stuck VACUUM operations\n- When monitoring maintenance operation progress\n- When identifying maintenance operations that may be affecting performance\n\n[Strictly Prohibited Use Cases]:\n- Requests for terminating or controlling VACUUM processes\n- Requests for starting new VACUUM operations\n- Requests for changing VACUUM parameters or configuration\n\nArgs:\n    database_name: Target database name (shows operations in all databases if omitted)\n\nReturns:\n    Real-time status of running VACUUM/ANALYZE operations with timing and progress information",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {
+                  "database_name": {
+                    "default": null,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            },
+            {
+              "name": "get_vacuum_effectiveness_analysis",
+              "description": "[Tool Purpose]: Analyze VACUUM effectiveness and maintenance patterns using existing statistics\n\n[Exact Functionality]:\n- Compare manual VACUUM vs autovacuum effectiveness patterns\n- Analyze VACUUM frequency vs table activity (DML operations)\n- Identify tables with suboptimal VACUUM patterns\n- Calculate maintenance efficiency ratios without performance impact\n- Show VACUUM coverage analysis across all tables\n\n[Required Use Cases]:\n- When user requests \"VACUUM effectiveness\", \"maintenance efficiency\", \"VACUUM analysis\", etc.\n- When planning manual VACUUM schedules or autovacuum tuning\n- When identifying tables with poor maintenance patterns\n- When analyzing overall database maintenance health\n\n[Strictly Prohibited Use Cases]:\n- Requests for VACUUM execution or scheduling\n- Requests for autovacuum configuration changes\n- Requests for maintenance operation control\n\nArgs:\n    database_name: Target database name (uses default database from POSTGRES_DB env var if omitted)\n    schema_name: Schema to analyze (analyzes all user schemas if omitted)\n    limit: Maximum number of tables to analyze (1-100, default: 30)\n\nReturns:\n    VACUUM effectiveness analysis with maintenance patterns and recommendations",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {
+                  "database_name": {
+                    "default": null,
+                    "type": "string"
+                  },
+                  "schema_name": {
+                    "default": null,
+                    "type": "string"
+                  },
+                  "limit": {
+                    "default": 30,
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            },
+            {
+              "name": "get_database_stats",
+              "description": "[Tool Purpose]: Get comprehensive database-wide statistics and performance metrics\n\n[Exact Functionality]:\n- Show database-wide transaction statistics (commits, rollbacks)\n- Display block I/O statistics (disk reads vs buffer hits)\n- Provide tuple operation statistics (returned, fetched, inserted, updated, deleted)\n- Show temporary file usage and deadlock counts\n- Include checksum failure information and I/O timing data\n\n[Required Use Cases]:\n- When user requests \"database statistics\", \"database performance\", \"transaction stats\", etc.\n- When analyzing overall database performance and activity\n- When investigating I/O performance or buffer cache efficiency\n- When checking for deadlocks or temporary file usage\n\n[Strictly Prohibited Use Cases]:\n- Requests for statistics reset or modification\n- Requests for database configuration changes\n- Requests for performance tuning actions\n\nReturns:\n    Comprehensive database statistics including transactions, I/O, tuples, and performance metrics",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {},
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            },
+            {
+              "name": "get_bgwriter_stats",
+              "description": "[Tool Purpose]: Analyze background writer and checkpoint performance statistics with version compatibility\n\n[Exact Functionality]:\n- Show checkpoint execution statistics (timed vs requested)\n- Display checkpoint timing information (write and sync times)\n- Provide buffer writing statistics by different processes\n- Analyze background writer performance and efficiency\n- Automatically adapts to PostgreSQL version (15+ uses separate checkpointer view)\n\n[Required Use Cases]:\n- When user requests \"checkpoint stats\", \"bgwriter performance\", \"buffer stats\", etc.\n- When analyzing I/O performance and checkpoint impact\n- When investigating background writer efficiency\n- When troubleshooting checkpoint-related performance issues\n\n[Strictly Prohibited Use Cases]:\n- Requests for checkpoint execution or configuration changes\n- Requests for background writer parameter modifications\n- Requests for statistics reset\n\nReturns:\n    Background writer and checkpoint performance statistics with version-appropriate data",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {},
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            },
+            {
+              "name": "get_io_stats",
+              "description": "[Tool Purpose]: Analyze comprehensive I/O statistics across all database operations with version compatibility\n\n[Exact Functionality]:\n- PostgreSQL 16+: Shows detailed I/O statistics from pg_stat_io (reads, writes, hits, timing)\n- PostgreSQL 12-15: Falls back to pg_statio_* views with basic I/O information\n- Provides buffer cache efficiency analysis and I/O timing when available\n- Identifies I/O patterns and performance bottlenecks\n\n[Required Use Cases]:\n- When user requests \"I/O stats\", \"I/O performance\", \"buffer cache analysis\", etc.\n- When analyzing storage performance and buffer efficiency\n- When identifying I/O bottlenecks across different backend types\n- When comparing I/O patterns between relation types\n\n[Strictly Prohibited Use Cases]:\n- Requests for I/O configuration changes or buffer tuning\n- Requests for storage or filesystem modifications\n- Requests for I/O statistics reset\n\nArgs:\n    limit: Maximum number of results to return (1-100, default 20)\n    database_name: Target database name (optional)\n\nReturns:\n    Comprehensive I/O statistics with version-appropriate detail level",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {
+                  "limit": {
+                    "default": 20,
+                    "type": "integer"
+                  },
+                  "database_name": {
+                    "default": null,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            },
+            {
+              "name": "get_table_io_stats",
+              "description": "[Tool Purpose]: Analyze I/O performance statistics for tables (disk reads vs buffer cache hits)\n\n[Exact Functionality]:\n- Show heap, index, and TOAST table I/O statistics\n- Calculate buffer hit ratios for performance analysis\n- Identify tables with poor buffer cache performance\n- Provide detailed I/O breakdown by table component\n\n[Required Use Cases]:\n- When user requests \"table I/O stats\", \"buffer performance\", \"disk vs cache\", etc.\n- When analyzing table-level I/O performance\n- When identifying tables causing excessive disk I/O\n- When optimizing buffer cache efficiency\n\n[Strictly Prohibited Use Cases]:\n- Requests for I/O optimization actions\n- Requests for buffer cache configuration changes\n- Requests for statistics reset\n\nArgs:\n    database_name: Database name to analyze (uses default database if omitted)\n    schema_name: Schema name to filter (default: public)\n\nReturns:\n    Table I/O statistics including heap, index, and TOAST performance metrics",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {
+                  "database_name": {
+                    "default": null,
+                    "type": "string"
+                  },
+                  "schema_name": {
+                    "default": "public",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            },
+            {
+              "name": "get_index_io_stats",
+              "description": "[Tool Purpose]: Analyze I/O performance statistics for indexes (disk reads vs buffer cache hits)\n\n[Exact Functionality]:\n- Show index-level I/O statistics and buffer hit ratios\n- Identify indexes with poor buffer cache performance\n- Provide detailed I/O performance metrics per index\n- Help optimize index and buffer cache usage\n\n[Required Use Cases]:\n- When user requests \"index I/O stats\", \"index buffer performance\", etc.\n- When analyzing index-level I/O performance\n- When identifying indexes causing excessive disk I/O\n- When optimizing index buffer cache efficiency\n\n[Strictly Prohibited Use Cases]:\n- Requests for index optimization actions\n- Requests for buffer cache configuration changes\n- Requests for statistics reset\n\nArgs:\n    database_name: Database name to analyze (uses default database if omitted)\n    schema_name: Schema name to filter (default: public)\n\nReturns:\n    Index I/O statistics including buffer hit ratios and performance metrics",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {
+                  "database_name": {
+                    "default": null,
+                    "type": "string"
+                  },
+                  "schema_name": {
+                    "default": "public",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            },
+            {
+              "name": "get_all_tables_stats",
+              "description": "[Tool Purpose]: Get comprehensive statistics for all tables (including system tables if requested)\n\n[Exact Functionality]:\n- Show detailed access statistics for all tables in database\n- Include sequential scans, index scans, and tuple operations\n- Provide live/dead tuple estimates and maintenance history\n- Option to include system catalog tables\n\n[Required Use Cases]:\n- When user requests \"all tables stats\", \"complete table statistics\", etc.\n- When analyzing overall table usage patterns\n- When investigating table maintenance needs across the database\n- When getting comprehensive database activity overview\n\n[Strictly Prohibited Use Cases]:\n- Requests for table maintenance operations (VACUUM, ANALYZE)\n- Requests for statistics reset or modification\n- Requests for table optimization actions\n\nArgs:\n    database_name: Database name to analyze (uses default database if omitted)\n    include_system: Include system tables in results (default: False)\n\nReturns:\n    Comprehensive table statistics including access patterns and maintenance history",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {
+                  "database_name": {
+                    "default": null,
+                    "type": "string"
+                  },
+                  "include_system": {
+                    "default": false,
+                    "type": "boolean"
+                  }
+                },
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            },
+            {
+              "name": "get_user_functions_stats",
+              "description": "[Tool Purpose]: Analyze performance statistics for user-defined functions\n\n[Exact Functionality]:\n- Show execution count and timing statistics for user functions\n- Calculate average execution time per function call\n- Identify performance bottlenecks in user-defined functions\n- Provide total and self execution time breakdown\n\n[Required Use Cases]:\n- When user requests \"function stats\", \"function performance\", etc.\n- When analyzing user-defined function performance\n- When identifying slow or frequently called functions\n- When optimizing application function usage\n\n[Strictly Prohibited Use Cases]:\n- Requests for function modification or optimization\n- Requests for statistics reset\n- Requests for function execution or testing\n\nArgs:\n    database_name: Database name to analyze (uses default database if omitted)\n\nReturns:\n    User-defined function performance statistics including call counts and timing",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {
+                  "database_name": {
+                    "default": null,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            },
+            {
+              "name": "get_database_conflicts_stats",
+              "description": "[Tool Purpose]: Analyze query conflicts in standby/replica database environments\n\n[Exact Functionality]:\n- Show conflict statistics for standby servers (only relevant on replicas)\n- Display conflicts by type (tablespace, lock, snapshot, bufferpin, deadlock)\n- Help diagnose replication-related performance issues\n- Provide conflict resolution statistics\n\n[Required Use Cases]:\n- When user requests \"replication conflicts\", \"standby conflicts\", etc.\n- When analyzing replica server performance issues\n- When troubleshooting replication lag or conflicts\n- When monitoring standby server health\n\n[Strictly Prohibited Use Cases]:\n- Requests for conflict resolution actions\n- Requests for replication configuration changes\n- Requests for statistics reset\n\nArgs:\n    database_name: Database name to analyze (uses default database if omitted)\n\nReturns:\n    Database conflict statistics (meaningful only on standby servers)",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {
+                  "database_name": {
+                    "default": null,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            },
+            {
+              "name": "get_prompt_template",
+              "description": "Returns the MCP prompt template (full, headings, or specific section).\nArgs:\n    section: Section number or keyword (optional)\n    mode: 'full', 'headings', or None (optional)",
+              "inputSchema": {
+                "additionalProperties": false,
+                "properties": {
+                  "section": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "default": null
+                  },
+                  "mode": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "default": null
+                  }
+                },
+                "type": "object"
+              },
+              "outputSchema": {
+                "properties": {
+                  "result": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "result"
+                ],
+                "type": "object",
+                "x-fastmcp-wrap-result": true
+              },
+              "_meta": {
+                "fastmcp": {
+                  "tags": []
+                }
+              }
+            }
+          ]
+        }
+      },
+      "response_is_sse": false,
+      "response_status": 200,
+      "latency_ms": 4,
+      "http_method": null,
+      "http_path": null
+    }
+  ]
+}

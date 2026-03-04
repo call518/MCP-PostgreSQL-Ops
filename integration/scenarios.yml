@@ -1,0 +1,19 @@
+schema_version: "1.0"
+
+target:
+  command: "mcp-postgresql-ops"
+  env:
+    POSTGRES_HOST: "localhost"
+    POSTGRES_PORT: "15432"
+    POSTGRES_USER: "postgres"
+    POSTGRES_PASSWORD: "changeme!@34"
+    POSTGRES_DB: "ecommerce"
+
+redact:
+  server_url: false
+
+scenarios:
+  protocol_and_schemas:
+    description: "Protocol handshake and all tool schemas"
+    actions:
+      - list_tools
