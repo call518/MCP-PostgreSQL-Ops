@@ -42,11 +42,6 @@ class PostgreSQLVersion:
         return self.major >= 12
         
     @property
-    def has_checkpointer_split(self) -> bool:
-        """Deprecated: use has_checkpointer_view. Check if checkpointer stats are in separate view (15+)."""
-        return self.major >= 15
-        
-    @property
     def has_pg_stat_io(self) -> bool:
         """Check if pg_stat_io view is available (16+)."""
         return self.major >= 16
@@ -87,11 +82,6 @@ class PostgreSQLVersion:
         return self.major >= 15
 
     @property
-    def has_bgwriter_buffers_backend(self) -> bool:
-        """Check if pg_stat_bgwriter has buffers_backend/buffers_backend_fsync (12-16, removed in 17)."""
-        return self.major < 17
-
-    @property
     def has_replication_slot_invalidation(self) -> bool:
         """Check if pg_replication_slots has invalidation_reason and inactive_since (17+)."""
         return self.major >= 17
@@ -102,11 +92,6 @@ class PostgreSQLVersion:
         return self.major >= 17
 
     @property
-    def has_vacuum_progress_indexes(self) -> bool:
-        """Check if pg_stat_progress_vacuum has indexes_total/indexes_processed (17+)."""
-        return self.major >= 17
-
-    @property
     def has_pg_wait_events(self) -> bool:
         """Check if pg_wait_events view exists (17+)."""
         return self.major >= 17
@@ -114,11 +99,6 @@ class PostgreSQLVersion:
     @property
     def has_wal_summarizer(self) -> bool:
         """Check if WAL summarizer functions exist for incremental backup (17+)."""
-        return self.major >= 17
-
-    @property
-    def has_transaction_timeout(self) -> bool:
-        """Check if transaction_timeout GUC exists (17+)."""
         return self.major >= 17
 
     @property
@@ -154,16 +134,6 @@ class PostgreSQLVersion:
     @property
     def has_pg_stat_statements_v18(self) -> bool:
         """Check if pg_stat_statements has parallel_workers_* and wal_buffers_full (18+)."""
-        return self.major >= 18
-
-    @property
-    def has_idle_replication_slot_timeout(self) -> bool:
-        """Check if idle_replication_slot_timeout GUC exists (18+)."""
-        return self.major >= 18
-
-    @property
-    def has_pg_stat_wal_removed_columns(self) -> bool:
-        """Check if pg_stat_wal had wal_write/wal_sync columns removed (18+)."""
         return self.major >= 18
 
 # Global version cache
@@ -202,14 +172,16 @@ async def get_postgresql_version(database: str = None, force_refresh: bool = Fal
             return _cached_version
         else:
             logger.warning(f"Could not parse version string: {version_string}")
-            # Default to PostgreSQL 18 if parsing fails
-            _cached_version = PostgreSQLVersion(18, 0, 0)
+            # Default to PostgreSQL 12 (minimum supported) if parsing fails
+            # so queries degrade gracefully on any version
+            _cached_version = PostgreSQLVersion(12, 0, 0)
             return _cached_version
-            
+
     except Exception as e:
         logger.error(f"Failed to get PostgreSQL version: {e}")
-        # Default to PostgreSQL 18 if version detection fails
-        _cached_version = PostgreSQLVersion(18, 0, 0)
+        # Default to PostgreSQL 12 (minimum supported) if version detection fails
+        # so queries degrade gracefully on any version
+        _cached_version = PostgreSQLVersion(12, 0, 0)
         return _cached_version
 
 async def check_feature_availability(feature: str, database: str = None) -> bool:
@@ -304,99 +276,6 @@ def get_version_appropriate_query(base_query: str,
 # Version-specific query builders
 class VersionAwareQueries:
     """Collection of version-aware query builders."""
-    
-    @staticmethod
-    async def get_bgwriter_checkpointer_stats(database: str = None) -> str:
-        """Get background writer/checkpointer stats with version compatibility."""
-        version = await get_postgresql_version(database)
-
-        if version.has_checkpointer_view:
-            # PostgreSQL 15+: Separate checkpointer and bgwriter views
-            return """
-            SELECT 'checkpointer' as component,
-                   num_timed, num_requested, restartpoints_timed, restartpoints_req, restartpoints_done,
-                   write_time, sync_time, buffers_written, stats_reset
-            FROM pg_stat_checkpointer
-            UNION ALL
-            SELECT 'bgwriter' as component,
-                   NULL::bigint, NULL::bigint, NULL::bigint, NULL::bigint, NULL::bigint,
-                   NULL::double precision, NULL::double precision,
-                   buffers_clean as buffers_written, stats_reset
-            FROM pg_stat_bgwriter
-            """
-        else:
-            # PostgreSQL 12-14: All stats in bgwriter view
-            return """
-            SELECT 'bgwriter_legacy' as component,
-                   buffers_clean, maxwritten_clean, buffers_alloc, stats_reset,
-                   NULL::bigint as num_timed, NULL::bigint as num_requested
-            FROM pg_stat_bgwriter
-            """
-    
-    @staticmethod
-    async def get_io_statistics(database: str = None) -> str:
-        """Get I/O statistics with version compatibility."""
-        version = await get_postgresql_version(database)
-
-        if version.has_pg_stat_io:
-            # PostgreSQL 16+: Use comprehensive pg_stat_io
-            # PG 18+ adds read_bytes, write_bytes, extend_bytes
-            byte_cols = ""
-            if version.has_pg_stat_io_bytes:
-                byte_cols = ", read_bytes, write_bytes, extend_bytes"
-
-            return f"""
-            SELECT backend_type, object, context,
-                   reads, read_time, writes, write_time,
-                   extends, extend_time, hits, evictions,
-                   reuses, fsyncs, fsync_time{byte_cols}
-            FROM pg_stat_io
-            WHERE reads > 0 OR writes > 0 OR hits > 0
-            """
-        else:
-            # PostgreSQL 10-15: Fall back to pg_statio_* views
-            return """
-            SELECT 'client backend' as backend_type,
-                   'relation' as object, 
-                   'normal' as context,
-                   heap_blks_read as reads,
-                   0::double precision as read_time,
-                   0::bigint as writes,
-                   0::double precision as write_time,
-                   0::bigint as extends,
-                   0::double precision as extend_time,
-                   heap_blks_hit as hits,
-                   0::bigint as evictions,
-                   0::bigint as reuses,
-                   0::bigint as fsyncs,
-                   0::double precision as fsync_time
-            FROM pg_statio_all_tables
-            WHERE heap_blks_read > 0 OR heap_blks_hit > 0
-            """
-    
-    @staticmethod 
-    async def get_activity_with_leader_info(database: str = None) -> str:
-        """Get activity info with parallel leader tracking if available."""
-        version = await get_postgresql_version(database)
-        
-        base_columns = [
-            "pid", "datname", "usename", "application_name", 
-            "client_addr", "state", "query_start", "query"
-        ]
-        
-        version_columns = {
-            "leader_pid": PostgreSQLVersion(14),
-            "query_id": PostgreSQLVersion(13)
-        }
-        
-        columns = await get_compatible_column_list(
-            "pg_stat_activity", 
-            base_columns + list(version_columns.keys()),
-            version_columns,
-            database
-        )
-        
-        return f"SELECT {columns} FROM pg_stat_activity WHERE state = 'active'"
     
     @staticmethod
     async def get_replication_slots_query(database: str = None) -> str:
@@ -654,6 +533,12 @@ async def get_pg_stat_statements_query(database: str = None) -> str:
         ])
     elif version.has_pg_stat_statements_exec_time:
         # PG 13-16: old column names
+        base_columns.extend([
+            "blk_read_time as shared_blk_read_time",
+            "blk_write_time as shared_blk_write_time"
+        ])
+    else:
+        # PG 12: same column names as 13-16
         base_columns.extend([
             "blk_read_time as shared_blk_read_time",
             "blk_write_time as shared_blk_write_time"

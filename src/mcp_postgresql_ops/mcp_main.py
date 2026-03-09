@@ -2939,7 +2939,7 @@ async def get_bgwriter_stats() -> str:
                 ROUND(write_time::numeric, 2) as checkpoint_write_time_ms,
                 ROUND(sync_time::numeric, 2) as checkpoint_sync_time_ms,
                 ROUND((write_time + sync_time)::numeric, 2) as total_checkpoint_time_ms,
-                buffers_written as buffers_written_by_checkpoints,
+                buffers_written as buffers_written,
                 {checkpointer_extra_cols}
                 stats_reset as stats_reset_time
             FROM pg_stat_checkpointer
@@ -2953,7 +2953,7 @@ async def get_bgwriter_stats() -> str:
                 0 as checkpoint_write_time_ms,
                 0 as checkpoint_sync_time_ms,
                 0 as total_checkpoint_time_ms,
-                buffers_clean as buffers_written_by_checkpoints,
+                buffers_clean as buffers_written,
                 {bgwriter_extra_null_cols}
                 stats_reset as stats_reset_time
             FROM pg_stat_bgwriter
@@ -3766,6 +3766,9 @@ async def get_async_io_status(database_name: str = None) -> str:
 async def get_per_backend_io_stats(database_name: str = None, limit: int = 20) -> str:
     """
     [Tool Purpose]: Analyze per-backend I/O and WAL statistics (PostgreSQL 18+)
+
+    Note: Uses pg_stat_get_backend_io() and pg_stat_get_backend_wal() which
+    are new in PG 18. Function signatures may change before final release.
 
     [Exact Functionality]:
     - Show I/O statistics broken down by individual backend process

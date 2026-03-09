@@ -815,7 +815,7 @@ SET track_io_timing = 'on';
 - **get_wal_summarizer_status** (New! PG 17+)
   - "Show WAL summarizer status for incremental backups."
   - "Monitor WAL summarization progress."
-  - 📈 **PG17+**: WAL summarizer monitoring via `pg_wal_summary_stats`
+  - 📈 **PG17+**: WAL summarizer monitoring via `pg_get_wal_summarizer_state()`
   - ❌ **PG12-16**: Not available (returns informational message)
 - **get_async_io_status** (New! PG 18+)
   - "Show async I/O subsystem status."
