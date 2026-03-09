@@ -2919,6 +2919,7 @@ async def get_bgwriter_stats() -> str:
                 checkpointer_extra_cols = """,
                 num_done as completed_checkpoints,
                 slru_written as slru_buffers_written"""
+
                 bgwriter_extra_null_cols = """,
                 0 as completed_checkpoints,
                 0 as slru_buffers_written"""
@@ -3807,6 +3808,9 @@ async def get_per_backend_io_stats(database_name: str = None, limit: int = 20) -
 
         result = []
 
+        # Note: pg_stat_get_backend_io() and pg_stat_get_backend_wal() are PG 18+
+        # functions. Column schemas verified against PG 18 GA. Using explicit
+        # column lists to avoid duplicate column names (e.g. pid) from bio.*/bwal.*.
         query = f"""
         SELECT
             a.pid,
@@ -3814,7 +3818,22 @@ async def get_per_backend_io_stats(database_name: str = None, limit: int = 20) -
             a.datname as database_name,
             a.application_name,
             a.state,
-            bio.*
+            bio.backend_type,
+            bio.object,
+            bio.context,
+            bio.reads,
+            bio.read_time,
+            bio.writes,
+            bio.write_time,
+            bio.writebacks,
+            bio.writeback_time,
+            bio.extends,
+            bio.extend_time,
+            bio.hits,
+            bio.evictions,
+            bio.reuses,
+            bio.fsyncs,
+            bio.fsync_time
         FROM pg_stat_activity a
         CROSS JOIN LATERAL pg_stat_get_backend_io(a.pid) bio
         WHERE a.pid <> pg_backend_pid()
@@ -3836,7 +3855,14 @@ async def get_per_backend_io_stats(database_name: str = None, limit: int = 20) -
             a.pid,
             a.usename as username,
             a.datname as database_name,
-            bwal.*
+            bwal.wal_records,
+            bwal.wal_fpi,
+            bwal.wal_bytes,
+            bwal.wal_buffers_full,
+            bwal.wal_write,
+            bwal.wal_write_time,
+            bwal.wal_sync,
+            bwal.wal_sync_time
         FROM pg_stat_activity a
         CROSS JOIN LATERAL pg_stat_get_backend_wal(a.pid) bwal
         WHERE a.pid <> pg_backend_pid()
