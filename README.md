@@ -21,13 +21,13 @@
 
 ## Overview
 
-**MCP-PostgreSQL-Ops** is a professional MCP server for PostgreSQL database operations, monitoring, and management. Supports PostgreSQL 12-17 with comprehensive database analysis, performance monitoring, and intelligent maintenance recommendations through natural language queries. Most features work independently, but advanced query analysis capabilities are enhanced when `pg_stat_statements` and (optionally) `pg_stat_monitor` extensions are installed.
+**MCP-PostgreSQL-Ops** is a professional MCP server for PostgreSQL database operations, monitoring, and management. Supports PostgreSQL 12-18 with comprehensive database analysis, performance monitoring, and intelligent maintenance recommendations through natural language queries. Most features work independently, but advanced query analysis capabilities are enhanced when `pg_stat_statements` and (optionally) `pg_stat_monitor` extensions are installed.
 
 ---
 
 ## Features
 
-- ✅ **Zero Configuration**: Works with PostgreSQL 12-17 out-of-the-box with automatic version detection.
+- ✅ **Zero Configuration**: Works with PostgreSQL 12-18 out-of-the-box with automatic version detection.
 - ✅ **Natural Language**: Ask questions like "Show me slow queries" or "Analyze table bloat."
 - ✅ **Production Safe**: Read-only operations, RDS/Aurora compatible with regular user permissions.
 - ✅ **Extension Enhanced**: Optional `pg_stat_statements` and `pg_stat_monitor` for advanced query analytics.
@@ -40,11 +40,15 @@
 - ✅ **Developer-Friendly**: Simple codebase for easy customization and tool extension.
 
 ### 🔧 **Advanced Capabilities**
-- Version-aware I/O statistics (enhanced on PostgreSQL 16+).
+- Version-aware I/O statistics (enhanced on PostgreSQL 16+, byte columns on PG 18+).
 - Real-time connection and lock monitoring.
 - Background process and checkpoint analysis.
 - Replication status and WAL monitoring.
 - Database capacity and bloat analysis.
+- Wait event catalog with descriptions (PG 17+).
+- WAL summarizer monitoring for incremental backups (PG 17+).
+- Async I/O subsystem monitoring (PG 18+).
+- Per-backend I/O and WAL statistics (PG 18+).
 
 ## Tool Usage Examples
 
@@ -185,55 +189,74 @@ The `create-test-data.sql` script is executed by the `postgres-init-extensions` 
 
 ### 🟢 **Extension-Independent Tools (No Extensions Required)**
 
-| Tool Name | Extensions Required | PG 12 | PG 13 | PG 14 | PG 15 | PG 16 | PG 17 | System Views/Tables Used |
-|-----------|-------------------|-------|-------|-------|-------|-------|-------|--------------------------|
-| `get_server_info` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `version()`, `pg_extension` |
-| `get_active_connections` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_activity` |
-| `get_postgresql_config` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_settings` |
-| `get_database_list` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_database` |
-| `get_table_list` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `information_schema.tables` |
-| `get_table_schema_info` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `information_schema.*`, `pg_indexes` |
-| `get_database_schema_info` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_namespace`, `pg_class`, `pg_proc` |
-| `get_table_relationships` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `information_schema.*` (constraints) |
-| `get_user_list` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_user`, `pg_roles` |
-| `get_index_usage_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_indexes` |
-| `get_database_size_info` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_database_size()` |
-| `get_table_size_info` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_total_relation_size()` |
-| `get_vacuum_analyze_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
-| `get_current_database_info` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_database`, `current_database()` |
-| `get_table_bloat_analysis` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
-| `get_database_bloat_overview` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
-| `get_autovacuum_status` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
-| `get_autovacuum_activity` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
-| `get_running_vacuum_operations` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_activity` |
-| `get_vacuum_effectiveness_analysis` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
-| `get_table_bloat_analysis` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
-| `get_database_bloat_overview` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
-| `get_lock_monitoring` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_locks`, `pg_stat_activity` |
-| `get_wal_status` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_current_wal_lsn()` |
-| `get_database_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_database` |
-| `get_table_io_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_statio_user_tables` |
-| `get_index_io_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_statio_user_indexes` |
-| `get_database_conflicts_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_database_conflicts` |
+| Tool Name | Extensions Required | PG 12 | PG 13 | PG 14 | PG 15 | PG 16 | PG 17 | PG 18 | System Views/Tables Used |
+|-----------|-------------------|-------|-------|-------|-------|-------|-------|-------|--------------------------|
+| `get_server_info` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `version()`, `pg_extension` |
+| `get_active_connections` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_activity` |
+| `get_postgresql_config` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_settings` |
+| `get_database_list` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_database` |
+| `get_table_list` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `information_schema.tables` |
+| `get_table_schema_info` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `information_schema.*`, `pg_indexes` |
+| `get_database_schema_info` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_namespace`, `pg_class`, `pg_proc` |
+| `get_table_relationships` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `information_schema.*` (constraints) |
+| `get_user_list` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_user`, `pg_roles` |
+| `get_index_usage_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_indexes` |
+| `get_database_size_info` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_database_size()` |
+| `get_table_size_info` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_total_relation_size()` |
+| `get_vacuum_analyze_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ **Enhanced** | `pg_stat_user_tables` |
+| `get_current_database_info` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_database`, `current_database()` |
+| `get_table_bloat_analysis` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
+| `get_database_bloat_overview` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
+| `get_autovacuum_status` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
+| `get_autovacuum_activity` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
+| `get_running_vacuum_operations` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_activity` |
+| `get_vacuum_effectiveness_analysis` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
+| `get_table_bloat_analysis` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
+| `get_database_bloat_overview` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
+| `get_lock_monitoring` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_locks`, `pg_stat_activity` |
+| `get_wal_status` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_current_wal_lsn()` |
+| `get_database_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ **Enhanced** | `pg_stat_database` |
+| `get_table_io_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_statio_user_tables` |
+| `get_index_io_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_statio_user_indexes` |
+| `get_database_conflicts_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_database_conflicts` |
 
 ### 🚀 **Version-Aware Tools (Auto-Adapting)**
 
-| Tool Name | Extensions Required | PG 12 | PG 13 | PG 14 | PG 15 | PG 16 | PG 17 | Special Features |
-|-----------|-------------------|-------|-------|-------|-------|-------|-------|------------------|
-| `get_io_stats` | ❌ None | ✅ Basic | ✅ Basic | ✅ Basic | ✅ Basic | ✅ **Enhanced** | ✅ **Enhanced** | PG16+: `pg_stat_io` support |
-| `get_bgwriter_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ **Special** | ✅ | ✅ | PG15: Separate checkpointer stats |
-| `get_replication_status` | ❌ None | ✅ Compatible | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | PG13+: `wal_status`, `safe_wal_size`; PG16+: enhanced WAL receiver |
-| `get_all_tables_stats` | ❌ None | ✅ Compatible | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | PG13+: `n_ins_since_vacuum` tracking for vacuum maintenance optimization |
-| `get_user_functions_stats` | ⚙️ Config Required | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | Requires `track_functions=pl` |
+| Tool Name | Extensions Required | PG 12 | PG 13 | PG 14 | PG 15 | PG 16 | PG 17 | PG 18 | Special Features |
+|-----------|-------------------|-------|-------|-------|-------|-------|-------|-------|------------------|
+| `get_io_stats` | ❌ None | ✅ Basic | ✅ Basic | ✅ Basic | ✅ Basic | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | PG16+: `pg_stat_io` support; PG18+: byte columns |
+| `get_bgwriter_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ **Special** | ✅ | ✅ | ✅ **Enhanced** | PG15: Separate checkpointer stats; PG18+: `num_done`, `slru_written` |
+| `get_replication_status` | ❌ None | ✅ Compatible | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | PG13+: `wal_status`, `safe_wal_size`; PG16+: enhanced WAL receiver; PG17+: `invalidation_reason`, `inactive_since` |
+| `get_all_tables_stats` | ❌ None | ✅ Compatible | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | PG13+: `n_ins_since_vacuum` tracking for vacuum maintenance optimization |
+| `get_user_functions_stats` | ⚙️ Config Required | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | Requires `track_functions=pl` |
+| `get_wait_events` | ❌ None | ✅ Fallback | ✅ Fallback | ✅ Fallback | ✅ Fallback | ✅ Fallback | ✅ **Native** | ✅ **Native** | PG17+: `pg_wait_events` catalog; PG12-16: fallback descriptions |
+| `get_wal_summarizer_status` | ❌ None | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | PG17+: WAL summarizer monitoring for incremental backups |
+| `get_async_io_status` | ❌ None | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | PG18+: `pg_aios` async I/O subsystem monitoring |
+| `get_per_backend_io_stats` | ❌ None | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | PG18+: Per-backend I/O and WAL statistics |
 
 ### 🟡 **Extension-Dependent Tools (Extensions Required)**
 
-| Tool Name | Required Extension | PG 12 | PG 13 | PG 14 | PG 15 | PG 16 | PG 17 | Notes |
-|-----------|-------------------|-------|-------|-------|-------|-------|-------|-------|
-| `get_pg_stat_statements_top_queries` | `pg_stat_statements` | ✅ **Compatible** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | PG12: `total_time` → `total_exec_time`; PG13+: native `total_exec_time` |
-| `get_pg_stat_monitor_recent_queries` | `pg_stat_monitor` | ✅ **Compatible** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | PG12: `total_time` → `total_exec_time`; PG13+: native `total_exec_time` |
+| Tool Name | Required Extension | PG 12 | PG 13 | PG 14 | PG 15 | PG 16 | PG 17 | PG 18 | Notes |
+|-----------|-------------------|-------|-------|-------|-------|-------|-------|-------|-------|
+| `get_pg_stat_statements_top_queries` | `pg_stat_statements` | ✅ **Compatible** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | PG12: `total_time` → `total_exec_time`; PG13+: native `total_exec_time`; PG17+: `stats_since` |
+| `get_pg_stat_monitor_recent_queries` | `pg_stat_monitor` | ✅ **Compatible** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | PG12: `total_time` → `total_exec_time`; PG13+: native `total_exec_time` |
 
-> **📋 PostgreSQL 18 Support**: PostgreSQL 18 is currently in beta phase and not yet supported by Percona Distribution PostgreSQL. Support will be added once PostgreSQL 18 reaches stable release and distribution support becomes available.
+### 🆕 **Version-Specific Features**
+
+#### PostgreSQL 17
+- **`pg_wait_events` view**: Native wait event catalog with descriptions (used by `get_wait_events`)
+- **WAL summarizer**: Monitoring for incremental backup support (used by `get_wal_summarizer_status`)
+- **Replication slot enhancements**: `invalidation_reason` and `inactive_since` columns (used by `get_replication_status`)
+- **`pg_stat_statements` `stats_since`**: Track when statistics were last reset (used by `get_pg_stat_statements_top_queries`)
+- **VACUUM progress**: Index vacuum tracking in progress views (used by `get_running_vacuum_operations`)
+
+#### PostgreSQL 18
+- **`pg_aios` view**: Async I/O subsystem monitoring (used by `get_async_io_status`)
+- **Per-backend I/O stats**: Individual backend I/O and WAL statistics (used by `get_per_backend_io_stats`)
+- **VACUUM/ANALYZE time columns**: `last_vacuum_time`, `last_analyze_time` duration tracking (used by `get_vacuum_analyze_stats`)
+- **`pg_stat_io` byte columns**: `read_bytes`, `write_bytes`, `extend_bytes`, `writeback_bytes` (used by `get_io_stats`)
+- **Parallel worker stats**: `parallel_workers_launched`, `parallel_workers_to_launch` (used by `get_database_stats`)
+- **Checkpointer enhancements**: `num_done`, `slru_written` columns (used by `get_bgwriter_stats`)
 
 ---
 
@@ -479,7 +502,7 @@ Then restart PostgreSQL and run the CREATE EXTENSION commands above.
 - All other tools work without these extensions.
 
 ### Minimum Requirements
-- PostgreSQL 12+ (tested with PostgreSQL 17)
+- PostgreSQL 12+ (tested with PostgreSQL 17 and 18)
 - Python 3.12
 - Network access to PostgreSQL server
 - Read permissions on system catalogs
@@ -656,28 +679,28 @@ SET track_io_timing = 'on';
   - "Show current database information and connection details."
   - "Display database encoding, collation, and size information."
   - 📋 **Features**: Database name, encoding, collation, size, connection limits
-  - 🔧 **PostgreSQL 12-17**: Fully compatible, no extensions required
+  - 🔧 **PostgreSQL 12-18**: Fully compatible, no extensions required
 - **get_table_bloat_analysis**
   - "Analyze table bloat in the current database."
   - "Show dead tuple ratios and bloat estimates for user_logs table pattern."
   - "Find tables with high bloat that need VACUUM maintenance."
   - "Analyze bloat in specific schema with minimum 100 dead tuples."
   - 📋 **Features**: Dead tuple ratios, bloat size estimates, VACUUM recommendations, pattern filtering
-  - 🔧 **PostgreSQL 12-17**: Fully compatible, no extensions required
+  - 🔧 **PostgreSQL 12-18**: Fully compatible, no extensions required
   - 💡 **Usage**: Extension-Independent approach using pg_stat_user_tables
 - **get_database_bloat_overview**
   - "Show database-wide bloat summary by schema."
   - "Get high-level view of storage efficiency across all schemas."
   - "Identify schemas requiring maintenance attention."
   - 📋 **Features**: Schema-level aggregation, total bloat estimates, maintenance status
-  - 🔧 **PostgreSQL 12-17**: Fully compatible, no extensions required
+  - 🔧 **PostgreSQL 12-18**: Fully compatible, no extensions required
 - **get_autovacuum_status**
   - "Check autovacuum configuration and trigger conditions."
   - "Show tables needing immediate autovacuum attention."
   - "Analyze autovacuum threshold percentages for public schema."
   - "Find tables approaching autovacuum trigger points."
   - 📋 **Features**: Trigger threshold analysis, urgency classification, configuration status
-  - 🔧 **PostgreSQL 12-17**: Fully compatible, no extensions required
+  - 🔧 **PostgreSQL 12-18**: Fully compatible, no extensions required
   - 💡 **Usage**: Extension-Independent autovacuum monitoring using pg_stat_user_tables
 - **get_autovacuum_activity**
   - "Show autovacuum activity patterns for the last 48 hours."
@@ -685,7 +708,7 @@ SET track_io_timing = 'on';
   - "Find tables with irregular autovacuum patterns."
   - "Analyze recent autovacuum and autoanalyze history."
   - 📋 **Features**: Activity patterns, execution frequency, timing analysis
-  - 🔧 **PostgreSQL 12-17**: Fully compatible, no extensions required
+  - 🔧 **PostgreSQL 12-18**: Fully compatible, no extensions required
   - 💡 **Usage**: Historical autovacuum pattern analysis
 - **get_running_vacuum_operations**
   - "Show currently running VACUUM and ANALYZE operations."
@@ -693,7 +716,7 @@ SET track_io_timing = 'on';
   - "Check if any VACUUM operations are blocking queries."
   - "Find long-running maintenance operations."
   - 📋 **Features**: Real-time operation status, elapsed time, impact level, process details
-  - 🔧 **PostgreSQL 12-17**: Fully compatible, no extensions required
+  - 🔧 **PostgreSQL 12-18**: Fully compatible, no extensions required
   - 💡 **Usage**: Real-time maintenance monitoring using pg_stat_activity
 - **get_vacuum_effectiveness_analysis**
   - "Analyze VACUUM effectiveness and maintenance patterns."
@@ -701,7 +724,7 @@ SET track_io_timing = 'on';
   - "Find tables with suboptimal maintenance patterns."
   - "Check VACUUM frequency vs table activity ratios."
   - 📋 **Features**: Maintenance pattern analysis, effectiveness assessment, DML-to-VACUUM ratios
-  - 🔧 **PostgreSQL 12-17**: Fully compatible, no extensions required
+  - 🔧 **PostgreSQL 12-18**: Fully compatible, no extensions required
   - 💡 **Usage**: Strategic VACUUM analysis using existing statistics
 - **get_table_bloat_analysis**
   - "Analyze table bloat in the public schema."
@@ -779,11 +802,31 @@ SET track_io_timing = 'on';
   - "Check what MCP tools are available on this PostgreSQL version."
   - "Displays feature availability matrix and upgrade recommendations."
 - **get_all_tables_stats** (Enhanced!)
-  - "Show comprehensive statistics for all tables." (version-compatible for PG12-17)
+  - "Show comprehensive statistics for all tables." (version-compatible for PG12-18)
   - "Include system tables with include_system=true parameter."
   - "Analyze table access patterns and maintenance needs."
   - 📈 **PG13+**: Tracks insertions since vacuum (`n_ins_since_vacuum`) for optimal maintenance scheduling
   - 📊 **PG12**: Compatible mode with NULL for unsupported columns
+- **get_wait_events** (New!)
+  - "Show wait event types and descriptions."
+  - "What wait events are available on this PostgreSQL version?"
+  - 📈 **PG17+**: Native `pg_wait_events` catalog with full descriptions
+  - 📊 **PG12-16**: Fallback with built-in wait event descriptions
+- **get_wal_summarizer_status** (New! PG 17+)
+  - "Show WAL summarizer status for incremental backups."
+  - "Monitor WAL summarization progress."
+  - 📈 **PG17+**: WAL summarizer monitoring via `pg_wal_summary_stats`
+  - ❌ **PG12-16**: Not available (returns informational message)
+- **get_async_io_status** (New! PG 18+)
+  - "Show async I/O subsystem status."
+  - "Monitor pg_aios for async I/O operations."
+  - 📈 **PG18+**: `pg_aios` view for async I/O monitoring
+  - ❌ **PG12-17**: Not available (returns informational message)
+- **get_per_backend_io_stats** (New! PG 18+)
+  - "Show per-backend I/O and WAL statistics."
+  - "Analyze I/O patterns by individual backend process."
+  - 📈 **PG18+**: Per-backend I/O stats with WAL statistics
+  - ❌ **PG12-17**: Not available (returns informational message)
 
 ### 🟡 Extension-Dependent Tools
 
@@ -791,12 +834,12 @@ SET track_io_timing = 'on';
   - "Show top 10 slowest queries."
   - "Analyze slow queries in the inventory database."
   - 📈 **Version-Compatible**: PG12 uses `total_time` → `total_exec_time` mapping; PG13+ uses native columns
-  - 💡 **Cross-Version**: Automatically adapts query structure for PostgreSQL 12-17 compatibility
+  - 💡 **Cross-Version**: Automatically adapts query structure for PostgreSQL 12-18 compatibility
 - **get_pg_stat_monitor_recent_queries** (Optional, uses `pg_stat_monitor`)
   - "Show recent queries in real time."
   - "Monitor query activity for the last 5 minutes."
   - 📈 **Version-Compatible**: PG12 uses `total_time` → `total_exec_time` mapping; PG13+ uses native columns
-  - 💡 **Cross-Version**: Automatically adapts query structure for PostgreSQL 12-17 compatibility
+  - 💡 **Cross-Version**: Automatically adapts query structure for PostgreSQL 12-18 compatibility
 
 **💡 Pro Tip**: All tools support multi-database operations using the `database_name` parameter. This allows PostgreSQL superusers to analyze and monitor multiple databases from a single MCP server instance.
 
@@ -907,9 +950,9 @@ uv run pytest
 
 ### Version Compatibility Testing
 
-The MCP server automatically adapts to PostgreSQL versions 12-17. To test across versions:
+The MCP server automatically adapts to PostgreSQL versions 12-18. To test across versions:
 
-1. **Set up test databases**: Different PostgreSQL versions (12, 14, 15, 16, 17)
+1. **Set up test databases**: Different PostgreSQL versions (12, 14, 15, 16, 17, 18)
 2. **Run compatibility tests**: Point to each version and verify tool behavior
 3. **Check feature detection**: Ensure proper version detection and feature availability
 4. **Verify fallback behavior**: Confirm graceful degradation on older versions
@@ -1161,7 +1204,7 @@ docker-compose logs -f mcp-server
 - **Input Validation**: Always validate `limit` parameters with `max(1, min(limit, 100))`
 - **Error Handling**: Return user-friendly error messages instead of raising exceptions
 - **Logging**: Use `logger.error()` for debugging while returning clean error messages to users
-- **PostgreSQL Compatibility**: Your custom queries should work across PostgreSQL 12-17
+- **PostgreSQL Compatibility**: Your custom queries should work across PostgreSQL 12-18
 - **Extension Dependencies**: If your tool requires specific extensions, check availability with `check_extension_exists()`
 
 ### Advanced Patterns
