@@ -434,11 +434,18 @@ async def get_server_info() -> str:
         # Version compatibility features
         features = {
             'Modern Version (12+)': pg_version.is_modern,
-            'Checkpointer Split (15+)': pg_version.has_checkpointer_split,
+            'Checkpointer View (15+)': pg_version.has_checkpointer_view,
             'pg_stat_io View (16+)': pg_version.has_pg_stat_io,
             'Enhanced WAL Receiver (16+)': pg_version.has_enhanced_wal_receiver,
             'Replication Slot Stats (14+)': pg_version.has_replication_slot_stats,
             'Parallel Leader Tracking (14+)': pg_version.has_parallel_leader_tracking,
+            'Wait Events View (17+)': pg_version.has_pg_wait_events,
+            'WAL Summarizer (17+)': pg_version.has_wal_summarizer,
+            'Replication Slot Invalidation (17+)': pg_version.has_replication_slot_invalidation,
+            'VACUUM Time Columns (18+)': pg_version.has_vacuum_time_columns,
+            'Async I/O View (18+)': pg_version.has_pg_aios,
+            'Per-Backend I/O Stats (18+)': pg_version.has_per_backend_io,
+            'Parallel Worker Stats (18+)': pg_version.has_parallel_worker_stats,
         }
         
         result = []
@@ -464,14 +471,18 @@ async def get_server_info() -> str:
         
         # Add compatibility summary
         if pg_version.is_modern:
-            if pg_version >= 16:
-                result.append("🚀 Excellent: All MCP tools fully supported with latest features!")
+            if pg_version >= 18:
+                result.append("All MCP tools fully supported with PG18 async I/O, VACUUM timing, and per-backend stats!")
+            elif pg_version >= 17:
+                result.append("All MCP tools fully supported with PG17 wait events, WAL summarizer, and enhanced stats!")
+            elif pg_version >= 16:
+                result.append("All MCP tools fully supported with latest features!")
             elif pg_version >= 14:
-                result.append("✅ Great: Most advanced features available, consider upgrading to PG16+ for pg_stat_io")
+                result.append("Most advanced features available, consider upgrading to PG16+ for pg_stat_io")
             else:
-                result.append("✅ Good: Core features supported, upgrade to PG14+ recommended for enhanced monitoring")
+                result.append("Core features supported, upgrade to PG14+ recommended for enhanced monitoring")
         else:
-            result.append("⚠️  Limited: PostgreSQL 12+ required for full MCP tool support")
+            result.append("Limited: PostgreSQL 12+ required for full MCP tool support")
             
         return "\n".join(result)
         
@@ -1952,8 +1963,19 @@ async def get_vacuum_analyze_stats(database_name: str = None) -> str:
         Schema name, table name, last VACUUM time, last ANALYZE time, and execution count statistics
     """
     try:
-        query = """
-        SELECT 
+        version = await get_postgresql_version(database_name)
+
+        # PG 18+ adds total_vacuum_time, total_autovacuum_time, etc.
+        vacuum_time_cols = ""
+        if version.has_vacuum_time_columns:
+            vacuum_time_cols = """
+            ROUND(total_vacuum_time::numeric, 2) as total_vacuum_time_ms,
+            ROUND(total_autovacuum_time::numeric, 2) as total_autovacuum_time_ms,
+            ROUND(total_analyze_time::numeric, 2) as total_analyze_time_ms,
+            ROUND(total_autoanalyze_time::numeric, 2) as total_autoanalyze_time_ms,"""
+
+        query = f"""
+        SELECT
             schemaname as schema_name,
             relname as table_name,
             last_vacuum,
@@ -1964,21 +1986,22 @@ async def get_vacuum_analyze_stats(database_name: str = None) -> str:
             autovacuum_count,
             analyze_count,
             autoanalyze_count,
+            {vacuum_time_cols}
             n_tup_ins as inserts,
             n_tup_upd as updates,
             n_tup_del as deletes
         FROM pg_stat_user_tables
         ORDER BY schemaname, relname
         """
-        
+
         stats = await execute_query(query, database=database_name)
-        
+
         title = "VACUUM/ANALYZE Statistics"
         if database_name:
             title += f" (Database: {database_name})"
-            
+
         return format_table_data(stats, title)
-        
+
     except Exception as e:
         logger.error(f"Failed to get vacuum/analyze stats: {e}")
         return f"Error retrieving VACUUM/ANALYZE statistics: {str(e)}"
@@ -2805,8 +2828,17 @@ async def get_database_stats() -> str:
         Comprehensive database statistics including transactions, I/O, tuples, and performance metrics
     """
     try:
-        query = """
-        SELECT 
+        version = await get_postgresql_version()
+
+        # PG 18+ adds parallel worker tracking
+        parallel_cols = ""
+        if version.has_parallel_worker_stats:
+            parallel_cols = """
+            parallel_workers_to_launch,
+            parallel_workers_launched,"""
+
+        query = f"""
+        SELECT
             datname as database_name,
             numbackends as active_connections,
             xact_commit as transactions_committed,
@@ -2814,8 +2846,8 @@ async def get_database_stats() -> str:
             ROUND((xact_commit::numeric / NULLIF(xact_commit + xact_rollback, 0)) * 100, 2) as commit_ratio_percent,
             blks_read as disk_blocks_read,
             blks_hit as buffer_blocks_hit,
-            CASE 
-                WHEN blks_read + blks_hit > 0 THEN 
+            CASE
+                WHEN blks_read + blks_hit > 0 THEN
                     ROUND((blks_hit::numeric / (blks_read + blks_hit)) * 100, 2)
                 ELSE 0
             END as buffer_hit_ratio_percent,
@@ -2828,8 +2860,9 @@ async def get_database_stats() -> str:
             temp_files as temporary_files_created,
             pg_size_pretty(temp_bytes) as temp_files_size,
             deadlocks as deadlock_count,
+            {parallel_cols}
             COALESCE(checksum_failures, 0) as checksum_failures,
-            CASE 
+            CASE
                 WHEN checksum_last_failure IS NOT NULL THEN
                     checksum_last_failure::text
                 ELSE 'None'
@@ -2837,11 +2870,11 @@ async def get_database_stats() -> str:
             COALESCE(ROUND(blk_read_time::numeric, 2), 0) as disk_read_time_ms,
             COALESCE(ROUND(blk_write_time::numeric, 2), 0) as disk_write_time_ms,
             stats_reset
-        FROM pg_stat_database 
+        FROM pg_stat_database
         WHERE datname IS NOT NULL
         ORDER BY datname
         """
-        
+
         stats = await execute_query(query)
         return format_table_data(stats, "Database Statistics")
         
@@ -2878,16 +2911,27 @@ async def get_bgwriter_stats() -> str:
     """
     try:
         pg_version = await get_postgresql_version()
-        
-        if pg_version.has_checkpointer_split:
-            # PostgreSQL 15 ONLY: Use separate views  
-            query = """
-            SELECT 
+
+        if pg_version.has_checkpointer_view:
+            # PostgreSQL 15+: Separate checkpointer and bgwriter views
+            # PG 18 adds num_done and slru_written to pg_stat_checkpointer
+            checkpointer_extra_cols = ""
+            bgwriter_extra_null_cols = ""
+            if pg_version.has_checkpointer_v18:
+                checkpointer_extra_cols = """
+                num_done as completed_checkpoints,
+                slru_written as slru_buffers_written,"""
+                bgwriter_extra_null_cols = """
+                0 as completed_checkpoints,
+                0 as slru_buffers_written,"""
+
+            query = f"""
+            SELECT
                 'Checkpointer (PG15+)' as component,
                 num_timed as scheduled_checkpoints,
                 num_requested as requested_checkpoints,
                 num_timed + num_requested as total_checkpoints,
-                CASE 
+                CASE
                     WHEN (num_timed + num_requested) > 0 THEN
                         ROUND((num_timed::numeric / (num_timed + num_requested)) * 100, 2)
                     ELSE 0
@@ -2896,16 +2940,11 @@ async def get_bgwriter_stats() -> str:
                 ROUND(sync_time::numeric, 2) as checkpoint_sync_time_ms,
                 ROUND((write_time + sync_time)::numeric, 2) as total_checkpoint_time_ms,
                 buffers_written as buffers_written_by_checkpoints,
-                0 as buffers_written_by_bgwriter,
-                0 as buffers_written_by_backend,
-                0 as backend_fsync_calls,
-                0 as buffers_allocated,
-                0 as bgwriter_maxwritten_stops,
-                0 as bgwriter_stop_ratio_percent,
+                {checkpointer_extra_cols}
                 stats_reset as stats_reset_time
             FROM pg_stat_checkpointer
             UNION ALL
-            SELECT 
+            SELECT
                 'Background Writer (PG15+)' as component,
                 0 as scheduled_checkpoints,
                 0 as requested_checkpoints,
@@ -2914,30 +2953,21 @@ async def get_bgwriter_stats() -> str:
                 0 as checkpoint_write_time_ms,
                 0 as checkpoint_sync_time_ms,
                 0 as total_checkpoint_time_ms,
-                0 as buffers_written_by_checkpoints,
-                buffers_clean as buffers_written_by_bgwriter,
-                0 as buffers_written_by_backend,
-                0 as backend_fsync_calls,
-                buffers_alloc as buffers_allocated,
-                maxwritten_clean as bgwriter_maxwritten_stops,
-                CASE 
-                    WHEN buffers_clean > 0 AND maxwritten_clean > 0 THEN
-                        ROUND((maxwritten_clean::numeric / buffers_clean) * 100, 2)
-                    ELSE 0
-                END as bgwriter_stop_ratio_percent,
+                buffers_clean as buffers_written_by_checkpoints,
+                {bgwriter_extra_null_cols}
                 stats_reset as stats_reset_time
             FROM pg_stat_bgwriter
             """
-            explanation = f"PostgreSQL {pg_version} detected - using separate checkpointer and bgwriter views (PG15 only)"
+            explanation = f"PostgreSQL {pg_version} detected - using separate checkpointer and bgwriter views"
         else:
-            # PostgreSQL 12-14, 16+: Use combined bgwriter view
+            # PostgreSQL 12-14: Combined bgwriter view with all columns
             query = """
-            SELECT 
+            SELECT
                 'Combined BGWriter (PG12-14)' as component,
                 checkpoints_timed as scheduled_checkpoints,
                 checkpoints_req as requested_checkpoints,
                 checkpoints_timed + checkpoints_req as total_checkpoints,
-                CASE 
+                CASE
                     WHEN (checkpoints_timed + checkpoints_req) > 0 THEN
                         ROUND((checkpoints_timed::numeric / (checkpoints_timed + checkpoints_req)) * 100, 2)
                     ELSE 0
@@ -2951,7 +2981,7 @@ async def get_bgwriter_stats() -> str:
                 buffers_backend_fsync as backend_fsync_calls,
                 buffers_alloc as buffers_allocated,
                 maxwritten_clean as bgwriter_maxwritten_stops,
-                CASE 
+                CASE
                     WHEN buffers_clean > 0 AND maxwritten_clean > 0 THEN
                         ROUND((maxwritten_clean::numeric / buffers_clean) * 100, 2)
                     ELSE 0
@@ -2960,23 +2990,25 @@ async def get_bgwriter_stats() -> str:
             FROM pg_stat_bgwriter
             """
             explanation = f"PostgreSQL {pg_version} detected - using combined bgwriter view (includes checkpointer)"
-        
+
         stats = await execute_query(query)
-        
+
         result = []
         result.append("=== Background Writer & Checkpointer Statistics ===\n")
         result.append(explanation)
         result.append("")
         result.append(format_table_data(stats, "Background Process Performance"))
-        
-        if pg_version.has_checkpointer_split:
-            result.append("\nNote: PostgreSQL 15 provides separate detailed statistics for checkpointer and background writer processes")
+
+        if pg_version.has_checkpointer_view:
+            result.append(f"\nNote: PostgreSQL {pg_version} provides separate statistics for checkpointer and background writer processes")
+            if pg_version.has_checkpointer_v18:
+                result.append("Note: PG18+ includes completed checkpoint count and SLRU buffer statistics")
         else:
             result.append(f"\nNote: PostgreSQL {pg_version} uses combined bgwriter view with all background process statistics")
-            result.append("\nNote: Upgrade to PostgreSQL 15+ for separate checkpointer and background writer statistics")
-        
+            result.append("Note: Upgrade to PostgreSQL 15+ for separate checkpointer and background writer statistics")
+
         return "\n".join(result)
-        
+
     except Exception as e:
         logger.error(f"Failed to get bgwriter stats: {e}")
         return f"Error retrieving background writer statistics: {str(e)}"
@@ -3017,8 +3049,16 @@ async def get_io_stats(limit: int = 20, database_name: str = None) -> str:
         
         if pg_version.has_pg_stat_io:
             # PostgreSQL 16+: Use comprehensive pg_stat_io
+            # PG 18+ adds read_bytes/write_bytes/extend_bytes
+            byte_cols = ""
+            if pg_version.has_pg_stat_io_bytes:
+                byte_cols = """
+                pg_size_pretty(read_bytes) as read_bytes_pretty,
+                pg_size_pretty(write_bytes) as write_bytes_pretty,
+                pg_size_pretty(extend_bytes) as extend_bytes_pretty,"""
+
             query = f"""
-            SELECT 
+            SELECT
                 backend_type,
                 object,
                 context,
@@ -3028,12 +3068,13 @@ async def get_io_stats(limit: int = 20, database_name: str = None) -> str:
                 ROUND(write_time::numeric, 2) as write_time_ms,
                 extends,
                 ROUND(extend_time::numeric, 2) as extend_time_ms,
+                {byte_cols}
                 hits,
                 evictions,
                 reuses,
                 fsyncs,
                 ROUND(fsync_time::numeric, 2) as fsync_time_ms,
-                CASE 
+                CASE
                     WHEN (reads + hits) > 0 THEN
                         ROUND((hits::numeric / (reads + hits)) * 100, 2)
                     ELSE 0

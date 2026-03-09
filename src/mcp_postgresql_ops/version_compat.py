@@ -43,8 +43,8 @@ class PostgreSQLVersion:
         
     @property
     def has_checkpointer_split(self) -> bool:
-        """Check if checkpointer stats are in separate view (only PG15)."""
-        return self.major == 15
+        """Deprecated: use has_checkpointer_view. Check if checkpointer stats are in separate view (15+)."""
+        return self.major >= 15
         
     @property
     def has_pg_stat_io(self) -> bool:
@@ -80,6 +80,91 @@ class PostgreSQLVersion:
     def has_pg_stat_statements_exec_time(self) -> bool:
         """Check if pg_stat_statements uses total_exec_time and mean_exec_time columns (13+)."""
         return self.major >= 13
+
+    @property
+    def has_checkpointer_view(self) -> bool:
+        """Check if pg_stat_checkpointer view exists (15+)."""
+        return self.major >= 15
+
+    @property
+    def has_bgwriter_buffers_backend(self) -> bool:
+        """Check if pg_stat_bgwriter has buffers_backend/buffers_backend_fsync (12-16, removed in 17)."""
+        return self.major < 17
+
+    @property
+    def has_replication_slot_invalidation(self) -> bool:
+        """Check if pg_replication_slots has invalidation_reason and inactive_since (17+)."""
+        return self.major >= 17
+
+    @property
+    def has_pg_stat_statements_v17(self) -> bool:
+        """Check if pg_stat_statements has stats_since, local_blk_read/write_time (17+)."""
+        return self.major >= 17
+
+    @property
+    def has_vacuum_progress_indexes(self) -> bool:
+        """Check if pg_stat_progress_vacuum has indexes_total/indexes_processed (17+)."""
+        return self.major >= 17
+
+    @property
+    def has_pg_wait_events(self) -> bool:
+        """Check if pg_wait_events view exists (17+)."""
+        return self.major >= 17
+
+    @property
+    def has_wal_summarizer(self) -> bool:
+        """Check if WAL summarizer functions exist for incremental backup (17+)."""
+        return self.major >= 17
+
+    @property
+    def has_transaction_timeout(self) -> bool:
+        """Check if transaction_timeout GUC exists (17+)."""
+        return self.major >= 17
+
+    @property
+    def has_pg_stat_io_bytes(self) -> bool:
+        """Check if pg_stat_io has read_bytes/write_bytes/extend_bytes columns (18+)."""
+        return self.major >= 18
+
+    @property
+    def has_vacuum_time_columns(self) -> bool:
+        """Check if pg_stat_*_tables has total_vacuum_time etc. (18+)."""
+        return self.major >= 18
+
+    @property
+    def has_pg_aios(self) -> bool:
+        """Check if pg_aios view exists for async I/O monitoring (18+)."""
+        return self.major >= 18
+
+    @property
+    def has_per_backend_io(self) -> bool:
+        """Check if pg_stat_get_backend_io() function exists (18+)."""
+        return self.major >= 18
+
+    @property
+    def has_parallel_worker_stats(self) -> bool:
+        """Check if pg_stat_database has parallel_workers_to_launch/launched (18+)."""
+        return self.major >= 18
+
+    @property
+    def has_checkpointer_v18(self) -> bool:
+        """Check if pg_stat_checkpointer has num_done and slru_written (18+)."""
+        return self.major >= 18
+
+    @property
+    def has_pg_stat_statements_v18(self) -> bool:
+        """Check if pg_stat_statements has parallel_workers_* and wal_buffers_full (18+)."""
+        return self.major >= 18
+
+    @property
+    def has_idle_replication_slot_timeout(self) -> bool:
+        """Check if idle_replication_slot_timeout GUC exists (18+)."""
+        return self.major >= 18
+
+    @property
+    def has_pg_stat_wal_removed_columns(self) -> bool:
+        """Check if pg_stat_wal had wal_write/wal_sync columns removed (18+)."""
+        return self.major >= 18
 
 # Global version cache
 _cached_version: Optional[PostgreSQLVersion] = None
@@ -117,13 +202,13 @@ async def get_postgresql_version(database: str = None, force_refresh: bool = Fal
             return _cached_version
         else:
             logger.warning(f"Could not parse version string: {version_string}")
-            # Default to PostgreSQL 17 if parsing fails
-            _cached_version = PostgreSQLVersion(17, 0, 0)
+            # Default to PostgreSQL 18 if parsing fails
+            _cached_version = PostgreSQLVersion(18, 0, 0)
             return _cached_version
             
     except Exception as e:
         logger.error(f"Failed to get PostgreSQL version: {e}")
-        # Default to PostgreSQL 17 if version detection fails
+        # Default to PostgreSQL 18 if version detection fails
         _cached_version = PostgreSQLVersion(17, 0, 0)
         return _cached_version
 
@@ -142,10 +227,16 @@ async def check_feature_availability(feature: str, database: str = None) -> bool
     
     feature_requirements = {
         'pg_stat_io': version.has_pg_stat_io,
-        'checkpointer_split': version.has_checkpointer_split,
+        'checkpointer_split': version.has_checkpointer_view,
         'enhanced_wal_receiver': version.has_enhanced_wal_receiver,
         'replication_slot_stats': version.has_replication_slot_stats,
         'parallel_leader_tracking': version.has_parallel_leader_tracking,
+        'pg_wait_events': version.has_pg_wait_events,
+        'wal_summarizer': version.has_wal_summarizer,
+        'pg_aios': version.has_pg_aios,
+        'per_backend_io': version.has_per_backend_io,
+        'vacuum_time_columns': version.has_vacuum_time_columns,
+        'pg_stat_io_bytes': version.has_pg_stat_io_bytes,
     }
     
     return feature_requirements.get(feature, False)
@@ -308,16 +399,8 @@ class VersionAwareQueries:
     async def get_replication_slots_query(database: str = None) -> str:
         """Get replication slots info with version compatibility."""
         version = await get_postgresql_version(database)
-        
-        base_columns = [
-            "slot_name", "plugin", "slot_type", "datoid", "temporary",
-            "active", "active_pid", "restart_lsn", "confirmed_flush_lsn"
-        ]
-        
-        # wal_status and safe_wal_size are available from PostgreSQL 13+
-        if version.has_replication_slot_wal_status:
-            return """
-            SELECT 
+
+        base_columns = """
                 slot_name,
                 plugin,
                 slot_type,
@@ -326,27 +409,38 @@ class VersionAwareQueries:
                 active,
                 active_pid,
                 restart_lsn,
-                confirmed_flush_lsn,
+                confirmed_flush_lsn"""
+
+        if version.has_replication_slot_invalidation:
+            # PostgreSQL 17+: includes invalidation_reason and inactive_since
+            return f"""
+            SELECT {base_columns},
                 wal_status,
-                safe_wal_size / 1024 / 1024 as safe_wal_size_mb
+                safe_wal_size / 1024 / 1024 as safe_wal_size_mb,
+                invalidation_reason,
+                inactive_since
+            FROM pg_replication_slots
+            ORDER BY slot_name
+            """
+        elif version.has_replication_slot_wal_status:
+            # PostgreSQL 13-16: wal_status and safe_wal_size
+            return f"""
+            SELECT {base_columns},
+                wal_status,
+                safe_wal_size / 1024 / 1024 as safe_wal_size_mb,
+                NULL::text as invalidation_reason,
+                NULL::timestamptz as inactive_since
             FROM pg_replication_slots
             ORDER BY slot_name
             """
         else:
-            # PostgreSQL 12 and older - without wal_status and safe_wal_size
-            return """
-            SELECT 
-                slot_name,
-                plugin,
-                slot_type,
-                datoid,
-                temporary,
-                active,
-                active_pid,
-                restart_lsn,
-                confirmed_flush_lsn,
+            # PostgreSQL 12: minimal columns
+            return f"""
+            SELECT {base_columns},
                 NULL::text as wal_status,
-                NULL::numeric as safe_wal_size_mb
+                NULL::numeric as safe_wal_size_mb,
+                NULL::text as invalidation_reason,
+                NULL::timestamptz as inactive_since
             FROM pg_replication_slots
             ORDER BY slot_name
             """
@@ -533,18 +627,40 @@ async def get_pg_stat_statements_query(database: str = None) -> str:
         
     # Add remaining common columns
     base_columns.extend([
-        "shared_blks_hit", "shared_blks_read", "shared_blks_dirtied", 
-        "shared_blks_written", "local_blks_hit", "local_blks_read", 
+        "shared_blks_hit", "shared_blks_read", "shared_blks_dirtied",
+        "shared_blks_written", "local_blks_hit", "local_blks_read",
         "local_blks_dirtied", "local_blks_written", "temp_blks_read", "temp_blks_written"
     ])
-    
+
+    # Add version-specific I/O timing columns
+    if version.has_pg_stat_statements_v17:
+        # PG 17+: renamed timing columns and new stats_since
+        base_columns.extend([
+            "shared_blk_read_time", "shared_blk_write_time",
+            "local_blk_read_time", "local_blk_write_time",
+            "stats_since", "minmax_stats_since"
+        ])
+    elif version.has_pg_stat_statements_exec_time:
+        # PG 13-16: old column names
+        base_columns.extend([
+            "blk_read_time as shared_blk_read_time",
+            "blk_write_time as shared_blk_write_time"
+        ])
+
+    if version.has_pg_stat_statements_v18:
+        # PG 18+: parallel worker and WAL buffer stats
+        base_columns.extend([
+            "parallel_workers_to_launch", "parallel_workers_launched",
+            "wal_buffers_full"
+        ])
+
     columns_str = ",\n    ".join(base_columns)
-    
+
     return f"""
-    SELECT 
+    SELECT
         {columns_str}
-    FROM pg_stat_statements 
-    ORDER BY total_exec_time DESC 
+    FROM pg_stat_statements
+    ORDER BY total_exec_time DESC
     """
 
 
