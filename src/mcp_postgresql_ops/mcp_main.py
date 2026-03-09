@@ -3132,16 +3132,16 @@ async def get_io_stats(limit: int = 20, database_name: str = None) -> str:
         
         # Add version-specific notes
         if pg_version.has_pg_stat_io:
-            result.append(f"\n✅ PostgreSQL {pg_version} provides comprehensive I/O monitoring with timing details")
-            result.append("📊 Backend types: client backend, checkpointer, background writer, autovacuum, etc.")
-            result.append("🎯 Contexts: normal, vacuum, bulkread, bulkwrite operations")
+            result.append(f"\nPostgreSQL {pg_version} provides comprehensive I/O monitoring with timing details")
+            result.append("Backend types: client backend, checkpointer, background writer, autovacuum, etc.")
+            result.append("Contexts: normal, vacuum, bulkread, bulkwrite operations")
         else:
-            result.append(f"\n⚠️  PostgreSQL {pg_version} provides basic I/O statistics only")
-            result.append("🚀 Upgrade to PostgreSQL 16+ for comprehensive I/O monitoring with:")
-            result.append("   • Per-backend-type I/O statistics")
-            result.append("   • I/O timing information (when track_io_timing enabled)")
-            result.append("   • Context-aware I/O tracking (normal/vacuum/bulk operations)")
-            result.append("   • Buffer eviction and reuse statistics")
+            result.append(f"\nNote: PostgreSQL {pg_version} provides basic I/O statistics only")
+            result.append("Upgrade to PostgreSQL 16+ for comprehensive I/O monitoring with:")
+            result.append("   - Per-backend-type I/O statistics")
+            result.append("   - I/O timing information (when track_io_timing enabled)")
+            result.append("   - Context-aware I/O tracking (normal/vacuum/bulk operations)")
+            result.append("   - Buffer eviction and reuse statistics")
         
         return "\n".join(result)
         

@@ -471,12 +471,13 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 
 ### 🚀 Version-Aware Tools (Auto-Adapting)
 
-**get_io_stats** (New!)
+**get_io_stats** (Enhanced!)
 - "Show comprehensive I/O statistics." (PostgreSQL 16+ provides detailed breakdown)
 - "Analyze I/O statistics."
 - "Analyze buffer cache efficiency and I/O timing."
 - "Monitor I/O patterns by backend type and context."
 - 📈 **PG16+**: Full pg_stat_io with timing, backend types, and contexts
+- 📈 **PG18+**: Additional byte-level I/O columns (`read_bytes`, `write_bytes`, `extend_bytes`, `writeback_bytes`) for precise I/O size tracking
 - 📊 **PG12-15**: Basic pg_statio_* fallback with buffer hit ratios
 
 **get_bgwriter_stats** (Enhanced!)
@@ -491,12 +492,9 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 - "Check what MCP tools are available on this PostgreSQL version."
 - "Displays feature availability matrix and upgrade recommendations."
 
-**get_io_stats** (Enhanced!)
-- 📈 **PG18+**: Additional byte-level I/O columns (`read_bytes`, `write_bytes`, `extend_bytes`, `writeback_bytes`) for precise I/O size tracking
-
 **get_all_tables_stats** (Enhanced!)
 - 📈 **PG13+**: `n_ins_since_vacuum` column for tracking insertions since last VACUUM
-- 📈 **PG18+**: VACUUM time columns (`last_vacuum_time`, `last_autovacuum_time`, `last_analyze_time`, `last_autoanalyze_time`) for maintenance duration tracking
+- 📈 **PG18+**: VACUUM time columns (`total_vacuum_time`, `total_autovacuum_time`, `total_analyze_time`, `total_autoanalyze_time`) for maintenance duration tracking
 
 **get_wait_events** (New! PG 17+)
 - "List available wait event types and their descriptions."
