@@ -3530,6 +3530,326 @@ async def get_database_conflicts_stats(database_name: str = None) -> str:
 
 
 # =============================================================================
+# PostgreSQL 17/18 Feature Tools
+# =============================================================================
+
+@mcp.tool()
+async def get_wait_events(database_name: str = None, wait_event_type: str = None) -> str:
+    """
+    [Tool Purpose]: List available wait event types and their descriptions (PostgreSQL 17+)
+
+    [Exact Functionality]:
+    - Show all wait event types with human-readable descriptions from pg_wait_events catalog
+    - Correlate with current active sessions waiting on events
+    - Filter by specific wait event type
+    - Falls back to basic pg_stat_activity wait info on PG < 17
+
+    [Required Use Cases]:
+    - When user requests "wait events", "wait event descriptions", "what are sessions waiting on"
+    - When diagnosing session waits and understanding wait event meanings
+    - When analyzing wait patterns across the database
+
+    [Strictly Prohibited Use Cases]:
+    - Requests for session termination or wait resolution
+    - Requests for configuration changes
+
+    Args:
+        database_name: Database name to analyze (uses default if omitted)
+        wait_event_type: Filter by wait event type (e.g., "Lock", "IO", "LWLock")
+
+    Returns:
+        Wait event catalog with descriptions, or active session wait summary on older versions
+    """
+    try:
+        version = await get_postgresql_version(database_name)
+
+        if version.has_pg_wait_events:
+            where_clause = ""
+            params = []
+            if wait_event_type:
+                where_clause = "WHERE type ILIKE $1"
+                params = [f"%{wait_event_type}%"]
+
+            query = f"""
+            SELECT
+                type as wait_event_type,
+                name as wait_event_name,
+                description
+            FROM pg_wait_events
+            {where_clause}
+            ORDER BY type, name
+            """
+
+            events = await execute_query(query, params, database=database_name)
+
+            summary_query = """
+            SELECT
+                wait_event_type,
+                wait_event,
+                COUNT(*) as session_count
+            FROM pg_stat_activity
+            WHERE wait_event IS NOT NULL AND pid <> pg_backend_pid()
+            GROUP BY wait_event_type, wait_event
+            ORDER BY COUNT(*) DESC
+            """
+            summary = await execute_query(summary_query, database=database_name)
+
+            result = []
+            title = "Wait Event Catalog (pg_wait_events)"
+            if wait_event_type:
+                title += f" [Filter: {wait_event_type}]"
+            result.append(format_table_data(events, title))
+
+            if summary:
+                result.append("\n" + format_table_data(summary, "Current Session Wait Summary"))
+            else:
+                result.append("\nNo sessions currently waiting on events")
+
+            return "\n".join(result)
+        else:
+            query = """
+            SELECT
+                wait_event_type,
+                wait_event,
+                COUNT(*) as session_count,
+                string_agg(pid::text, ', ' ORDER BY pid) as pids
+            FROM pg_stat_activity
+            WHERE wait_event IS NOT NULL AND pid <> pg_backend_pid()
+            GROUP BY wait_event_type, wait_event
+            ORDER BY COUNT(*) DESC
+            """
+            events = await execute_query(query, database=database_name)
+
+            result = format_table_data(events, f"Current Wait Events (PG {version} - no pg_wait_events catalog)")
+            result += f"\n\nNote: Upgrade to PostgreSQL 17+ for detailed wait event descriptions"
+            return result
+
+    except Exception as e:
+        logger.error(f"Failed to get wait events: {e}")
+        return f"Error retrieving wait events: {str(e)}"
+
+
+@mcp.tool()
+async def get_wal_summarizer_status(database_name: str = None) -> str:
+    """
+    [Tool Purpose]: Monitor WAL summarizer status for incremental backup support (PostgreSQL 17+)
+
+    [Exact Functionality]:
+    - Show WAL summarizer process state and progress
+    - Display available WAL summaries for incremental backups
+    - Report summarize_wal configuration status
+    - Falls back to version notice on PG < 17
+
+    [Required Use Cases]:
+    - When user requests "WAL summarizer", "incremental backup status", "WAL summary"
+    - When checking incremental backup readiness
+    - When monitoring WAL summarization progress
+
+    [Strictly Prohibited Use Cases]:
+    - Requests for WAL summarizer configuration changes
+    - Requests for backup execution
+
+    Args:
+        database_name: Database name (uses default if omitted)
+
+    Returns:
+        WAL summarizer state and available summaries, or version notice on older PG
+    """
+    try:
+        version = await get_postgresql_version(database_name)
+
+        if not version.has_wal_summarizer:
+            return f"WAL summarizer is not available on PostgreSQL {version}. Upgrade to PostgreSQL 17+ for incremental backup support via WAL summarization."
+
+        result = []
+
+        config_query = """
+        SELECT name, setting, short_desc
+        FROM pg_settings
+        WHERE name IN ('summarize_wal', 'wal_summary_keep_time')
+        ORDER BY name
+        """
+        config = await execute_query(config_query, database=database_name)
+        result.append(format_table_data(config, "WAL Summarizer Configuration"))
+
+        try:
+            state_query = "SELECT * FROM pg_get_wal_summarizer_state()"
+            state = await execute_query(state_query, database=database_name)
+            result.append("\n" + format_table_data(state, "WAL Summarizer State"))
+        except Exception:
+            result.append("\nWAL summarizer state unavailable (summarize_wal may be disabled)")
+
+        try:
+            summaries_query = """
+            SELECT *
+            FROM pg_available_wal_summaries()
+            ORDER BY start_lsn DESC
+            LIMIT 20
+            """
+            summaries = await execute_query(summaries_query, database=database_name)
+            if summaries:
+                result.append("\n" + format_table_data(summaries, "Available WAL Summaries (Latest 20)"))
+            else:
+                result.append("\nNo WAL summaries available yet")
+        except Exception:
+            result.append("\nWAL summaries unavailable")
+
+        return "\n".join(result)
+
+    except Exception as e:
+        logger.error(f"Failed to get WAL summarizer status: {e}")
+        return f"Error retrieving WAL summarizer status: {str(e)}"
+
+
+@mcp.tool()
+async def get_async_io_status(database_name: str = None) -> str:
+    """
+    [Tool Purpose]: Monitor asynchronous I/O subsystem status (PostgreSQL 18+)
+
+    [Exact Functionality]:
+    - Show active async I/O operations from pg_aios view
+    - Display I/O method configuration and concurrency settings
+    - Report async I/O file handle usage
+    - Falls back to I/O configuration info on PG < 18
+
+    [Required Use Cases]:
+    - When user requests "async I/O status", "AIO monitoring", "I/O subsystem"
+    - When investigating I/O performance and concurrency
+    - When checking async I/O configuration
+
+    [Strictly Prohibited Use Cases]:
+    - Requests for I/O configuration changes
+    - Requests for storage modifications
+
+    Args:
+        database_name: Database name (uses default if omitted)
+
+    Returns:
+        Async I/O subsystem status and configuration, or version notice on older PG
+    """
+    try:
+        version = await get_postgresql_version(database_name)
+
+        if not version.has_pg_aios:
+            return f"Async I/O subsystem view (pg_aios) is not available on PostgreSQL {version}. Upgrade to PostgreSQL 18+ for async I/O monitoring."
+
+        result = []
+
+        config_query = """
+        SELECT name, setting, unit, short_desc
+        FROM pg_settings
+        WHERE name IN ('io_method', 'io_combine_limit', 'io_max_combine_limit',
+                       'effective_io_concurrency', 'maintenance_io_concurrency')
+        ORDER BY name
+        """
+        config = await execute_query(config_query, database=database_name)
+        result.append(format_table_data(config, "Async I/O Configuration"))
+
+        try:
+            aios_query = "SELECT * FROM pg_aios LIMIT 100"
+            aios = await execute_query(aios_query, database=database_name)
+            if aios:
+                result.append("\n" + format_table_data(aios, "Active Async I/O Operations (pg_aios)"))
+            else:
+                result.append("\nNo active async I/O operations at this moment")
+        except Exception:
+            result.append("\npg_aios view unavailable")
+
+        return "\n".join(result)
+
+    except Exception as e:
+        logger.error(f"Failed to get async I/O status: {e}")
+        return f"Error retrieving async I/O status: {str(e)}"
+
+
+@mcp.tool()
+async def get_per_backend_io_stats(database_name: str = None, limit: int = 20) -> str:
+    """
+    [Tool Purpose]: Analyze per-backend I/O and WAL statistics (PostgreSQL 18+)
+
+    [Exact Functionality]:
+    - Show I/O statistics broken down by individual backend process
+    - Display per-backend WAL generation statistics
+    - Identify backends with highest I/O activity
+    - Falls back to version notice on PG < 18
+
+    [Required Use Cases]:
+    - When user requests "per-backend I/O", "backend I/O stats", "which backend is doing most I/O"
+    - When diagnosing I/O hotspots at the process level
+    - When analyzing per-connection I/O patterns
+
+    [Strictly Prohibited Use Cases]:
+    - Requests for backend termination
+    - Requests for I/O configuration changes
+
+    Args:
+        database_name: Database name (uses default if omitted)
+        limit: Maximum results (1-100, default 20)
+
+    Returns:
+        Per-backend I/O and WAL statistics, or version notice on older PG
+    """
+    try:
+        version = await get_postgresql_version(database_name)
+        limit = max(1, min(limit, 100))
+
+        if not version.has_per_backend_io:
+            return f"Per-backend I/O statistics are not available on PostgreSQL {version}. Upgrade to PostgreSQL 18+ for pg_stat_get_backend_io()."
+
+        result = []
+
+        query = f"""
+        SELECT
+            a.pid,
+            a.usename as username,
+            a.datname as database_name,
+            a.application_name,
+            a.state,
+            bio.*
+        FROM pg_stat_activity a
+        CROSS JOIN LATERAL pg_stat_get_backend_io(a.pid) bio
+        WHERE a.pid <> pg_backend_pid()
+        ORDER BY bio.reads + bio.writes DESC
+        LIMIT {limit}
+        """
+
+        try:
+            stats = await execute_query(query, database=database_name)
+            if stats:
+                result.append(format_table_data(stats, f"Per-Backend I/O Statistics (Top {limit})"))
+            else:
+                result.append("No per-backend I/O statistics available")
+        except Exception as e:
+            result.append(f"Per-backend I/O query failed: {e}")
+
+        wal_query = f"""
+        SELECT
+            a.pid,
+            a.usename as username,
+            a.datname as database_name,
+            bwal.*
+        FROM pg_stat_activity a
+        CROSS JOIN LATERAL pg_stat_get_backend_wal(a.pid) bwal
+        WHERE a.pid <> pg_backend_pid()
+        ORDER BY bwal.wal_bytes DESC NULLS LAST
+        LIMIT {limit}
+        """
+
+        try:
+            wal_stats = await execute_query(wal_query, database=database_name)
+            if wal_stats:
+                result.append("\n" + format_table_data(wal_stats, f"Per-Backend WAL Statistics (Top {limit})"))
+        except Exception:
+            pass
+
+        return "\n".join(result) if result else "No per-backend statistics available"
+
+    except Exception as e:
+        logger.error(f"Failed to get per-backend I/O stats: {e}")
+        return f"Error retrieving per-backend I/O statistics: {str(e)}"
+
+
+# =============================================================================
 # Prompt Template Tools
 # =============================================================================
 
