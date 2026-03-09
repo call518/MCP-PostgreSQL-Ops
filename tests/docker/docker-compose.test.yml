@@ -139,7 +139,7 @@ services:
       retries: 10
 
   pg18:
-    image: postgres:18beta1-alpine
+    image: postgres:18-alpine
     ports:
       - "5418:5432"
     environment:
