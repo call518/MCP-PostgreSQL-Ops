@@ -1,16 +1,8 @@
 # PostgreSQL Operations MCP Server - Prompt Templates
 
-## Server ### 📈 Database Performance Analysis
-- "Show database-wide performance statistics."
-- "Analyze transaction commit ratios and I/O patterns."
-- "Check buffer cache hit ratios for all databases."
-- "Monitor temporary file usage and deadlock counts."
+## Server
 
-### 🔧 Background Writer & Checkpoints
-- "Analyze checkpoint performance and timing."
-- "Show background writer efficiency statistics."
-- "Check buffer allocation and writing patterns."
-- "Monitor checkpoint scheduling vs requested ratios." professional MCP server for PostgreSQL database server operations, monitoring, and management. Provides advanced performance analysis capabilities using pg_stat_statements and pg_stat_monitor extensions.
+Professional MCP server for PostgreSQL database server operations, monitoring, and management. Provides advanced performance analysis capabilities using pg_stat_statements and pg_stat_monitor extensions.
 
 ## Key Features
 
@@ -87,7 +79,7 @@
 
 ## Sample Prompts
 
-### � Database Performance Analysis
+### 📈 Database Performance Analysis
 - "Show database-wide performance statistics"
 - "Analyze transaction commit ratios and I/O patterns"
 - "Check buffer cache hit ratios for all databases"
@@ -252,7 +244,7 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 
 ## Example Queries
 
-### � Extension-Independent Tools (Always Available)
+### 🟢 Extension-Independent Tools (Always Available)
 
 **get_server_info**
 - "Show PostgreSQL server version and extension status."
