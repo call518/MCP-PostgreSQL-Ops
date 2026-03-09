@@ -31,7 +31,7 @@ jobs:
         run: pip install --upgrade build
       - name: Build distributions
         run: python -m build
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: dist
           path: dist/
