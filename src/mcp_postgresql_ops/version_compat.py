@@ -25,14 +25,14 @@ class PostgreSQLVersion:
         return f"{self.major}.{self.minor}.{self.patch}"
         
     def __eq__(self, other):
-        if isinstance(other, (int, float)):
+        if isinstance(other, int):
             return self.major == other
         if isinstance(other, PostgreSQLVersion):
             return (self.major, self.minor, self.patch) == (other.major, other.minor, other.patch)
         return NotImplemented
 
     def __lt__(self, other):
-        if isinstance(other, (int, float)):
+        if isinstance(other, int):
             return self.major < other
         if isinstance(other, PostgreSQLVersion):
             return (self.major, self.minor, self.patch) < (other.major, other.minor, other.patch)
@@ -223,66 +223,6 @@ async def check_feature_availability(feature: str, database: str = None) -> bool
     
     return feature_requirements.get(feature, False)
 
-async def get_compatible_column_list(table_name: str, 
-                                   all_columns: list, 
-                                   version_specific_columns: dict,
-                                   database: str = None) -> str:
-    """
-    Generate version-compatible column list for SELECT queries.
-    
-    Args:
-        table_name: PostgreSQL table/view name
-        all_columns: List of all possible columns
-        version_specific_columns: Dict mapping version requirements to columns
-        database: Database to connect to
-        
-    Returns:
-        Comma-separated column list for SQL SELECT
-    """
-    version = await get_postgresql_version(database)
-    
-    available_columns = []
-    
-    for col in all_columns:
-        # Check if column has version requirements
-        required_version = version_specific_columns.get(col)
-        if required_version is None:
-            # No version requirement - always available
-            available_columns.append(col)
-        elif version >= required_version:
-            # Version requirement met
-            available_columns.append(col)
-        else:
-            # Version requirement not met - provide NULL placeholder
-            available_columns.append(f"NULL::text AS {col}")
-            
-    return ", ".join(available_columns)
-
-def get_version_appropriate_query(base_query: str, 
-                                version_variants: dict, 
-                                version: PostgreSQLVersion) -> str:
-    """
-    Select version-appropriate query variant.
-    
-    Args:
-        base_query: Default/fallback query
-        version_variants: Dict mapping version requirements to query variants
-        version: PostgreSQL version
-        
-    Returns:
-        Most appropriate query for the version
-    """
-    # Sort version variants by version (highest first)
-    sorted_variants = sorted(version_variants.items(), 
-                           key=lambda x: (x[0].major, x[0].minor), 
-                           reverse=True)
-    
-    for required_version, query in sorted_variants:
-        if version >= required_version:
-            return query
-            
-    return base_query
-
 # Version-specific query builders
 class VersionAwareQueries:
     """Collection of version-aware query builders."""
@@ -469,29 +409,6 @@ class VersionAwareQueries:
             FROM {view_name}
             ORDER BY seq_scan + COALESCE(idx_scan, 0) DESC, schemaname, relname
             """
-
-
-# Utility functions for tool implementations
-async def execute_version_aware_query(queries_by_version: dict, 
-                                    fallback_query: str,
-                                    database: str = None):
-    """
-    Execute the most appropriate query based on PostgreSQL version.
-    
-    Args:
-        queries_by_version: Dict mapping PostgreSQLVersion to query strings
-        fallback_query: Default query if no version matches
-        database: Database to connect to
-        
-    Returns:
-        Query results
-    """
-    from .functions import execute_query
-    
-    version = await get_postgresql_version(database)
-    query = get_version_appropriate_query(fallback_query, queries_by_version, version)
-    
-    return await execute_query(query, database=database)
 
 
 # Version-aware pg_stat_statements queries

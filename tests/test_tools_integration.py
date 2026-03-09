@@ -2,11 +2,7 @@
 
 Requires Docker Compose test stack running (tests/docker/docker-compose.test.yml).
 """
-import os
-import sys
 import pytest
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 # Import all tool functions directly
 from mcp_postgresql_ops.mcp_main import (

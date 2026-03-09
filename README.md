@@ -227,7 +227,7 @@ The `create-test-data.sql` script is executed by the `postgres-init-extensions` 
 | `get_replication_status` | ❌ None | ✅ Compatible | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | PG13+: `wal_status`, `safe_wal_size`; PG16+: enhanced WAL receiver; PG17+: `invalidation_reason`, `inactive_since` |
 | `get_all_tables_stats` | ❌ None | ✅ Compatible | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | PG13+: `n_ins_since_vacuum` tracking for vacuum maintenance optimization |
 | `get_user_functions_stats` | ⚙️ Config Required | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | Requires `track_functions=pl` |
-| `get_wait_events` | ❌ None | ✅ Fallback | ✅ Fallback | ✅ Fallback | ✅ Fallback | ✅ Fallback | ✅ **Native** | ✅ **Native** | PG17+: `pg_wait_events` catalog; PG12-16: fallback descriptions |
+| `get_wait_events` | ❌ None | ✅ Fallback | ✅ Fallback | ✅ Fallback | ✅ Fallback | ✅ Fallback | ✅ **Native** | ✅ **Native** | PG17+: `pg_wait_events` catalog; PG12-16: fallback to `pg_stat_activity` current waits |
 | `get_wal_summarizer_status` | ❌ None | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | PG17+: WAL summarizer monitoring for incremental backups |
 | `get_async_io_status` | ❌ None | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | PG18+: `pg_aios` async I/O subsystem monitoring |
 | `get_per_backend_io_stats` | ❌ None | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | PG18+: Per-backend I/O and WAL statistics |
@@ -796,7 +796,7 @@ SET track_io_timing = 'on';
   - "Show wait event types and descriptions."
   - "What wait events are available on this PostgreSQL version?"
   - 📈 **PG17+**: Native `pg_wait_events` catalog with full descriptions
-  - 📊 **PG12-16**: Fallback with built-in wait event descriptions
+  - 📊 **PG12-16**: Fallback to `pg_stat_activity` current waits grouped by type
 - **get_wal_summarizer_status** (New! PG 17+)
   - "Show WAL summarizer status for incremental backups."
   - "Monitor WAL summarization progress."

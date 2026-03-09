@@ -1,16 +1,15 @@
 """Unit tests for version_compat.py — no database required."""
 import re
-import sys
-import os
 from unittest.mock import AsyncMock, patch
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 from mcp_postgresql_ops.version_compat import (
     PostgreSQLVersion,
     VersionAwareQueries,
     get_pg_stat_statements_query,
 )
+
+TRAILING_COMMA_PATTERN = re.compile(r',\s*FROM\b', re.IGNORECASE)
 
 
 async def _mock_version_call(func, major, *args, **kwargs):
@@ -209,12 +208,10 @@ class TestVersionComparison:
 class TestPgStatStatementsQueryGeneration:
     """Test that get_pg_stat_statements_query produces valid SQL for all versions."""
 
-    TRAILING_COMMA_PATTERN = re.compile(r',\s*FROM\b', re.IGNORECASE)
-
     @pytest.mark.parametrize("major", [12, 13, 14, 15, 16, 17, 18])
     async def test_no_trailing_comma_before_from(self, major):
         query = await _mock_version_call(get_pg_stat_statements_query, major)
-        assert not self.TRAILING_COMMA_PATTERN.search(query), \
+        assert not TRAILING_COMMA_PATTERN.search(query), \
             f"PG{major}: trailing comma before FROM in pg_stat_statements query"
 
     @pytest.mark.parametrize("major", [12, 13, 14, 15, 16, 17, 18])
@@ -250,12 +247,10 @@ class TestPgStatStatementsQueryGeneration:
 class TestVersionAwareQueriesSQL:
     """Test VersionAwareQueries methods produce valid SQL via mocked version detection."""
 
-    TRAILING_COMMA_PATTERN = re.compile(r',\s*FROM\b', re.IGNORECASE)
-
     @pytest.mark.parametrize("major", [12, 13, 14, 15, 16, 17, 18])
     async def test_replication_slots_query_no_trailing_comma(self, major):
         query = await _mock_version_call(VersionAwareQueries.get_replication_slots_query, major)
-        assert not self.TRAILING_COMMA_PATTERN.search(query), \
+        assert not TRAILING_COMMA_PATTERN.search(query), \
             f"PG{major}: trailing comma in replication slots query"
 
     @pytest.mark.parametrize("major", [12, 13, 14, 15, 16, 17, 18])
@@ -276,7 +271,7 @@ class TestVersionAwareQueriesSQL:
     @pytest.mark.parametrize("major", [12, 13, 14, 15, 16, 17, 18])
     async def test_all_tables_stats_query_no_trailing_comma(self, major):
         query = await _mock_version_call(VersionAwareQueries.get_all_tables_stats_query, major)
-        assert not self.TRAILING_COMMA_PATTERN.search(query), \
+        assert not TRAILING_COMMA_PATTERN.search(query), \
             f"PG{major}: trailing comma in all_tables_stats query"
 
     async def test_all_tables_stats_pg18_has_vacuum_time(self):

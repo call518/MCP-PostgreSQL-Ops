@@ -3049,10 +3049,10 @@ async def get_io_stats(limit: int = 20, database_name: str = None) -> str:
             # PG 18+ adds read_bytes/write_bytes/extend_bytes
             byte_cols = ""
             if pg_version.has_pg_stat_io_bytes:
-                byte_cols = """
+                byte_cols = """,
                 pg_size_pretty(read_bytes) as read_bytes_pretty,
                 pg_size_pretty(write_bytes) as write_bytes_pretty,
-                pg_size_pretty(extend_bytes) as extend_bytes_pretty,"""
+                pg_size_pretty(extend_bytes) as extend_bytes_pretty"""
 
             query = f"""
             SELECT
@@ -3064,8 +3064,7 @@ async def get_io_stats(limit: int = 20, database_name: str = None) -> str:
                 writes,
                 ROUND(write_time::numeric, 2) as write_time_ms,
                 extends,
-                ROUND(extend_time::numeric, 2) as extend_time_ms,
-                {byte_cols}
+                ROUND(extend_time::numeric, 2) as extend_time_ms{byte_cols},
                 hits,
                 evictions,
                 reuses,
@@ -3683,7 +3682,8 @@ async def get_wal_summarizer_status(database_name: str = None) -> str:
             state_query = "SELECT * FROM pg_get_wal_summarizer_state()"
             state = await execute_query(state_query, database=database_name)
             result.append("\n" + format_table_data(state, "WAL Summarizer State"))
-        except Exception:
+        except Exception as e:
+            logger.debug(f"WAL summarizer state query failed: {e}")
             result.append("\nWAL summarizer state unavailable (summarize_wal may be disabled)")
 
         try:
@@ -3698,7 +3698,8 @@ async def get_wal_summarizer_status(database_name: str = None) -> str:
                 result.append("\n" + format_table_data(summaries, "Available WAL Summaries (Latest 20)"))
             else:
                 result.append("\nNo WAL summaries available yet")
-        except Exception:
+        except Exception as e:
+            logger.debug(f"WAL summaries query failed: {e}")
             result.append("\nWAL summaries unavailable")
 
         return "\n".join(result)
@@ -3759,7 +3760,8 @@ async def get_async_io_status(database_name: str = None) -> str:
                 result.append("\n" + format_table_data(aios, "Active Async I/O Operations (pg_aios)"))
             else:
                 result.append("\nNo active async I/O operations at this moment")
-        except Exception:
+        except Exception as e:
+            logger.debug(f"pg_aios query failed: {e}")
             result.append("\npg_aios view unavailable")
 
         return "\n".join(result)
@@ -3775,7 +3777,7 @@ async def get_per_backend_io_stats(database_name: str = None, limit: int = 20) -
     [Tool Purpose]: Analyze per-backend I/O and WAL statistics (PostgreSQL 18+)
 
     Note: Uses pg_stat_get_backend_io() and pg_stat_get_backend_wal() which
-    are new in PG 18. Function signatures may change before final release.
+    are new in PG 18.
 
     [Exact Functionality]:
     - Show I/O statistics broken down by individual backend process
@@ -3848,6 +3850,7 @@ async def get_per_backend_io_stats(database_name: str = None, limit: int = 20) -
             else:
                 result.append("No per-backend I/O statistics available")
         except Exception as e:
+            logger.debug(f"Per-backend I/O query failed: {e}")
             result.append(f"Per-backend I/O query failed: {e}")
 
         wal_query = f"""
@@ -3874,8 +3877,8 @@ async def get_per_backend_io_stats(database_name: str = None, limit: int = 20) -
             wal_stats = await execute_query(wal_query, database=database_name)
             if wal_stats:
                 result.append("\n" + format_table_data(wal_stats, f"Per-Backend WAL Statistics (Top {limit})"))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Per-backend WAL stats query failed: {e}")
 
         return "\n".join(result) if result else "No per-backend statistics available"
 

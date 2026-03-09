@@ -491,23 +491,12 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 - "Check what MCP tools are available on this PostgreSQL version."
 - "Displays feature availability matrix and upgrade recommendations."
 
-### 🟡 Extension-Dependent Tools
+**get_io_stats** (Enhanced!)
+- 📈 **PG18+**: Additional byte-level I/O columns (`read_bytes`, `write_bytes`, `extend_bytes`, `writeback_bytes`) for precise I/O size tracking
 
-**get_pg_stat_statements_top_queries** (Requires `pg_stat_statements`)
-- "Show top 10 slowest queries."
-- "Analyze slow queries in the ecommerce database."
-- "Show top 20 slowest queries."
-- "Find queries consuming most resources."
-- "Monitor query execution patterns."
-- "Show cache hit ratios for queries."
-- 📈 **Version-Compatible**: Automatically adapts for PostgreSQL 12-18 (PG12: total_time→total_exec_time mapping, PG17+: stats_since, PG18+: parallel_workers)
-
-**get_pg_stat_monitor_recent_queries** (Optional, uses `pg_stat_monitor`)
-- "Show recent queries in real time."
-- "Monitor query activity for the last 5 minutes."
-- "Monitor recent 15 queries with detailed stats."
-- "Track recent queries in ecommerce database."
-- 📈 **Version-Compatible**: Automatically adapts for PostgreSQL 12-18 (PG12: total_time→total_exec_time mapping)
+**get_all_tables_stats** (Enhanced!)
+- 📈 **PG13+**: `n_ins_since_vacuum` column for tracking insertions since last VACUUM
+- 📈 **PG18+**: VACUUM time columns (`last_vacuum_time`, `last_autovacuum_time`, `last_analyze_time`, `last_autoanalyze_time`) for maintenance duration tracking
 
 **get_wait_events** (New! PG 17+)
 - "List available wait event types and their descriptions."
@@ -529,6 +518,24 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 - "Show per-backend I/O and WAL statistics."
 - "Analyze I/O patterns by individual backend process."
 - ⚠️ **PG18+ only**: Returns version notice on older versions
+
+### 🟡 Extension-Dependent Tools
+
+**get_pg_stat_statements_top_queries** (Requires `pg_stat_statements`)
+- "Show top 10 slowest queries."
+- "Analyze slow queries in the ecommerce database."
+- "Show top 20 slowest queries."
+- "Find queries consuming most resources."
+- "Monitor query execution patterns."
+- "Show cache hit ratios for queries."
+- 📈 **Version-Compatible**: Automatically adapts for PostgreSQL 12-18 (PG12: total_time→total_exec_time mapping, PG17+: stats_since, PG18+: parallel_workers)
+
+**get_pg_stat_monitor_recent_queries** (Optional, uses `pg_stat_monitor`)
+- "Show recent queries in real time."
+- "Monitor query activity for the last 5 minutes."
+- "Monitor recent 15 queries with detailed stats."
+- "Track recent queries in ecommerce database."
+- 📈 **Version-Compatible**: Automatically adapts for PostgreSQL 12-18 (PG12: total_time→total_exec_time mapping)
 
 ### 🔧 Advanced Usage Examples
 
