@@ -14,7 +14,7 @@
 
 ## Key Features
 
-- ✅ **Version Compatibility**: Transparent PostgreSQL version support (12-17) - automatically detects and adapts functionality
+- ✅ **Version Compatibility**: Transparent PostgreSQL version support (12-18) - automatically detects and adapts functionality
 - ✅ **PostgreSQL Monitoring**: Performance analysis based on pg_stat_statements and pg_stat_monitor with backward compatibility
 - ✅ **Structure Exploration**: Database, table, and user listing with detailed schema information
 - ✅ **Schema Analysis**: Detailed table structure with columns, constraints, indexes, and relationships
@@ -70,11 +70,20 @@
 29. **get_user_functions_stats**: User-defined function performance analysis
 
 ### 💿 I/O Performance Analysis
-30. **get_table_io_stats**: Table I/O statistics (disk reads vs buffer cache hits)
-31. **get_index_io_stats**: Index I/O performance and buffer efficiency analysis
+30. **get_io_stats**: Comprehensive I/O statistics (PG 16+ pg_stat_io, PG 12-15 fallback)
+31. **get_table_io_stats**: Table I/O statistics (disk reads vs buffer cache hits)
+32. **get_index_io_stats**: Index I/O performance and buffer efficiency analysis
 
 ### 🔄 Replication Monitoring
-32. **get_database_conflicts_stats**: Query conflicts in standby/replica environments
+33. **get_database_conflicts_stats**: Query conflicts in standby/replica environments
+
+### 🆕 PostgreSQL 17+ Tools
+34. **get_wait_events**: Wait event catalog with descriptions (PG 17+ pg_wait_events; PG 12-16 falls back to pg_stat_activity)
+35. **get_wal_summarizer_status**: WAL summarizer state for incremental backup monitoring (PG 17+)
+
+### 🆕 PostgreSQL 18+ Tools
+36. **get_async_io_status**: Async I/O subsystem monitoring via pg_aios (PG 18+)
+37. **get_per_backend_io_stats**: Per-backend I/O and WAL statistics (PG 18+)
 
 ## Sample Prompts
 
@@ -480,8 +489,9 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 
 **get_bgwriter_stats** (Enhanced!)
 - "Show background writer and checkpoint performance."
-- 📈 **PG15**: Separate checkpointer and bgwriter statistics (unique feature)
-- 📊 **PG12-14, 16+**: Combined bgwriter stats (includes checkpointer data)
+- 📈 **PG17+**: Separate checkpointer and bgwriter statistics via pg_stat_checkpointer
+- 📈 **PG18+**: Additional completed_checkpoints and slru_buffers_written columns
+- 📊 **PG12-16**: Combined bgwriter stats (includes checkpointer data)
 
 **get_server_info** (Enhanced!)
 - "Show server version and compatibility features."
@@ -498,14 +508,35 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 - "Find queries consuming most resources."
 - "Monitor query execution patterns."
 - "Show cache hit ratios for queries."
-- 📈 **Version-Compatible**: Automatically adapts for PostgreSQL 12-17 (PG12: total_time→total_exec_time mapping)
+- 📈 **Version-Compatible**: Automatically adapts for PostgreSQL 12-18 (PG12: total_time→total_exec_time mapping, PG17+: stats_since, PG18+: parallel_workers)
 
 **get_pg_stat_monitor_recent_queries** (Optional, uses `pg_stat_monitor`)
 - "Show recent queries in real time."
 - "Monitor query activity for the last 5 minutes."
 - "Monitor recent 15 queries with detailed stats."
 - "Track recent queries in ecommerce database."
-- 📈 **Version-Compatible**: Automatically adapts for PostgreSQL 12-17 (PG12: total_time→total_exec_time mapping)
+- 📈 **Version-Compatible**: Automatically adapts for PostgreSQL 12-18 (PG12: total_time→total_exec_time mapping)
+
+**get_wait_events** (New! PG 17+)
+- "List available wait event types and their descriptions."
+- "Show wait events filtered by Lock type."
+- 📈 **PG17+**: Full pg_wait_events catalog with descriptions
+- 📊 **PG12-16**: Fallback to pg_stat_activity current waits
+
+**get_wal_summarizer_status** (New! PG 17+)
+- "Monitor WAL summarizer status for incremental backups."
+- "Check WAL summarizer progress and configuration."
+- ⚠️ **PG17+ only**: Returns version notice on older versions
+
+**get_async_io_status** (New! PG 18+)
+- "Monitor async I/O subsystem status."
+- "Show pg_aios view for I/O operation monitoring."
+- ⚠️ **PG18+ only**: Returns version notice on older versions
+
+**get_per_backend_io_stats** (New! PG 18+)
+- "Show per-backend I/O and WAL statistics."
+- "Analyze I/O patterns by individual backend process."
+- ⚠️ **PG18+ only**: Returns version notice on older versions
 
 ### 🔧 Advanced Usage Examples
 
@@ -543,4 +574,4 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 
 **💡 Pro Tip**: All tools support multi-database operations using the `database_name` parameter. This allows PostgreSQL superusers to analyze and monitor multiple databases from a single MCP server instance.
 
-This MCP server provides comprehensive PostgreSQL monitoring and management capabilities while maintaining read-only safety and providing detailed insights for database administration with automatic version compatibility across PostgreSQL 12-18.
+This MCP server provides comprehensive PostgreSQL monitoring and management capabilities while maintaining read-only safety and providing detailed insights for database administration with automatic version compatibility across PostgreSQL 12-18. New tools for PG 17+ (wait events, WAL summarizer) and PG 18+ (async I/O, per-backend I/O) gracefully degrade with informative messages on older versions.

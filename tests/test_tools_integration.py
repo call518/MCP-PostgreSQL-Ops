@@ -301,6 +301,14 @@ class TestVersionSpecificFeatures:
         result = await get_vacuum_analyze_stats()
         assert "vacuum_time" in result.lower() or "total_vacuum_time" in result
 
+    async def test_all_tables_stats_pg18_vacuum_time(self, setup_env):
+        """PG 18 should include vacuum time columns in all tables stats."""
+        major, _ = setup_env
+        if major < 18:
+            pytest.skip("PG 18+ only")
+        result = await get_all_tables_stats()
+        assert "vacuum_time" in result.lower() or "total_vacuum_time" in result
+
     async def test_database_stats_pg18_parallel_workers(self, setup_env):
         """PG 18 should include parallel worker stats."""
         major, _ = setup_env

@@ -36,16 +36,17 @@ jobs:
 
       - name: Wait for all PostgreSQL instances
         run: |
-          for port in 5412 5413 5414 5415 5416 5417 5418; do
-            echo "Waiting for PostgreSQL on port $port..."
+          for svc in pg12 pg13 pg14 pg15 pg16 pg17 pg18; do
+            echo "Waiting for $svc to be healthy..."
             for i in $(seq 1 30); do
-              if pg_isready -h localhost -p $port -U postgres 2>/dev/null; then
-                echo "PostgreSQL on port $port is ready"
+              status=$(docker compose -f tests/docker/docker-compose.test.yml ps $svc --format '{{.Health}}' 2>/dev/null || echo "unknown")
+              if [ "$status" = "healthy" ]; then
+                echo "$svc is ready"
                 break
               fi
               if [ $i -eq 30 ]; then
-                echo "Timed out waiting for PostgreSQL on port $port"
-                docker compose -f tests/docker/docker-compose.test.yml logs
+                echo "Timed out waiting for $svc"
+                docker compose -f tests/docker/docker-compose.test.yml logs $svc
                 exit 1
               fi
               sleep 2
