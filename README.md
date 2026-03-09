@@ -248,12 +248,12 @@ The `create-test-data.sql` script is executed by the `postgres-init-extensions` 
 - **WAL summarizer**: Monitoring for incremental backup support (used by `get_wal_summarizer_status`)
 - **Replication slot enhancements**: `invalidation_reason` and `inactive_since` columns (used by `get_replication_status`)
 - **`pg_stat_statements` `stats_since`**: Track when statistics were last reset (used by `get_pg_stat_statements_top_queries`)
-- **VACUUM progress**: Index vacuum tracking in progress views (used by `get_running_vacuum_operations`)
+- **VACUUM progress**: Index vacuum tracking in progress views (future enhancement for `get_running_vacuum_operations`)
 
 #### PostgreSQL 18
 - **`pg_aios` view**: Async I/O subsystem monitoring (used by `get_async_io_status`)
 - **Per-backend I/O stats**: Individual backend I/O and WAL statistics (used by `get_per_backend_io_stats`)
-- **VACUUM/ANALYZE time columns**: `last_vacuum_time`, `last_analyze_time` duration tracking (used by `get_vacuum_analyze_stats`)
+- **VACUUM/ANALYZE time columns**: `total_vacuum_time`, `total_autovacuum_time`, `total_analyze_time`, `total_autoanalyze_time` cumulative timing (used by `get_vacuum_analyze_stats`)
 - **`pg_stat_io` byte columns**: `read_bytes`, `write_bytes`, `extend_bytes`, `writeback_bytes` (used by `get_io_stats`)
 - **Parallel worker stats**: `parallel_workers_launched`, `parallel_workers_to_launch` (used by `get_database_stats`)
 - **Checkpointer enhancements**: `num_done`, `slru_written` columns (used by `get_bgwriter_stats`)
