@@ -477,7 +477,7 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
 - "Analyze buffer cache efficiency and I/O timing."
 - "Monitor I/O patterns by backend type and context."
 - 📈 **PG16+**: Full pg_stat_io with timing, backend types, and contexts
-- 📈 **PG18+**: Additional byte-level I/O columns (`read_bytes`, `write_bytes`, `extend_bytes`, `writeback_bytes`) for precise I/O size tracking
+- 📈 **PG18+**: Additional byte-level I/O columns (`read_bytes`, `write_bytes`, `extend_bytes`) for precise I/O size tracking
 - 📊 **PG12-15**: Basic pg_statio_* fallback with buffer hit ratios
 
 **get_bgwriter_stats** (Enhanced!)
