@@ -4,6 +4,7 @@ PostgreSQL Version Compatibility Utilities
 Provides version detection and compatibility handling for MCP PostgreSQL tools.
 """
 
+import functools
 import re
 import logging
 from typing import Tuple, Optional
@@ -11,9 +12,10 @@ from .functions import execute_single_query
 
 logger = logging.getLogger(__name__)
 
+@functools.total_ordering
 class PostgreSQLVersion:
     """PostgreSQL version information and compatibility utilities."""
-    
+
     def __init__(self, major: int, minor: int = 0, patch: int = 0):
         self.major = major
         self.minor = minor  
@@ -22,19 +24,22 @@ class PostgreSQLVersion:
     def __str__(self):
         return f"{self.major}.{self.minor}.{self.patch}"
         
-    def __ge__(self, other):
+    def __eq__(self, other):
         if isinstance(other, (int, float)):
-            return self.major >= other
+            return self.major == other
         if isinstance(other, PostgreSQLVersion):
-            return (self.major, self.minor, self.patch) >= (other.major, other.minor, other.patch)
-        return False
-    
+            return (self.major, self.minor, self.patch) == (other.major, other.minor, other.patch)
+        return NotImplemented
+
     def __lt__(self, other):
         if isinstance(other, (int, float)):
             return self.major < other
         if isinstance(other, PostgreSQLVersion):
             return (self.major, self.minor, self.patch) < (other.major, other.minor, other.patch)
-        return False
+        return NotImplemented
+
+    def __hash__(self):
+        return hash((self.major, self.minor, self.patch))
         
     @property
     def is_modern(self) -> bool:
@@ -531,14 +536,8 @@ async def get_pg_stat_statements_query(database: str = None) -> str:
             "local_blk_read_time", "local_blk_write_time",
             "stats_since", "minmax_stats_since"
         ])
-    elif version.has_pg_stat_statements_exec_time:
-        # PG 13-16: old column names
-        base_columns.extend([
-            "blk_read_time as shared_blk_read_time",
-            "blk_write_time as shared_blk_write_time"
-        ])
     else:
-        # PG 12: same column names as 13-16
+        # PG 12-16: old column names (blk_read_time/blk_write_time)
         base_columns.extend([
             "blk_read_time as shared_blk_read_time",
             "blk_write_time as shared_blk_write_time"

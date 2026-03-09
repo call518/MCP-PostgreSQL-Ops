@@ -211,8 +211,6 @@ The `create-test-data.sql` script is executed by the `postgres-init-extensions` 
 | `get_autovacuum_activity` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
 | `get_running_vacuum_operations` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_activity` |
 | `get_vacuum_effectiveness_analysis` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
-| `get_table_bloat_analysis` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
-| `get_database_bloat_overview` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_stat_user_tables` |
 | `get_lock_monitoring` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_locks`, `pg_stat_activity` |
 | `get_wal_status` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `pg_current_wal_lsn()` |
 | `get_database_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ **Enhanced** | `pg_stat_database` |
@@ -254,7 +252,7 @@ The `create-test-data.sql` script is executed by the `postgres-init-extensions` 
 - **`pg_aios` view**: Async I/O subsystem monitoring (used by `get_async_io_status`)
 - **Per-backend I/O stats**: Individual backend I/O and WAL statistics (used by `get_per_backend_io_stats`)
 - **VACUUM/ANALYZE time columns**: `total_vacuum_time`, `total_autovacuum_time`, `total_analyze_time`, `total_autoanalyze_time` cumulative timing (used by `get_vacuum_analyze_stats`)
-- **`pg_stat_io` byte columns**: `read_bytes`, `write_bytes`, `extend_bytes`, `writeback_bytes` (used by `get_io_stats`)
+- **`pg_stat_io` byte columns**: `read_bytes`, `write_bytes`, `extend_bytes` (used by `get_io_stats`)
 - **Parallel worker stats**: `parallel_workers_launched`, `parallel_workers_to_launch` (used by `get_database_stats`)
 - **Checkpointer enhancements**: `num_done`, `slru_written` columns (used by `get_bgwriter_stats`)
 
@@ -726,19 +724,6 @@ SET track_io_timing = 'on';
   - 📋 **Features**: Maintenance pattern analysis, effectiveness assessment, DML-to-VACUUM ratios
   - 🔧 **PostgreSQL 12-18**: Fully compatible, no extensions required
   - 💡 **Usage**: Strategic VACUUM analysis using existing statistics
-- **get_table_bloat_analysis**
-  - "Analyze table bloat in the public schema."
-  - "Show tables with high dead tuple ratios in ecommerce database."
-  - "Find tables requiring VACUUM maintenance."
-  - "Check bloat for tables with more than 5000 dead tuples."
-  - 📋 **Features**: Dead tuple ratios, estimated bloat size, VACUUM recommendations
-  - ⚠️ **Required**: Specify `database_name` for cross-database analysis
-- **get_database_bloat_overview**
-  - "Show database-wide bloat summary by schema."
-  - "Get bloat overview for inventory database."
-  - "Identify schemas with highest bloat ratios."
-  - "Database maintenance planning with bloat statistics."
-  - 📋 **Features**: Schema-level aggregation, maintenance priorities, size recommendations
 - **get_lock_monitoring**
   - "Show all current locks and blocked sessions."
   - "Show only blocked sessions with granted=false filter."

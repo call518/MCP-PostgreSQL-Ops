@@ -35,11 +35,6 @@ def build_pg_stat_statements_query(version: PostgreSQLVersion) -> str:
             "local_blk_read_time", "local_blk_write_time",
             "stats_since", "minmax_stats_since"
         ])
-    elif version.has_pg_stat_statements_exec_time:
-        base_columns.extend([
-            "blk_read_time as shared_blk_read_time",
-            "blk_write_time as shared_blk_write_time"
-        ])
     else:
         base_columns.extend([
             "blk_read_time as shared_blk_read_time",
@@ -217,6 +212,34 @@ class TestVersionComparison:
         assert v >= 16
         assert v >= 17
         assert not (v >= 18)
+
+    def test_eq_same(self):
+        assert PostgreSQLVersion(16, 0, 0) == PostgreSQLVersion(16, 0, 0)
+
+    def test_eq_different(self):
+        assert not (PostgreSQLVersion(16, 0, 0) == PostgreSQLVersion(17, 0, 0))
+
+    def test_ne(self):
+        assert PostgreSQLVersion(16, 0, 0) != PostgreSQLVersion(17, 0, 0)
+
+    def test_le(self):
+        assert PostgreSQLVersion(15, 0, 0) <= PostgreSQLVersion(16, 0, 0)
+        assert PostgreSQLVersion(16, 0, 0) <= PostgreSQLVersion(16, 0, 0)
+        assert not (PostgreSQLVersion(17, 0, 0) <= PostgreSQLVersion(16, 0, 0))
+
+    def test_gt(self):
+        assert PostgreSQLVersion(17, 0, 0) > PostgreSQLVersion(16, 0, 0)
+        assert not (PostgreSQLVersion(16, 0, 0) > PostgreSQLVersion(16, 0, 0))
+
+    def test_hash(self):
+        a = PostgreSQLVersion(16, 0, 0)
+        b = PostgreSQLVersion(16, 0, 0)
+        assert hash(a) == hash(b)
+        assert {a, b} == {a}
+
+    def test_int_eq(self):
+        assert PostgreSQLVersion(17, 0, 0) == 17
+        assert not (PostgreSQLVersion(17, 0, 0) == 16)
 
 
 class TestPgStatStatementsQueryGeneration:
