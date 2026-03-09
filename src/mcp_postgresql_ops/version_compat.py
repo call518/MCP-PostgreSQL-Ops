@@ -83,7 +83,12 @@ class PostgreSQLVersion:
 
     @property
     def has_checkpointer_view(self) -> bool:
-        """Check if pg_stat_checkpointer view exists (17+)."""
+        """Check if pg_stat_checkpointer must be used for checkpoint stats (17+).
+
+        The pg_stat_checkpointer view was introduced in PG 15, but checkpoint
+        columns were not removed from pg_stat_bgwriter until PG 17. We gate
+        on 17+ because the combined bgwriter query works on PG 12-16.
+        """
         return self.major >= 17
 
     @property

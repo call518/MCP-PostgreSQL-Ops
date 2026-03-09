@@ -1968,11 +1968,11 @@ async def get_vacuum_analyze_stats(database_name: str = None) -> str:
         # PG 18+ adds total_vacuum_time, total_autovacuum_time, etc.
         vacuum_time_cols = ""
         if version.has_vacuum_time_columns:
-            vacuum_time_cols = """
+            vacuum_time_cols = """,
             ROUND(total_vacuum_time::numeric, 2) as total_vacuum_time_ms,
             ROUND(total_autovacuum_time::numeric, 2) as total_autovacuum_time_ms,
             ROUND(total_analyze_time::numeric, 2) as total_analyze_time_ms,
-            ROUND(total_autoanalyze_time::numeric, 2) as total_autoanalyze_time_ms,"""
+            ROUND(total_autoanalyze_time::numeric, 2) as total_autoanalyze_time_ms"""
 
         query = f"""
         SELECT
@@ -1985,8 +1985,7 @@ async def get_vacuum_analyze_stats(database_name: str = None) -> str:
             vacuum_count,
             autovacuum_count,
             analyze_count,
-            autoanalyze_count,
-            {vacuum_time_cols}
+            autoanalyze_count{vacuum_time_cols},
             n_tup_ins as inserts,
             n_tup_upd as updates,
             n_tup_del as deletes
@@ -2833,9 +2832,9 @@ async def get_database_stats() -> str:
         # PG 18+ adds parallel worker tracking
         parallel_cols = ""
         if version.has_parallel_worker_stats:
-            parallel_cols = """
+            parallel_cols = """,
             parallel_workers_to_launch,
-            parallel_workers_launched,"""
+            parallel_workers_launched"""
 
         query = f"""
         SELECT
@@ -2859,8 +2858,7 @@ async def get_database_stats() -> str:
             conflicts as query_conflicts,
             temp_files as temporary_files_created,
             pg_size_pretty(temp_bytes) as temp_files_size,
-            deadlocks as deadlock_count,
-            {parallel_cols}
+            deadlocks as deadlock_count{parallel_cols},
             COALESCE(checksum_failures, 0) as checksum_failures,
             CASE
                 WHEN checksum_last_failure IS NOT NULL THEN
@@ -2918,12 +2916,12 @@ async def get_bgwriter_stats() -> str:
             checkpointer_extra_cols = ""
             bgwriter_extra_null_cols = ""
             if pg_version.has_checkpointer_v18:
-                checkpointer_extra_cols = """
+                checkpointer_extra_cols = """,
                 num_done as completed_checkpoints,
-                slru_written as slru_buffers_written,"""
-                bgwriter_extra_null_cols = """
+                slru_written as slru_buffers_written"""
+                bgwriter_extra_null_cols = """,
                 0 as completed_checkpoints,
-                0 as slru_buffers_written,"""
+                0 as slru_buffers_written"""
 
             query = f"""
             SELECT
@@ -2939,8 +2937,7 @@ async def get_bgwriter_stats() -> str:
                 ROUND(write_time::numeric, 2) as checkpoint_write_time_ms,
                 ROUND(sync_time::numeric, 2) as checkpoint_sync_time_ms,
                 ROUND((write_time + sync_time)::numeric, 2) as total_checkpoint_time_ms,
-                buffers_written as buffers_written,
-                {checkpointer_extra_cols}
+                buffers_written as buffers_written{checkpointer_extra_cols},
                 stats_reset as stats_reset_time
             FROM pg_stat_checkpointer
             UNION ALL
@@ -2953,8 +2950,7 @@ async def get_bgwriter_stats() -> str:
                 0 as checkpoint_write_time_ms,
                 0 as checkpoint_sync_time_ms,
                 0 as total_checkpoint_time_ms,
-                buffers_clean as buffers_written,
-                {bgwriter_extra_null_cols}
+                buffers_clean as buffers_written{bgwriter_extra_null_cols},
                 stats_reset as stats_reset_time
             FROM pg_stat_bgwriter
             """
@@ -3607,7 +3603,13 @@ async def get_wait_events(database_name: str = None, wait_event_type: str = None
 
             return "\n".join(result)
         else:
-            query = """
+            where_filter = ""
+            params = []
+            if wait_event_type:
+                where_filter = "AND wait_event_type ILIKE $1"
+                params = [f"%{wait_event_type}%"]
+
+            query = f"""
             SELECT
                 wait_event_type,
                 wait_event,
@@ -3615,12 +3617,16 @@ async def get_wait_events(database_name: str = None, wait_event_type: str = None
                 string_agg(pid::text, ', ' ORDER BY pid) as pids
             FROM pg_stat_activity
             WHERE wait_event IS NOT NULL AND pid <> pg_backend_pid()
+            {where_filter}
             GROUP BY wait_event_type, wait_event
             ORDER BY COUNT(*) DESC
             """
-            events = await execute_query(query, database=database_name)
+            events = await execute_query(query, params, database=database_name)
 
-            result = format_table_data(events, f"Current Wait Events (PG {version} - no pg_wait_events catalog)")
+            title = f"Current Wait Events (PG {version} - no pg_wait_events catalog)"
+            if wait_event_type:
+                title += f" [Filter: {wait_event_type}]"
+            result = format_table_data(events, title)
             result += f"\n\nNote: Upgrade to PostgreSQL 17+ for detailed wait event descriptions"
             return result
 
