@@ -309,9 +309,9 @@ class VersionAwareQueries:
     async def get_bgwriter_checkpointer_stats(database: str = None) -> str:
         """Get background writer/checkpointer stats with version compatibility."""
         version = await get_postgresql_version(database)
-        
-        if version.has_checkpointer_split:
-            # PostgreSQL 15+: Use separate checkpointer view
+
+        if version.has_checkpointer_view:
+            # PostgreSQL 15+: Separate checkpointer and bgwriter views
             return """
             SELECT 'checkpointer' as component,
                    num_timed, num_requested, restartpoints_timed, restartpoints_req, restartpoints_done,
@@ -319,15 +319,13 @@ class VersionAwareQueries:
             FROM pg_stat_checkpointer
             UNION ALL
             SELECT 'bgwriter' as component,
-                   NULL::bigint as num_timed, NULL::bigint as num_requested, 
-                   NULL::bigint as restartpoints_timed, NULL::bigint as restartpoints_req, 
-                   NULL::bigint as restartpoints_done, NULL::double precision as write_time,
-                   NULL::double precision as sync_time,
+                   NULL::bigint, NULL::bigint, NULL::bigint, NULL::bigint, NULL::bigint,
+                   NULL::double precision, NULL::double precision,
                    buffers_clean as buffers_written, stats_reset
             FROM pg_stat_bgwriter
             """
         else:
-            # PostgreSQL 10-14: All stats in bgwriter view
+            # PostgreSQL 12-14: All stats in bgwriter view
             return """
             SELECT 'bgwriter_legacy' as component,
                    buffers_clean, maxwritten_clean, buffers_alloc, stats_reset,
@@ -339,14 +337,20 @@ class VersionAwareQueries:
     async def get_io_statistics(database: str = None) -> str:
         """Get I/O statistics with version compatibility."""
         version = await get_postgresql_version(database)
-        
+
         if version.has_pg_stat_io:
             # PostgreSQL 16+: Use comprehensive pg_stat_io
-            return """
-            SELECT backend_type, object, context, 
+            # PG 18+ adds read_bytes, write_bytes, extend_bytes
+            byte_cols = ""
+            if version.has_pg_stat_io_bytes:
+                byte_cols = "read_bytes, write_bytes, extend_bytes,"
+
+            return f"""
+            SELECT backend_type, object, context,
                    reads, read_time, writes, write_time,
                    extends, extend_time, hits, evictions,
-                   reuses, fsyncs, fsync_time
+                   reuses, fsyncs, fsync_time,
+                   {byte_cols}
             FROM pg_stat_io
             WHERE reads > 0 OR writes > 0 OR hits > 0
             """
@@ -497,13 +501,22 @@ class VersionAwareQueries:
     async def get_all_tables_stats_query(include_system: bool = False, database: str = None) -> str:
         """Get all tables statistics query with version compatibility."""
         version = await get_postgresql_version(database)
-        
+
         view_name = "pg_stat_all_tables" if include_system else "pg_stat_user_tables"
-        
+
+        # PG 18+ adds VACUUM/ANALYZE time columns
+        vacuum_time_cols = ""
+        if version.has_vacuum_time_columns:
+            vacuum_time_cols = """
+                ROUND(total_vacuum_time::numeric, 2) as total_vacuum_time_ms,
+                ROUND(total_autovacuum_time::numeric, 2) as total_autovacuum_time_ms,
+                ROUND(total_analyze_time::numeric, 2) as total_analyze_time_ms,
+                ROUND(total_autoanalyze_time::numeric, 2) as total_autoanalyze_time_ms,"""
+
         # n_ins_since_vacuum is available from PostgreSQL 13+
         if version.has_table_stats_ins_since_vacuum:
             return f"""
-            SELECT 
+            SELECT
                 schemaname as schema_name,
                 relname as table_name,
                 seq_scan as sequential_scans,
@@ -516,7 +529,7 @@ class VersionAwareQueries:
                 n_tup_hot_upd as hot_updates,
                 n_live_tup as estimated_live_tuples,
                 n_dead_tup as estimated_dead_tuples,
-                CASE 
+                CASE
                     WHEN n_live_tup > 0 THEN
                         ROUND((n_dead_tup::numeric / n_live_tup) * 100, 2)
                     ELSE 0
@@ -530,14 +543,15 @@ class VersionAwareQueries:
                 vacuum_count,
                 autovacuum_count,
                 analyze_count,
-                autoanalyze_count
+                autoanalyze_count,
+                {vacuum_time_cols}
             FROM {view_name}
             ORDER BY seq_scan + COALESCE(idx_scan, 0) DESC, schemaname, relname
             """
         else:
             # PostgreSQL 12 - without n_ins_since_vacuum
             return f"""
-            SELECT 
+            SELECT
                 schemaname as schema_name,
                 relname as table_name,
                 seq_scan as sequential_scans,
@@ -550,7 +564,7 @@ class VersionAwareQueries:
                 n_tup_hot_upd as hot_updates,
                 n_live_tup as estimated_live_tuples,
                 n_dead_tup as estimated_dead_tuples,
-                CASE 
+                CASE
                     WHEN n_live_tup > 0 THEN
                         ROUND((n_dead_tup::numeric / n_live_tup) * 100, 2)
                     ELSE 0
