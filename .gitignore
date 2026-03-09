@@ -16,3 +16,4 @@ wheels/
 #.github/copilot-instructions.md
 
 .env
+*.swp
