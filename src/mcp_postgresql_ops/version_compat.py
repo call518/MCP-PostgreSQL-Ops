@@ -209,7 +209,7 @@ async def get_postgresql_version(database: str = None, force_refresh: bool = Fal
     except Exception as e:
         logger.error(f"Failed to get PostgreSQL version: {e}")
         # Default to PostgreSQL 18 if version detection fails
-        _cached_version = PostgreSQLVersion(17, 0, 0)
+        _cached_version = PostgreSQLVersion(18, 0, 0)
         return _cached_version
 
 async def check_feature_availability(feature: str, database: str = None) -> bool:
@@ -343,14 +343,13 @@ class VersionAwareQueries:
             # PG 18+ adds read_bytes, write_bytes, extend_bytes
             byte_cols = ""
             if version.has_pg_stat_io_bytes:
-                byte_cols = "read_bytes, write_bytes, extend_bytes,"
+                byte_cols = ", read_bytes, write_bytes, extend_bytes"
 
             return f"""
             SELECT backend_type, object, context,
                    reads, read_time, writes, write_time,
                    extends, extend_time, hits, evictions,
-                   reuses, fsyncs, fsync_time,
-                   {byte_cols}
+                   reuses, fsyncs, fsync_time{byte_cols}
             FROM pg_stat_io
             WHERE reads > 0 OR writes > 0 OR hits > 0
             """
@@ -507,11 +506,11 @@ class VersionAwareQueries:
         # PG 18+ adds VACUUM/ANALYZE time columns
         vacuum_time_cols = ""
         if version.has_vacuum_time_columns:
-            vacuum_time_cols = """
+            vacuum_time_cols = """,
                 ROUND(total_vacuum_time::numeric, 2) as total_vacuum_time_ms,
                 ROUND(total_autovacuum_time::numeric, 2) as total_autovacuum_time_ms,
                 ROUND(total_analyze_time::numeric, 2) as total_analyze_time_ms,
-                ROUND(total_autoanalyze_time::numeric, 2) as total_autoanalyze_time_ms,"""
+                ROUND(total_autoanalyze_time::numeric, 2) as total_autoanalyze_time_ms"""
 
         # n_ins_since_vacuum is available from PostgreSQL 13+
         if version.has_table_stats_ins_since_vacuum:
@@ -543,8 +542,7 @@ class VersionAwareQueries:
                 vacuum_count,
                 autovacuum_count,
                 analyze_count,
-                autoanalyze_count,
-                {vacuum_time_cols}
+                autoanalyze_count{vacuum_time_cols}
             FROM {view_name}
             ORDER BY seq_scan + COALESCE(idx_scan, 0) DESC, schemaname, relname
             """
