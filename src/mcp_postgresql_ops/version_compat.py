@@ -78,8 +78,8 @@ class PostgreSQLVersion:
 
     @property
     def has_checkpointer_view(self) -> bool:
-        """Check if pg_stat_checkpointer view exists (15+)."""
-        return self.major >= 15
+        """Check if pg_stat_checkpointer view exists (17+)."""
+        return self.major >= 17
 
     @property
     def has_replication_slot_invalidation(self) -> bool:

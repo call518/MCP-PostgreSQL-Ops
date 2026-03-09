@@ -225,7 +225,7 @@ The `create-test-data.sql` script is executed by the `postgres-init-extensions` 
 | Tool Name | Extensions Required | PG 12 | PG 13 | PG 14 | PG 15 | PG 16 | PG 17 | PG 18 | Special Features |
 |-----------|-------------------|-------|-------|-------|-------|-------|-------|-------|------------------|
 | `get_io_stats` | ❌ None | ✅ Basic | ✅ Basic | ✅ Basic | ✅ Basic | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | PG16+: `pg_stat_io` support; PG18+: byte columns |
-| `get_bgwriter_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ **Special** | ✅ | ✅ | ✅ **Enhanced** | PG15: Separate checkpointer stats; PG18+: `num_done`, `slru_written` |
+| `get_bgwriter_stats` | ❌ None | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ **Special** | ✅ **Enhanced** | PG17: Separate checkpointer stats; PG18+: `num_done`, `slru_written` |
 | `get_replication_status` | ❌ None | ✅ Compatible | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | PG13+: `wal_status`, `safe_wal_size`; PG16+: enhanced WAL receiver; PG17+: `invalidation_reason`, `inactive_since` |
 | `get_all_tables_stats` | ❌ None | ✅ Compatible | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | ✅ **Enhanced** | PG13+: `n_ins_since_vacuum` tracking for vacuum maintenance optimization |
 | `get_user_functions_stats` | ⚙️ Config Required | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | Requires `track_functions=pl` |
@@ -794,8 +794,8 @@ SET track_io_timing = 'on';
   - 📊 **PG12-15**: Basic pg_statio_* fallback with buffer hit ratios
 - **get_bgwriter_stats** (Enhanced!)
   - "Show background writer and checkpoint performance."
-  - 📈 **PG15**: Separate checkpointer and bgwriter statistics (unique feature)
-  - 📊 **PG12-14, 16+**: Combined bgwriter stats (includes checkpointer data)
+  - 📈 **PG17+**: Separate checkpointer and bgwriter statistics via `pg_stat_checkpointer`
+  - 📊 **PG12-16**: Combined bgwriter stats (includes checkpointer data)
 - **get_server_info** (Enhanced!)
   - "Show server version and compatibility features."
   - "Check server compatibility."
@@ -906,8 +906,9 @@ SET track_io_timing = 'on';
    ```
 
 2. **Understanding feature availability**:
-   - **PostgreSQL 16-17**: All features available
-   - **PostgreSQL 15+**: Separate checkpointer stats
+   - **PostgreSQL 18**: All features including async I/O, VACUUM timing, per-backend stats
+   - **PostgreSQL 17**: Separate checkpointer stats, wait events, WAL summarizer
+   - **PostgreSQL 16**: pg_stat_io view
    - **PostgreSQL 14+**: Parallel query tracking
    - **PostgreSQL 12-13**: Core functionality only
 

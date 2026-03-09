@@ -434,7 +434,7 @@ async def get_server_info() -> str:
         # Version compatibility features
         features = {
             'Modern Version (12+)': pg_version.is_modern,
-            'Checkpointer View (15+)': pg_version.has_checkpointer_view,
+            'Checkpointer View (17+)': pg_version.has_checkpointer_view,
             'pg_stat_io View (16+)': pg_version.has_pg_stat_io,
             'Enhanced WAL Receiver (16+)': pg_version.has_enhanced_wal_receiver,
             'Replication Slot Stats (14+)': pg_version.has_replication_slot_stats,
@@ -2893,7 +2893,7 @@ async def get_bgwriter_stats() -> str:
     - Display checkpoint timing information (write and sync times)
     - Provide buffer writing statistics by different processes
     - Analyze background writer performance and efficiency
-    - Automatically adapts to PostgreSQL version (15+ uses separate checkpointer view)
+    - Automatically adapts to PostgreSQL version (17+ uses separate checkpointer view)
     
     [Required Use Cases]:
     - When user requests "checkpoint stats", "bgwriter performance", "buffer stats", etc.
@@ -2913,7 +2913,7 @@ async def get_bgwriter_stats() -> str:
         pg_version = await get_postgresql_version()
 
         if pg_version.has_checkpointer_view:
-            # PostgreSQL 15+: Separate checkpointer and bgwriter views
+            # PostgreSQL 17+: Separate checkpointer and bgwriter views
             # PG 18 adds num_done and slru_written to pg_stat_checkpointer
             checkpointer_extra_cols = ""
             bgwriter_extra_null_cols = ""
@@ -2927,7 +2927,7 @@ async def get_bgwriter_stats() -> str:
 
             query = f"""
             SELECT
-                'Checkpointer (PG15+)' as component,
+                'Checkpointer (PG17+)' as component,
                 num_timed as scheduled_checkpoints,
                 num_requested as requested_checkpoints,
                 num_timed + num_requested as total_checkpoints,
@@ -2945,7 +2945,7 @@ async def get_bgwriter_stats() -> str:
             FROM pg_stat_checkpointer
             UNION ALL
             SELECT
-                'Background Writer (PG15+)' as component,
+                'Background Writer (PG17+)' as component,
                 0 as scheduled_checkpoints,
                 0 as requested_checkpoints,
                 0 as total_checkpoints,
@@ -2960,10 +2960,10 @@ async def get_bgwriter_stats() -> str:
             """
             explanation = f"PostgreSQL {pg_version} detected - using separate checkpointer and bgwriter views"
         else:
-            # PostgreSQL 12-14: Combined bgwriter view with all columns
+            # PostgreSQL 12-16: Combined bgwriter view with all columns
             query = """
             SELECT
-                'Combined BGWriter (PG12-14)' as component,
+                'Combined BGWriter (PG12-16)' as component,
                 checkpoints_timed as scheduled_checkpoints,
                 checkpoints_req as requested_checkpoints,
                 checkpoints_timed + checkpoints_req as total_checkpoints,
@@ -3005,7 +3005,7 @@ async def get_bgwriter_stats() -> str:
                 result.append("Note: PG18+ includes completed checkpoint count and SLRU buffer statistics")
         else:
             result.append(f"\nNote: PostgreSQL {pg_version} uses combined bgwriter view with all background process statistics")
-            result.append("Note: Upgrade to PostgreSQL 15+ for separate checkpointer and background writer statistics")
+            result.append("Note: Upgrade to PostgreSQL 17+ for separate checkpointer and background writer statistics")
 
         return "\n".join(result)
 
