@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main]
 
+# Fix: GitHub CodeQL Code Scanning alerts #1 and #2 (CWE-275, actions/missing-workflow-permissions)
+# Explicitly restrict GITHUB_TOKEN to read-only to follow the principle of least privilege.
+permissions:
+  contents: read
+
 jobs:
   unit-tests:
     name: Unit Tests
