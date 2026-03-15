@@ -434,11 +434,18 @@ async def get_server_info() -> str:
         # Version compatibility features
         features = {
             'Modern Version (12+)': pg_version.is_modern,
-            'Checkpointer Split (15+)': pg_version.has_checkpointer_split,
+            'Checkpointer View (17+)': pg_version.has_checkpointer_view,
             'pg_stat_io View (16+)': pg_version.has_pg_stat_io,
             'Enhanced WAL Receiver (16+)': pg_version.has_enhanced_wal_receiver,
             'Replication Slot Stats (14+)': pg_version.has_replication_slot_stats,
             'Parallel Leader Tracking (14+)': pg_version.has_parallel_leader_tracking,
+            'Wait Events View (17+)': pg_version.has_pg_wait_events,
+            'WAL Summarizer (17+)': pg_version.has_wal_summarizer,
+            'Replication Slot Invalidation (17+)': pg_version.has_replication_slot_invalidation,
+            'VACUUM Time Columns (18+)': pg_version.has_vacuum_time_columns,
+            'Async I/O View (18+)': pg_version.has_pg_aios,
+            'Per-Backend I/O Stats (18+)': pg_version.has_per_backend_io,
+            'Parallel Worker Stats (18+)': pg_version.has_parallel_worker_stats,
         }
         
         result = []
@@ -464,14 +471,18 @@ async def get_server_info() -> str:
         
         # Add compatibility summary
         if pg_version.is_modern:
-            if pg_version >= 16:
-                result.append("🚀 Excellent: All MCP tools fully supported with latest features!")
+            if pg_version >= 18:
+                result.append("All MCP tools fully supported with PG18 async I/O, VACUUM timing, and per-backend stats!")
+            elif pg_version >= 17:
+                result.append("All MCP tools fully supported with PG17 wait events, WAL summarizer, and enhanced stats!")
+            elif pg_version >= 16:
+                result.append("All MCP tools fully supported with latest features!")
             elif pg_version >= 14:
-                result.append("✅ Great: Most advanced features available, consider upgrading to PG16+ for pg_stat_io")
+                result.append("Most advanced features available, consider upgrading to PG16+ for pg_stat_io")
             else:
-                result.append("✅ Good: Core features supported, upgrade to PG14+ recommended for enhanced monitoring")
+                result.append("Core features supported, upgrade to PG14+ recommended for enhanced monitoring")
         else:
-            result.append("⚠️  Limited: PostgreSQL 12+ required for full MCP tool support")
+            result.append("Limited: PostgreSQL 12+ required for full MCP tool support")
             
         return "\n".join(result)
         
@@ -1952,8 +1963,19 @@ async def get_vacuum_analyze_stats(database_name: str = None) -> str:
         Schema name, table name, last VACUUM time, last ANALYZE time, and execution count statistics
     """
     try:
-        query = """
-        SELECT 
+        version = await get_postgresql_version(database_name)
+
+        # PG 18+ adds total_vacuum_time, total_autovacuum_time, etc.
+        vacuum_time_cols = ""
+        if version.has_vacuum_time_columns:
+            vacuum_time_cols = """,
+            ROUND(total_vacuum_time::numeric, 2) as total_vacuum_time_ms,
+            ROUND(total_autovacuum_time::numeric, 2) as total_autovacuum_time_ms,
+            ROUND(total_analyze_time::numeric, 2) as total_analyze_time_ms,
+            ROUND(total_autoanalyze_time::numeric, 2) as total_autoanalyze_time_ms"""
+
+        query = f"""
+        SELECT
             schemaname as schema_name,
             relname as table_name,
             last_vacuum,
@@ -1963,22 +1985,22 @@ async def get_vacuum_analyze_stats(database_name: str = None) -> str:
             vacuum_count,
             autovacuum_count,
             analyze_count,
-            autoanalyze_count,
+            autoanalyze_count{vacuum_time_cols},
             n_tup_ins as inserts,
             n_tup_upd as updates,
             n_tup_del as deletes
         FROM pg_stat_user_tables
         ORDER BY schemaname, relname
         """
-        
+
         stats = await execute_query(query, database=database_name)
-        
+
         title = "VACUUM/ANALYZE Statistics"
         if database_name:
             title += f" (Database: {database_name})"
-            
+
         return format_table_data(stats, title)
-        
+
     except Exception as e:
         logger.error(f"Failed to get vacuum/analyze stats: {e}")
         return f"Error retrieving VACUUM/ANALYZE statistics: {str(e)}"
@@ -2805,8 +2827,17 @@ async def get_database_stats() -> str:
         Comprehensive database statistics including transactions, I/O, tuples, and performance metrics
     """
     try:
-        query = """
-        SELECT 
+        version = await get_postgresql_version()
+
+        # PG 18+ adds parallel worker tracking
+        parallel_cols = ""
+        if version.has_parallel_worker_stats:
+            parallel_cols = """,
+            parallel_workers_to_launch,
+            parallel_workers_launched"""
+
+        query = f"""
+        SELECT
             datname as database_name,
             numbackends as active_connections,
             xact_commit as transactions_committed,
@@ -2814,8 +2845,8 @@ async def get_database_stats() -> str:
             ROUND((xact_commit::numeric / NULLIF(xact_commit + xact_rollback, 0)) * 100, 2) as commit_ratio_percent,
             blks_read as disk_blocks_read,
             blks_hit as buffer_blocks_hit,
-            CASE 
-                WHEN blks_read + blks_hit > 0 THEN 
+            CASE
+                WHEN blks_read + blks_hit > 0 THEN
                     ROUND((blks_hit::numeric / (blks_read + blks_hit)) * 100, 2)
                 ELSE 0
             END as buffer_hit_ratio_percent,
@@ -2827,9 +2858,9 @@ async def get_database_stats() -> str:
             conflicts as query_conflicts,
             temp_files as temporary_files_created,
             pg_size_pretty(temp_bytes) as temp_files_size,
-            deadlocks as deadlock_count,
+            deadlocks as deadlock_count{parallel_cols},
             COALESCE(checksum_failures, 0) as checksum_failures,
-            CASE 
+            CASE
                 WHEN checksum_last_failure IS NOT NULL THEN
                     checksum_last_failure::text
                 ELSE 'None'
@@ -2837,11 +2868,11 @@ async def get_database_stats() -> str:
             COALESCE(ROUND(blk_read_time::numeric, 2), 0) as disk_read_time_ms,
             COALESCE(ROUND(blk_write_time::numeric, 2), 0) as disk_write_time_ms,
             stats_reset
-        FROM pg_stat_database 
+        FROM pg_stat_database
         WHERE datname IS NOT NULL
         ORDER BY datname
         """
-        
+
         stats = await execute_query(query)
         return format_table_data(stats, "Database Statistics")
         
@@ -2860,7 +2891,7 @@ async def get_bgwriter_stats() -> str:
     - Display checkpoint timing information (write and sync times)
     - Provide buffer writing statistics by different processes
     - Analyze background writer performance and efficiency
-    - Automatically adapts to PostgreSQL version (15+ uses separate checkpointer view)
+    - Automatically adapts to PostgreSQL version (17+ uses separate checkpointer view)
     
     [Required Use Cases]:
     - When user requests "checkpoint stats", "bgwriter performance", "buffer stats", etc.
@@ -2878,16 +2909,28 @@ async def get_bgwriter_stats() -> str:
     """
     try:
         pg_version = await get_postgresql_version()
-        
-        if pg_version.has_checkpointer_split:
-            # PostgreSQL 15 ONLY: Use separate views  
-            query = """
-            SELECT 
-                'Checkpointer (PG15+)' as component,
+
+        if pg_version.has_checkpointer_view:
+            # PostgreSQL 17+: Separate checkpointer and bgwriter views
+            # PG 18 adds num_done and slru_written to pg_stat_checkpointer
+            checkpointer_extra_cols = ""
+            bgwriter_extra_null_cols = ""
+            if pg_version.has_checkpointer_v18:
+                checkpointer_extra_cols = """,
+                num_done as completed_checkpoints,
+                slru_written as slru_buffers_written"""
+
+                bgwriter_extra_null_cols = """,
+                0 as completed_checkpoints,
+                0 as slru_buffers_written"""
+
+            query = f"""
+            SELECT
+                'Checkpointer (PG17+)' as component,
                 num_timed as scheduled_checkpoints,
                 num_requested as requested_checkpoints,
                 num_timed + num_requested as total_checkpoints,
-                CASE 
+                CASE
                     WHEN (num_timed + num_requested) > 0 THEN
                         ROUND((num_timed::numeric / (num_timed + num_requested)) * 100, 2)
                     ELSE 0
@@ -2895,18 +2938,12 @@ async def get_bgwriter_stats() -> str:
                 ROUND(write_time::numeric, 2) as checkpoint_write_time_ms,
                 ROUND(sync_time::numeric, 2) as checkpoint_sync_time_ms,
                 ROUND((write_time + sync_time)::numeric, 2) as total_checkpoint_time_ms,
-                buffers_written as buffers_written_by_checkpoints,
-                0 as buffers_written_by_bgwriter,
-                0 as buffers_written_by_backend,
-                0 as backend_fsync_calls,
-                0 as buffers_allocated,
-                0 as bgwriter_maxwritten_stops,
-                0 as bgwriter_stop_ratio_percent,
+                buffers_written as buffers_written{checkpointer_extra_cols},
                 stats_reset as stats_reset_time
             FROM pg_stat_checkpointer
             UNION ALL
-            SELECT 
-                'Background Writer (PG15+)' as component,
+            SELECT
+                'Background Writer (PG17+)' as component,
                 0 as scheduled_checkpoints,
                 0 as requested_checkpoints,
                 0 as total_checkpoints,
@@ -2914,30 +2951,20 @@ async def get_bgwriter_stats() -> str:
                 0 as checkpoint_write_time_ms,
                 0 as checkpoint_sync_time_ms,
                 0 as total_checkpoint_time_ms,
-                0 as buffers_written_by_checkpoints,
-                buffers_clean as buffers_written_by_bgwriter,
-                0 as buffers_written_by_backend,
-                0 as backend_fsync_calls,
-                buffers_alloc as buffers_allocated,
-                maxwritten_clean as bgwriter_maxwritten_stops,
-                CASE 
-                    WHEN buffers_clean > 0 AND maxwritten_clean > 0 THEN
-                        ROUND((maxwritten_clean::numeric / buffers_clean) * 100, 2)
-                    ELSE 0
-                END as bgwriter_stop_ratio_percent,
+                buffers_clean as buffers_written{bgwriter_extra_null_cols},
                 stats_reset as stats_reset_time
             FROM pg_stat_bgwriter
             """
-            explanation = f"PostgreSQL {pg_version} detected - using separate checkpointer and bgwriter views (PG15 only)"
+            explanation = f"PostgreSQL {pg_version} detected - using separate checkpointer and bgwriter views"
         else:
-            # PostgreSQL 12-14, 16+: Use combined bgwriter view
+            # PostgreSQL 12-16: Combined bgwriter view with all columns
             query = """
-            SELECT 
-                'Combined BGWriter (PG12-14)' as component,
+            SELECT
+                'Combined BGWriter (PG12-16)' as component,
                 checkpoints_timed as scheduled_checkpoints,
                 checkpoints_req as requested_checkpoints,
                 checkpoints_timed + checkpoints_req as total_checkpoints,
-                CASE 
+                CASE
                     WHEN (checkpoints_timed + checkpoints_req) > 0 THEN
                         ROUND((checkpoints_timed::numeric / (checkpoints_timed + checkpoints_req)) * 100, 2)
                     ELSE 0
@@ -2951,7 +2978,7 @@ async def get_bgwriter_stats() -> str:
                 buffers_backend_fsync as backend_fsync_calls,
                 buffers_alloc as buffers_allocated,
                 maxwritten_clean as bgwriter_maxwritten_stops,
-                CASE 
+                CASE
                     WHEN buffers_clean > 0 AND maxwritten_clean > 0 THEN
                         ROUND((maxwritten_clean::numeric / buffers_clean) * 100, 2)
                     ELSE 0
@@ -2960,23 +2987,25 @@ async def get_bgwriter_stats() -> str:
             FROM pg_stat_bgwriter
             """
             explanation = f"PostgreSQL {pg_version} detected - using combined bgwriter view (includes checkpointer)"
-        
+
         stats = await execute_query(query)
-        
+
         result = []
         result.append("=== Background Writer & Checkpointer Statistics ===\n")
         result.append(explanation)
         result.append("")
         result.append(format_table_data(stats, "Background Process Performance"))
-        
-        if pg_version.has_checkpointer_split:
-            result.append("\nNote: PostgreSQL 15 provides separate detailed statistics for checkpointer and background writer processes")
+
+        if pg_version.has_checkpointer_view:
+            result.append(f"\nNote: PostgreSQL {pg_version} provides separate statistics for checkpointer and background writer processes")
+            if pg_version.has_checkpointer_v18:
+                result.append("Note: PG18+ includes completed checkpoint count and SLRU buffer statistics")
         else:
             result.append(f"\nNote: PostgreSQL {pg_version} uses combined bgwriter view with all background process statistics")
-            result.append("\nNote: Upgrade to PostgreSQL 15+ for separate checkpointer and background writer statistics")
-        
+            result.append("Note: Upgrade to PostgreSQL 17+ for separate checkpointer and background writer statistics")
+
         return "\n".join(result)
-        
+
     except Exception as e:
         logger.error(f"Failed to get bgwriter stats: {e}")
         return f"Error retrieving background writer statistics: {str(e)}"
@@ -3017,8 +3046,16 @@ async def get_io_stats(limit: int = 20, database_name: str = None) -> str:
         
         if pg_version.has_pg_stat_io:
             # PostgreSQL 16+: Use comprehensive pg_stat_io
+            # PG 18+ adds read_bytes/write_bytes/extend_bytes
+            byte_cols = ""
+            if pg_version.has_pg_stat_io_bytes:
+                byte_cols = """,
+                pg_size_pretty(read_bytes) as read_bytes_pretty,
+                pg_size_pretty(write_bytes) as write_bytes_pretty,
+                pg_size_pretty(extend_bytes) as extend_bytes_pretty"""
+
             query = f"""
-            SELECT 
+            SELECT
                 backend_type,
                 object,
                 context,
@@ -3027,13 +3064,13 @@ async def get_io_stats(limit: int = 20, database_name: str = None) -> str:
                 writes,
                 ROUND(write_time::numeric, 2) as write_time_ms,
                 extends,
-                ROUND(extend_time::numeric, 2) as extend_time_ms,
+                ROUND(extend_time::numeric, 2) as extend_time_ms{byte_cols},
                 hits,
                 evictions,
                 reuses,
                 fsyncs,
                 ROUND(fsync_time::numeric, 2) as fsync_time_ms,
-                CASE 
+                CASE
                     WHEN (reads + hits) > 0 THEN
                         ROUND((hits::numeric / (reads + hits)) * 100, 2)
                     ELSE 0
@@ -3095,16 +3132,16 @@ async def get_io_stats(limit: int = 20, database_name: str = None) -> str:
         
         # Add version-specific notes
         if pg_version.has_pg_stat_io:
-            result.append(f"\n✅ PostgreSQL {pg_version} provides comprehensive I/O monitoring with timing details")
-            result.append("📊 Backend types: client backend, checkpointer, background writer, autovacuum, etc.")
-            result.append("🎯 Contexts: normal, vacuum, bulkread, bulkwrite operations")
+            result.append(f"\nPostgreSQL {pg_version} provides comprehensive I/O monitoring with timing details")
+            result.append("Backend types: client backend, checkpointer, background writer, autovacuum, etc.")
+            result.append("Contexts: normal, vacuum, bulkread, bulkwrite operations")
         else:
-            result.append(f"\n⚠️  PostgreSQL {pg_version} provides basic I/O statistics only")
-            result.append("🚀 Upgrade to PostgreSQL 16+ for comprehensive I/O monitoring with:")
-            result.append("   • Per-backend-type I/O statistics")
-            result.append("   • I/O timing information (when track_io_timing enabled)")
-            result.append("   • Context-aware I/O tracking (normal/vacuum/bulk operations)")
-            result.append("   • Buffer eviction and reuse statistics")
+            result.append(f"\nNote: PostgreSQL {pg_version} provides basic I/O statistics only")
+            result.append("Upgrade to PostgreSQL 16+ for comprehensive I/O monitoring with:")
+            result.append("   - Per-backend-type I/O statistics")
+            result.append("   - I/O timing information (when track_io_timing enabled)")
+            result.append("   - Context-aware I/O tracking (normal/vacuum/bulk operations)")
+            result.append("   - Buffer eviction and reuse statistics")
         
         return "\n".join(result)
         
@@ -3486,6 +3523,368 @@ async def get_database_conflicts_stats(database_name: str = None) -> str:
     except Exception as e:
         logger.error(f"Failed to get database conflicts stats: {e}")
         return f"Error retrieving database conflicts statistics: {str(e)}"
+
+
+# =============================================================================
+# PostgreSQL 17/18 Feature Tools
+# =============================================================================
+
+@mcp.tool()
+async def get_wait_events(database_name: str = None, wait_event_type: str = None) -> str:
+    """
+    [Tool Purpose]: List available wait event types and their descriptions (PostgreSQL 17+)
+
+    [Exact Functionality]:
+    - Show all wait event types with human-readable descriptions from pg_wait_events catalog
+    - Correlate with current active sessions waiting on events
+    - Filter by specific wait event type
+    - Falls back to basic pg_stat_activity wait info on PG < 17
+
+    [Required Use Cases]:
+    - When user requests "wait events", "wait event descriptions", "what are sessions waiting on"
+    - When diagnosing session waits and understanding wait event meanings
+    - When analyzing wait patterns across the database
+
+    [Strictly Prohibited Use Cases]:
+    - Requests for session termination or wait resolution
+    - Requests for configuration changes
+
+    Args:
+        database_name: Database name to analyze (uses default if omitted)
+        wait_event_type: Filter by wait event type (e.g., "Lock", "IO", "LWLock")
+
+    Returns:
+        Wait event catalog with descriptions, or active session wait summary on older versions
+    """
+    try:
+        version = await get_postgresql_version(database_name)
+
+        if version.has_pg_wait_events:
+            where_clause = ""
+            params = []
+            if wait_event_type:
+                where_clause = "WHERE type ILIKE $1"
+                params = [f"%{wait_event_type}%"]
+
+            query = f"""
+            SELECT
+                type as wait_event_type,
+                name as wait_event_name,
+                description
+            FROM pg_wait_events
+            {where_clause}
+            ORDER BY type, name
+            """
+
+            events = await execute_query(query, params, database=database_name)
+
+            summary_query = """
+            SELECT
+                wait_event_type,
+                wait_event,
+                COUNT(*) as session_count
+            FROM pg_stat_activity
+            WHERE wait_event IS NOT NULL AND pid <> pg_backend_pid()
+            GROUP BY wait_event_type, wait_event
+            ORDER BY COUNT(*) DESC
+            """
+            summary = await execute_query(summary_query, database=database_name)
+
+            result = []
+            title = "Wait Event Catalog (pg_wait_events)"
+            if wait_event_type:
+                title += f" [Filter: {wait_event_type}]"
+            result.append(format_table_data(events, title))
+
+            if summary:
+                result.append("\n" + format_table_data(summary, "Current Session Wait Summary"))
+            else:
+                result.append("\nNo sessions currently waiting on events")
+
+            return "\n".join(result)
+        else:
+            where_filter = ""
+            params = []
+            if wait_event_type:
+                where_filter = "AND wait_event_type ILIKE $1"
+                params = [f"%{wait_event_type}%"]
+
+            query = f"""
+            SELECT
+                wait_event_type,
+                wait_event,
+                COUNT(*) as session_count,
+                string_agg(pid::text, ', ' ORDER BY pid) as pids
+            FROM pg_stat_activity
+            WHERE wait_event IS NOT NULL AND pid <> pg_backend_pid()
+            {where_filter}
+            GROUP BY wait_event_type, wait_event
+            ORDER BY COUNT(*) DESC
+            """
+            events = await execute_query(query, params, database=database_name)
+
+            title = f"Current Wait Events (PG {version} - no pg_wait_events catalog)"
+            if wait_event_type:
+                title += f" [Filter: {wait_event_type}]"
+            result = format_table_data(events, title)
+            result += f"\n\nNote: Upgrade to PostgreSQL 17+ for detailed wait event descriptions"
+            return result
+
+    except Exception as e:
+        logger.error(f"Failed to get wait events: {e}")
+        return f"Error retrieving wait events: {str(e)}"
+
+
+@mcp.tool()
+async def get_wal_summarizer_status(database_name: str = None) -> str:
+    """
+    [Tool Purpose]: Monitor WAL summarizer status for incremental backup support (PostgreSQL 17+)
+
+    [Exact Functionality]:
+    - Show WAL summarizer process state and progress
+    - Display available WAL summaries for incremental backups
+    - Report summarize_wal configuration status
+    - Falls back to version notice on PG < 17
+
+    [Required Use Cases]:
+    - When user requests "WAL summarizer", "incremental backup status", "WAL summary"
+    - When checking incremental backup readiness
+    - When monitoring WAL summarization progress
+
+    [Strictly Prohibited Use Cases]:
+    - Requests for WAL summarizer configuration changes
+    - Requests for backup execution
+
+    Args:
+        database_name: Database name (uses default if omitted)
+
+    Returns:
+        WAL summarizer state and available summaries, or version notice on older PG
+    """
+    try:
+        version = await get_postgresql_version(database_name)
+
+        if not version.has_wal_summarizer:
+            return f"WAL summarizer is not available on PostgreSQL {version}. Upgrade to PostgreSQL 17+ for incremental backup support via WAL summarization."
+
+        result = []
+
+        config_query = """
+        SELECT name, setting, short_desc
+        FROM pg_settings
+        WHERE name IN ('summarize_wal', 'wal_summary_keep_time')
+        ORDER BY name
+        """
+        config = await execute_query(config_query, database=database_name)
+        result.append(format_table_data(config, "WAL Summarizer Configuration"))
+
+        try:
+            state_query = "SELECT * FROM pg_get_wal_summarizer_state()"
+            state = await execute_query(state_query, database=database_name)
+            result.append("\n" + format_table_data(state, "WAL Summarizer State"))
+        except Exception as e:
+            logger.debug(f"WAL summarizer state query failed: {e}")
+            result.append("\nWAL summarizer state unavailable (summarize_wal may be disabled)")
+
+        try:
+            summaries_query = """
+            SELECT *
+            FROM pg_available_wal_summaries()
+            ORDER BY start_lsn DESC
+            LIMIT 20
+            """
+            summaries = await execute_query(summaries_query, database=database_name)
+            if summaries:
+                result.append("\n" + format_table_data(summaries, "Available WAL Summaries (Latest 20)"))
+            else:
+                result.append("\nNo WAL summaries available yet")
+        except Exception as e:
+            logger.debug(f"WAL summaries query failed: {e}")
+            result.append("\nWAL summaries unavailable")
+
+        return "\n".join(result)
+
+    except Exception as e:
+        logger.error(f"Failed to get WAL summarizer status: {e}")
+        return f"Error retrieving WAL summarizer status: {str(e)}"
+
+
+@mcp.tool()
+async def get_async_io_status(database_name: str = None) -> str:
+    """
+    [Tool Purpose]: Monitor asynchronous I/O subsystem status (PostgreSQL 18+)
+
+    [Exact Functionality]:
+    - Show active async I/O operations from pg_aios view
+    - Display I/O method configuration and concurrency settings
+    - Report async I/O file handle usage
+    - Falls back to I/O configuration info on PG < 18
+
+    [Required Use Cases]:
+    - When user requests "async I/O status", "AIO monitoring", "I/O subsystem"
+    - When investigating I/O performance and concurrency
+    - When checking async I/O configuration
+
+    [Strictly Prohibited Use Cases]:
+    - Requests for I/O configuration changes
+    - Requests for storage modifications
+
+    Args:
+        database_name: Database name (uses default if omitted)
+
+    Returns:
+        Async I/O subsystem status and configuration, or version notice on older PG
+    """
+    try:
+        version = await get_postgresql_version(database_name)
+
+        if not version.has_pg_aios:
+            return f"Async I/O subsystem view (pg_aios) is not available on PostgreSQL {version}. Upgrade to PostgreSQL 18+ for async I/O monitoring."
+
+        result = []
+
+        config_query = """
+        SELECT name, setting, unit, short_desc
+        FROM pg_settings
+        WHERE name IN ('io_method', 'io_combine_limit', 'io_max_combine_limit',
+                       'effective_io_concurrency', 'maintenance_io_concurrency')
+        ORDER BY name
+        """
+        config = await execute_query(config_query, database=database_name)
+        result.append(format_table_data(config, "Async I/O Configuration"))
+
+        try:
+            aios_query = "SELECT * FROM pg_aios LIMIT 100"
+            aios = await execute_query(aios_query, database=database_name)
+            if aios:
+                result.append("\n" + format_table_data(aios, "Active Async I/O Operations (pg_aios)"))
+            else:
+                result.append("\nNo active async I/O operations at this moment")
+        except Exception as e:
+            logger.debug(f"pg_aios query failed: {e}")
+            result.append("\npg_aios view unavailable")
+
+        return "\n".join(result)
+
+    except Exception as e:
+        logger.error(f"Failed to get async I/O status: {e}")
+        return f"Error retrieving async I/O status: {str(e)}"
+
+
+@mcp.tool()
+async def get_per_backend_io_stats(database_name: str = None, limit: int = 20) -> str:
+    """
+    [Tool Purpose]: Analyze per-backend I/O and WAL statistics (PostgreSQL 18+)
+
+    Note: Uses pg_stat_get_backend_io() and pg_stat_get_backend_wal() which
+    are new in PG 18.
+
+    [Exact Functionality]:
+    - Show I/O statistics broken down by individual backend process
+    - Display per-backend WAL generation statistics
+    - Identify backends with highest I/O activity
+    - Falls back to version notice on PG < 18
+
+    [Required Use Cases]:
+    - When user requests "per-backend I/O", "backend I/O stats", "which backend is doing most I/O"
+    - When diagnosing I/O hotspots at the process level
+    - When analyzing per-connection I/O patterns
+
+    [Strictly Prohibited Use Cases]:
+    - Requests for backend termination
+    - Requests for I/O configuration changes
+
+    Args:
+        database_name: Database name (uses default if omitted)
+        limit: Maximum results (1-100, default 20)
+
+    Returns:
+        Per-backend I/O and WAL statistics, or version notice on older PG
+    """
+    try:
+        version = await get_postgresql_version(database_name)
+        limit = max(1, min(limit, 100))
+
+        if not version.has_per_backend_io:
+            return f"Per-backend I/O statistics are not available on PostgreSQL {version}. Upgrade to PostgreSQL 18+ for pg_stat_get_backend_io()."
+
+        result = []
+
+        # Note: pg_stat_get_backend_io() and pg_stat_get_backend_wal() are PG 18+
+        # functions. Column schemas verified against PG 18 GA. Using explicit
+        # column lists to avoid duplicate column names (e.g. pid) from bio.*/bwal.*.
+        query = f"""
+        SELECT
+            a.pid,
+            a.usename as username,
+            a.datname as database_name,
+            a.application_name,
+            a.state,
+            bio.backend_type,
+            bio.object,
+            bio.context,
+            bio.reads,
+            bio.read_time,
+            bio.writes,
+            bio.write_time,
+            bio.writebacks,
+            bio.writeback_time,
+            bio.extends,
+            bio.extend_time,
+            bio.hits,
+            bio.evictions,
+            bio.reuses,
+            bio.fsyncs,
+            bio.fsync_time
+        FROM pg_stat_activity a
+        CROSS JOIN LATERAL pg_stat_get_backend_io(a.pid) bio
+        WHERE a.pid <> pg_backend_pid()
+        ORDER BY bio.reads + bio.writes DESC
+        LIMIT {limit}
+        """
+
+        try:
+            stats = await execute_query(query, database=database_name)
+            if stats:
+                result.append(format_table_data(stats, f"Per-Backend I/O Statistics (Top {limit})"))
+            else:
+                result.append("No per-backend I/O statistics available")
+        except Exception as e:
+            logger.debug(f"Per-backend I/O query failed: {e}")
+            result.append(f"Per-backend I/O query failed: {e}")
+
+        wal_query = f"""
+        SELECT
+            a.pid,
+            a.usename as username,
+            a.datname as database_name,
+            bwal.wal_records,
+            bwal.wal_fpi,
+            bwal.wal_bytes,
+            bwal.wal_buffers_full,
+            bwal.wal_write,
+            bwal.wal_write_time,
+            bwal.wal_sync,
+            bwal.wal_sync_time
+        FROM pg_stat_activity a
+        CROSS JOIN LATERAL pg_stat_get_backend_wal(a.pid) bwal
+        WHERE a.pid <> pg_backend_pid()
+        ORDER BY bwal.wal_bytes DESC NULLS LAST
+        LIMIT {limit}
+        """
+
+        try:
+            wal_stats = await execute_query(wal_query, database=database_name)
+            if wal_stats:
+                result.append("\n" + format_table_data(wal_stats, f"Per-Backend WAL Statistics (Top {limit})"))
+        except Exception as e:
+            logger.debug(f"Per-backend WAL stats query failed: {e}")
+
+        return "\n".join(result) if result else "No per-backend statistics available"
+
+    except Exception as e:
+        logger.error(f"Failed to get per-backend I/O stats: {e}")
+        return f"Error retrieving per-backend I/O statistics: {str(e)}"
 
 
 # =============================================================================

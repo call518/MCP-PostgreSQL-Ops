@@ -1,0 +1,70 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Run unit tests
+        run: pytest tests/test_version_compat.py -v --tb=short
+
+  integration-tests:
+    name: Integration Tests (PG 12-18)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start PostgreSQL instances
+        run: docker compose -f tests/docker/docker-compose.test.yml up -d
+
+      - name: Wait for all PostgreSQL instances
+        run: |
+          for svc in pg12 pg13 pg14 pg15 pg16 pg17 pg18; do
+            echo "Waiting for $svc to be healthy..."
+            for i in $(seq 1 30); do
+              status=$(docker compose -f tests/docker/docker-compose.test.yml ps $svc --format '{{.Health}}' 2>/dev/null || echo "unknown")
+              if [ "$status" = "healthy" ]; then
+                echo "$svc is ready"
+                break
+              fi
+              if [ $i -eq 30 ]; then
+                echo "Timed out waiting for $svc"
+                docker compose -f tests/docker/docker-compose.test.yml logs $svc
+                exit 1
+              fi
+              sleep 2
+            done
+          done
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Run integration tests
+        run: pytest tests/test_tools_integration.py -v --tb=short
+
+      - name: Tear down PostgreSQL instances
+        if: always()
+        run: docker compose -f tests/docker/docker-compose.test.yml down -v

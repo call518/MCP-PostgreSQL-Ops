@@ -4,6 +4,7 @@ PostgreSQL Version Compatibility Utilities
 Provides version detection and compatibility handling for MCP PostgreSQL tools.
 """
 
+import functools
 import re
 import logging
 from typing import Tuple, Optional
@@ -11,9 +12,10 @@ from .functions import execute_single_query
 
 logger = logging.getLogger(__name__)
 
+@functools.total_ordering
 class PostgreSQLVersion:
     """PostgreSQL version information and compatibility utilities."""
-    
+
     def __init__(self, major: int, minor: int = 0, patch: int = 0):
         self.major = major
         self.minor = minor  
@@ -22,29 +24,27 @@ class PostgreSQLVersion:
     def __str__(self):
         return f"{self.major}.{self.minor}.{self.patch}"
         
-    def __ge__(self, other):
-        if isinstance(other, (int, float)):
-            return self.major >= other
+    def __eq__(self, other):
+        if isinstance(other, int):
+            return self.major == other
         if isinstance(other, PostgreSQLVersion):
-            return (self.major, self.minor, self.patch) >= (other.major, other.minor, other.patch)
-        return False
-    
+            return (self.major, self.minor, self.patch) == (other.major, other.minor, other.patch)
+        return NotImplemented
+
     def __lt__(self, other):
-        if isinstance(other, (int, float)):
+        if isinstance(other, int):
             return self.major < other
         if isinstance(other, PostgreSQLVersion):
             return (self.major, self.minor, self.patch) < (other.major, other.minor, other.patch)
-        return False
+        return NotImplemented
+
+    def __hash__(self):
+        return hash((self.major, self.minor, self.patch))
         
     @property
     def is_modern(self) -> bool:
         """Check if this is a modern PostgreSQL version (12+)."""
         return self.major >= 12
-        
-    @property
-    def has_checkpointer_split(self) -> bool:
-        """Check if checkpointer stats are in separate view (only PG15)."""
-        return self.major == 15
         
     @property
     def has_pg_stat_io(self) -> bool:
@@ -80,6 +80,71 @@ class PostgreSQLVersion:
     def has_pg_stat_statements_exec_time(self) -> bool:
         """Check if pg_stat_statements uses total_exec_time and mean_exec_time columns (13+)."""
         return self.major >= 13
+
+    @property
+    def has_checkpointer_view(self) -> bool:
+        """Check if pg_stat_checkpointer must be used for checkpoint stats (17+).
+
+        The pg_stat_checkpointer view was introduced in PG 15, but checkpoint
+        columns were not removed from pg_stat_bgwriter until PG 17. We gate
+        on 17+ because the combined bgwriter query works on PG 12-16.
+        """
+        return self.major >= 17
+
+    @property
+    def has_replication_slot_invalidation(self) -> bool:
+        """Check if pg_replication_slots has invalidation_reason and inactive_since (17+)."""
+        return self.major >= 17
+
+    @property
+    def has_pg_stat_statements_v17(self) -> bool:
+        """Check if pg_stat_statements has stats_since, local_blk_read/write_time (17+)."""
+        return self.major >= 17
+
+    @property
+    def has_pg_wait_events(self) -> bool:
+        """Check if pg_wait_events view exists (17+)."""
+        return self.major >= 17
+
+    @property
+    def has_wal_summarizer(self) -> bool:
+        """Check if WAL summarizer functions exist for incremental backup (17+)."""
+        return self.major >= 17
+
+    @property
+    def has_pg_stat_io_bytes(self) -> bool:
+        """Check if pg_stat_io has read_bytes/write_bytes/extend_bytes columns (18+)."""
+        return self.major >= 18
+
+    @property
+    def has_vacuum_time_columns(self) -> bool:
+        """Check if pg_stat_*_tables has total_vacuum_time etc. (18+)."""
+        return self.major >= 18
+
+    @property
+    def has_pg_aios(self) -> bool:
+        """Check if pg_aios view exists for async I/O monitoring (18+)."""
+        return self.major >= 18
+
+    @property
+    def has_per_backend_io(self) -> bool:
+        """Check if pg_stat_get_backend_io() function exists (18+)."""
+        return self.major >= 18
+
+    @property
+    def has_parallel_worker_stats(self) -> bool:
+        """Check if pg_stat_database has parallel_workers_to_launch/launched (18+)."""
+        return self.major >= 18
+
+    @property
+    def has_checkpointer_v18(self) -> bool:
+        """Check if pg_stat_checkpointer has num_done and slru_written (18+)."""
+        return self.major >= 18
+
+    @property
+    def has_pg_stat_statements_v18(self) -> bool:
+        """Check if pg_stat_statements has parallel_workers_* and wal_buffers_full (18+)."""
+        return self.major >= 18
 
 # Global version cache
 _cached_version: Optional[PostgreSQLVersion] = None
@@ -117,14 +182,16 @@ async def get_postgresql_version(database: str = None, force_refresh: bool = Fal
             return _cached_version
         else:
             logger.warning(f"Could not parse version string: {version_string}")
-            # Default to PostgreSQL 17 if parsing fails
-            _cached_version = PostgreSQLVersion(17, 0, 0)
+            # Default to PostgreSQL 12 (minimum supported) if parsing fails
+            # so queries degrade gracefully on any version
+            _cached_version = PostgreSQLVersion(12, 0, 0)
             return _cached_version
-            
+
     except Exception as e:
         logger.error(f"Failed to get PostgreSQL version: {e}")
-        # Default to PostgreSQL 17 if version detection fails
-        _cached_version = PostgreSQLVersion(17, 0, 0)
+        # Default to PostgreSQL 12 (minimum supported) if version detection fails
+        # so queries degrade gracefully on any version
+        _cached_version = PostgreSQLVersion(12, 0, 0)
         return _cached_version
 
 async def check_feature_availability(feature: str, database: str = None) -> bool:
@@ -142,182 +209,30 @@ async def check_feature_availability(feature: str, database: str = None) -> bool
     
     feature_requirements = {
         'pg_stat_io': version.has_pg_stat_io,
-        'checkpointer_split': version.has_checkpointer_split,
+        'checkpointer_split': version.has_checkpointer_view,
         'enhanced_wal_receiver': version.has_enhanced_wal_receiver,
         'replication_slot_stats': version.has_replication_slot_stats,
         'parallel_leader_tracking': version.has_parallel_leader_tracking,
+        'pg_wait_events': version.has_pg_wait_events,
+        'wal_summarizer': version.has_wal_summarizer,
+        'pg_aios': version.has_pg_aios,
+        'per_backend_io': version.has_per_backend_io,
+        'vacuum_time_columns': version.has_vacuum_time_columns,
+        'pg_stat_io_bytes': version.has_pg_stat_io_bytes,
     }
     
     return feature_requirements.get(feature, False)
-
-async def get_compatible_column_list(table_name: str, 
-                                   all_columns: list, 
-                                   version_specific_columns: dict,
-                                   database: str = None) -> str:
-    """
-    Generate version-compatible column list for SELECT queries.
-    
-    Args:
-        table_name: PostgreSQL table/view name
-        all_columns: List of all possible columns
-        version_specific_columns: Dict mapping version requirements to columns
-        database: Database to connect to
-        
-    Returns:
-        Comma-separated column list for SQL SELECT
-    """
-    version = await get_postgresql_version(database)
-    
-    available_columns = []
-    
-    for col in all_columns:
-        # Check if column has version requirements
-        required_version = version_specific_columns.get(col)
-        if required_version is None:
-            # No version requirement - always available
-            available_columns.append(col)
-        elif version >= required_version:
-            # Version requirement met
-            available_columns.append(col)
-        else:
-            # Version requirement not met - provide NULL placeholder
-            available_columns.append(f"NULL::text AS {col}")
-            
-    return ", ".join(available_columns)
-
-def get_version_appropriate_query(base_query: str, 
-                                version_variants: dict, 
-                                version: PostgreSQLVersion) -> str:
-    """
-    Select version-appropriate query variant.
-    
-    Args:
-        base_query: Default/fallback query
-        version_variants: Dict mapping version requirements to query variants
-        version: PostgreSQL version
-        
-    Returns:
-        Most appropriate query for the version
-    """
-    # Sort version variants by version (highest first)
-    sorted_variants = sorted(version_variants.items(), 
-                           key=lambda x: (x[0].major, x[0].minor), 
-                           reverse=True)
-    
-    for required_version, query in sorted_variants:
-        if version >= required_version:
-            return query
-            
-    return base_query
 
 # Version-specific query builders
 class VersionAwareQueries:
     """Collection of version-aware query builders."""
     
     @staticmethod
-    async def get_bgwriter_checkpointer_stats(database: str = None) -> str:
-        """Get background writer/checkpointer stats with version compatibility."""
-        version = await get_postgresql_version(database)
-        
-        if version.has_checkpointer_split:
-            # PostgreSQL 15+: Use separate checkpointer view
-            return """
-            SELECT 'checkpointer' as component,
-                   num_timed, num_requested, restartpoints_timed, restartpoints_req, restartpoints_done,
-                   write_time, sync_time, buffers_written, stats_reset
-            FROM pg_stat_checkpointer
-            UNION ALL
-            SELECT 'bgwriter' as component,
-                   NULL::bigint as num_timed, NULL::bigint as num_requested, 
-                   NULL::bigint as restartpoints_timed, NULL::bigint as restartpoints_req, 
-                   NULL::bigint as restartpoints_done, NULL::double precision as write_time,
-                   NULL::double precision as sync_time,
-                   buffers_clean as buffers_written, stats_reset
-            FROM pg_stat_bgwriter
-            """
-        else:
-            # PostgreSQL 10-14: All stats in bgwriter view
-            return """
-            SELECT 'bgwriter_legacy' as component,
-                   buffers_clean, maxwritten_clean, buffers_alloc, stats_reset,
-                   NULL::bigint as num_timed, NULL::bigint as num_requested
-            FROM pg_stat_bgwriter
-            """
-    
-    @staticmethod
-    async def get_io_statistics(database: str = None) -> str:
-        """Get I/O statistics with version compatibility."""
-        version = await get_postgresql_version(database)
-        
-        if version.has_pg_stat_io:
-            # PostgreSQL 16+: Use comprehensive pg_stat_io
-            return """
-            SELECT backend_type, object, context, 
-                   reads, read_time, writes, write_time,
-                   extends, extend_time, hits, evictions,
-                   reuses, fsyncs, fsync_time
-            FROM pg_stat_io
-            WHERE reads > 0 OR writes > 0 OR hits > 0
-            """
-        else:
-            # PostgreSQL 10-15: Fall back to pg_statio_* views
-            return """
-            SELECT 'client backend' as backend_type,
-                   'relation' as object, 
-                   'normal' as context,
-                   heap_blks_read as reads,
-                   0::double precision as read_time,
-                   0::bigint as writes,
-                   0::double precision as write_time,
-                   0::bigint as extends,
-                   0::double precision as extend_time,
-                   heap_blks_hit as hits,
-                   0::bigint as evictions,
-                   0::bigint as reuses,
-                   0::bigint as fsyncs,
-                   0::double precision as fsync_time
-            FROM pg_statio_all_tables
-            WHERE heap_blks_read > 0 OR heap_blks_hit > 0
-            """
-    
-    @staticmethod 
-    async def get_activity_with_leader_info(database: str = None) -> str:
-        """Get activity info with parallel leader tracking if available."""
-        version = await get_postgresql_version(database)
-        
-        base_columns = [
-            "pid", "datname", "usename", "application_name", 
-            "client_addr", "state", "query_start", "query"
-        ]
-        
-        version_columns = {
-            "leader_pid": PostgreSQLVersion(14),
-            "query_id": PostgreSQLVersion(13)
-        }
-        
-        columns = await get_compatible_column_list(
-            "pg_stat_activity", 
-            base_columns + list(version_columns.keys()),
-            version_columns,
-            database
-        )
-        
-        return f"SELECT {columns} FROM pg_stat_activity WHERE state = 'active'"
-    
-    @staticmethod
     async def get_replication_slots_query(database: str = None) -> str:
         """Get replication slots info with version compatibility."""
         version = await get_postgresql_version(database)
-        
-        base_columns = [
-            "slot_name", "plugin", "slot_type", "datoid", "temporary",
-            "active", "active_pid", "restart_lsn", "confirmed_flush_lsn"
-        ]
-        
-        # wal_status and safe_wal_size are available from PostgreSQL 13+
-        if version.has_replication_slot_wal_status:
-            return """
-            SELECT 
+
+        base_columns = """
                 slot_name,
                 plugin,
                 slot_type,
@@ -326,27 +241,38 @@ class VersionAwareQueries:
                 active,
                 active_pid,
                 restart_lsn,
-                confirmed_flush_lsn,
+                confirmed_flush_lsn"""
+
+        if version.has_replication_slot_invalidation:
+            # PostgreSQL 17+: includes invalidation_reason and inactive_since
+            return f"""
+            SELECT {base_columns},
                 wal_status,
-                safe_wal_size / 1024 / 1024 as safe_wal_size_mb
+                safe_wal_size / 1024 / 1024 as safe_wal_size_mb,
+                invalidation_reason,
+                inactive_since
+            FROM pg_replication_slots
+            ORDER BY slot_name
+            """
+        elif version.has_replication_slot_wal_status:
+            # PostgreSQL 13-16: wal_status and safe_wal_size
+            return f"""
+            SELECT {base_columns},
+                wal_status,
+                safe_wal_size / 1024 / 1024 as safe_wal_size_mb,
+                NULL::text as invalidation_reason,
+                NULL::timestamptz as inactive_since
             FROM pg_replication_slots
             ORDER BY slot_name
             """
         else:
-            # PostgreSQL 12 and older - without wal_status and safe_wal_size
-            return """
-            SELECT 
-                slot_name,
-                plugin,
-                slot_type,
-                datoid,
-                temporary,
-                active,
-                active_pid,
-                restart_lsn,
-                confirmed_flush_lsn,
+            # PostgreSQL 12: minimal columns
+            return f"""
+            SELECT {base_columns},
                 NULL::text as wal_status,
-                NULL::numeric as safe_wal_size_mb
+                NULL::numeric as safe_wal_size_mb,
+                NULL::text as invalidation_reason,
+                NULL::timestamptz as inactive_since
             FROM pg_replication_slots
             ORDER BY slot_name
             """
@@ -403,13 +329,22 @@ class VersionAwareQueries:
     async def get_all_tables_stats_query(include_system: bool = False, database: str = None) -> str:
         """Get all tables statistics query with version compatibility."""
         version = await get_postgresql_version(database)
-        
+
         view_name = "pg_stat_all_tables" if include_system else "pg_stat_user_tables"
-        
+
+        # PG 18+ adds VACUUM/ANALYZE time columns
+        vacuum_time_cols = ""
+        if version.has_vacuum_time_columns:
+            vacuum_time_cols = """,
+                ROUND(total_vacuum_time::numeric, 2) as total_vacuum_time_ms,
+                ROUND(total_autovacuum_time::numeric, 2) as total_autovacuum_time_ms,
+                ROUND(total_analyze_time::numeric, 2) as total_analyze_time_ms,
+                ROUND(total_autoanalyze_time::numeric, 2) as total_autoanalyze_time_ms"""
+
         # n_ins_since_vacuum is available from PostgreSQL 13+
         if version.has_table_stats_ins_since_vacuum:
             return f"""
-            SELECT 
+            SELECT
                 schemaname as schema_name,
                 relname as table_name,
                 seq_scan as sequential_scans,
@@ -422,7 +357,7 @@ class VersionAwareQueries:
                 n_tup_hot_upd as hot_updates,
                 n_live_tup as estimated_live_tuples,
                 n_dead_tup as estimated_dead_tuples,
-                CASE 
+                CASE
                     WHEN n_live_tup > 0 THEN
                         ROUND((n_dead_tup::numeric / n_live_tup) * 100, 2)
                     ELSE 0
@@ -436,14 +371,14 @@ class VersionAwareQueries:
                 vacuum_count,
                 autovacuum_count,
                 analyze_count,
-                autoanalyze_count
+                autoanalyze_count{vacuum_time_cols}
             FROM {view_name}
             ORDER BY seq_scan + COALESCE(idx_scan, 0) DESC, schemaname, relname
             """
         else:
             # PostgreSQL 12 - without n_ins_since_vacuum
             return f"""
-            SELECT 
+            SELECT
                 schemaname as schema_name,
                 relname as table_name,
                 seq_scan as sequential_scans,
@@ -456,7 +391,7 @@ class VersionAwareQueries:
                 n_tup_hot_upd as hot_updates,
                 n_live_tup as estimated_live_tuples,
                 n_dead_tup as estimated_dead_tuples,
-                CASE 
+                CASE
                     WHEN n_live_tup > 0 THEN
                         ROUND((n_dead_tup::numeric / n_live_tup) * 100, 2)
                     ELSE 0
@@ -474,29 +409,6 @@ class VersionAwareQueries:
             FROM {view_name}
             ORDER BY seq_scan + COALESCE(idx_scan, 0) DESC, schemaname, relname
             """
-
-
-# Utility functions for tool implementations
-async def execute_version_aware_query(queries_by_version: dict, 
-                                    fallback_query: str,
-                                    database: str = None):
-    """
-    Execute the most appropriate query based on PostgreSQL version.
-    
-    Args:
-        queries_by_version: Dict mapping PostgreSQLVersion to query strings
-        fallback_query: Default query if no version matches
-        database: Database to connect to
-        
-    Returns:
-        Query results
-    """
-    from .functions import execute_query
-    
-    version = await get_postgresql_version(database)
-    query = get_version_appropriate_query(fallback_query, queries_by_version, version)
-    
-    return await execute_query(query, database=database)
 
 
 # Version-aware pg_stat_statements queries
@@ -533,18 +445,40 @@ async def get_pg_stat_statements_query(database: str = None) -> str:
         
     # Add remaining common columns
     base_columns.extend([
-        "shared_blks_hit", "shared_blks_read", "shared_blks_dirtied", 
-        "shared_blks_written", "local_blks_hit", "local_blks_read", 
+        "shared_blks_hit", "shared_blks_read", "shared_blks_dirtied",
+        "shared_blks_written", "local_blks_hit", "local_blks_read",
         "local_blks_dirtied", "local_blks_written", "temp_blks_read", "temp_blks_written"
     ])
-    
+
+    # Add version-specific I/O timing columns
+    if version.has_pg_stat_statements_v17:
+        # PG 17+: renamed timing columns and new stats_since
+        base_columns.extend([
+            "shared_blk_read_time", "shared_blk_write_time",
+            "local_blk_read_time", "local_blk_write_time",
+            "stats_since", "minmax_stats_since"
+        ])
+    else:
+        # PG 12-16: old column names (blk_read_time/blk_write_time)
+        base_columns.extend([
+            "blk_read_time as shared_blk_read_time",
+            "blk_write_time as shared_blk_write_time"
+        ])
+
+    if version.has_pg_stat_statements_v18:
+        # PG 18+: parallel worker and WAL buffer stats
+        base_columns.extend([
+            "parallel_workers_to_launch", "parallel_workers_launched",
+            "wal_buffers_full"
+        ])
+
     columns_str = ",\n    ".join(base_columns)
-    
+
     return f"""
-    SELECT 
+    SELECT
         {columns_str}
-    FROM pg_stat_statements 
-    ORDER BY total_exec_time DESC 
+    FROM pg_stat_statements
+    ORDER BY total_exec_time DESC
     """
 
 
