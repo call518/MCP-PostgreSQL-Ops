@@ -16,7 +16,7 @@ jobs:
     name: Unit Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Python 3.12
         uses: actions/setup-python@v6
@@ -34,7 +34,7 @@ jobs:
     name: Integration Tests (PG 12-18)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Start PostgreSQL instances
         run: docker compose -f tests/docker/docker-compose.test.yml up -d
