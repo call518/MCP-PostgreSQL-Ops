@@ -916,7 +916,7 @@ cd MCP-PostgreSQL-Ops
 uv sync
 
 # Test with MCP Inspector (loads .env automatically)
-./scripts/run-mcp-inspector-local.sh
+./run-mcp-inspector-local.sh
 
 # Direct execution methods:
 # 1. Using uv run (recommended for development)
@@ -1173,7 +1173,7 @@ Add your tool description to `src/mcp_postgresql_ops/prompt_template.md` for bet
 
 ```bash
 # Local testing with MCP Inspector
-./scripts/run-mcp-inspector-local.sh
+./run-mcp-inspector-local.sh
 
 # Or test with Docker stack
 docker-compose up -d
