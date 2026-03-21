@@ -4,46 +4,52 @@ Requires Docker Compose test stack running (tests/docker/docker-compose.test.yml
 """
 import pytest
 
-# Import all tool functions directly
-from mcp_postgresql_ops.mcp_main import (
-    get_lock_monitoring,
-    get_wal_status,
-    get_replication_status,
-    get_server_info,
-    get_current_database_info,
-    get_database_list,
-    get_table_list,
-    get_user_list,
-    get_table_schema_info,
-    get_database_schema_info,
-    get_table_relationships,
-    get_active_connections,
-    get_pg_stat_statements_top_queries,
-    get_pg_stat_monitor_recent_queries,
-    get_database_size_info,
-    get_table_size_info,
-    get_postgresql_config,
-    get_index_usage_stats,
-    get_vacuum_analyze_stats,
-    get_table_bloat_analysis,
-    get_database_bloat_overview,
-    get_autovacuum_status,
-    get_autovacuum_activity,
-    get_running_vacuum_operations,
-    get_vacuum_effectiveness_analysis,
-    get_database_stats,
-    get_bgwriter_stats,
-    get_io_stats,
-    get_table_io_stats,
-    get_index_io_stats,
-    get_all_tables_stats,
-    get_user_functions_stats,
-    get_database_conflicts_stats,
-    get_wait_events,
-    get_wal_summarizer_status,
-    get_async_io_status,
-    get_per_backend_io_stats,
-)
+import mcp_postgresql_ops.mcp_main as _mcp_main
+
+
+def _fn(name: str):
+    """Extract the raw callable from a FunctionTool (fastmcp >= 2.14) or return as-is."""
+    tool = getattr(_mcp_main, name)
+    return getattr(tool, "fn", tool)
+
+
+get_lock_monitoring = _fn("get_lock_monitoring")
+get_wal_status = _fn("get_wal_status")
+get_replication_status = _fn("get_replication_status")
+get_server_info = _fn("get_server_info")
+get_current_database_info = _fn("get_current_database_info")
+get_database_list = _fn("get_database_list")
+get_table_list = _fn("get_table_list")
+get_user_list = _fn("get_user_list")
+get_table_schema_info = _fn("get_table_schema_info")
+get_database_schema_info = _fn("get_database_schema_info")
+get_table_relationships = _fn("get_table_relationships")
+get_active_connections = _fn("get_active_connections")
+get_pg_stat_statements_top_queries = _fn("get_pg_stat_statements_top_queries")
+get_pg_stat_monitor_recent_queries = _fn("get_pg_stat_monitor_recent_queries")
+get_database_size_info = _fn("get_database_size_info")
+get_table_size_info = _fn("get_table_size_info")
+get_postgresql_config = _fn("get_postgresql_config")
+get_index_usage_stats = _fn("get_index_usage_stats")
+get_vacuum_analyze_stats = _fn("get_vacuum_analyze_stats")
+get_table_bloat_analysis = _fn("get_table_bloat_analysis")
+get_database_bloat_overview = _fn("get_database_bloat_overview")
+get_autovacuum_status = _fn("get_autovacuum_status")
+get_autovacuum_activity = _fn("get_autovacuum_activity")
+get_running_vacuum_operations = _fn("get_running_vacuum_operations")
+get_vacuum_effectiveness_analysis = _fn("get_vacuum_effectiveness_analysis")
+get_database_stats = _fn("get_database_stats")
+get_bgwriter_stats = _fn("get_bgwriter_stats")
+get_io_stats = _fn("get_io_stats")
+get_table_io_stats = _fn("get_table_io_stats")
+get_index_io_stats = _fn("get_index_io_stats")
+get_all_tables_stats = _fn("get_all_tables_stats")
+get_user_functions_stats = _fn("get_user_functions_stats")
+get_database_conflicts_stats = _fn("get_database_conflicts_stats")
+get_wait_events = _fn("get_wait_events")
+get_wal_summarizer_status = _fn("get_wal_summarizer_status")
+get_async_io_status = _fn("get_async_io_status")
+get_per_backend_io_stats = _fn("get_per_backend_io_stats")
 
 
 pytestmark = pytest.mark.asyncio

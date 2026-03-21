@@ -18,17 +18,21 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
       - name: Setup Python 3.12
         uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-          cache: pip
 
       - name: Install dependencies
-        run: pip install -e ".[dev]"
+        run: uv sync --extra dev
 
       - name: Run unit tests
-        run: pytest tests/test_version_compat.py -v --tb=short
+        run: uv run pytest tests/test_version_compat.py -v --tb=short
 
   integration-tests:
     name: Integration Tests (PG 12-18)
@@ -58,17 +62,21 @@ jobs:
             done
           done
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
       - name: Setup Python 3.12
         uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-          cache: pip
 
       - name: Install dependencies
-        run: pip install -e ".[dev]"
+        run: uv sync --extra dev
 
       - name: Run integration tests
-        run: pytest tests/test_tools_integration.py -v --tb=short
+        run: uv run pytest tests/test_tools_integration.py -v --tb=short
 
       - name: Tear down PostgreSQL instances
         if: always()
