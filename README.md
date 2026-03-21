@@ -930,9 +930,46 @@ mcp-postgresql-ops --log-level DEBUG
 
 # Test version compatibility (requires different PostgreSQL versions)
 # Modify POSTGRES_HOST in .env to point to different versions
+```
 
-# Run tests (if you add any)
-uv run pytest
+### Running Tests
+
+Two test suites are available:
+
+| Suite | File | Requires Docker |
+|-------|------|----------------|
+| Unit tests (version compatibility logic) | `tests/test_version_compat.py` | No |
+| Integration tests (all tools × PG 12–18) | `tests/test_tools_integration.py` | Yes |
+
+#### Option A — Run everything with a single command (recommended)
+
+`uv run pytest` automatically starts the Docker test containers (PG 12–18), waits for them to be fully initialized, runs all tests, then tears everything down.
+
+```bash
+# Run all tests (unit + integration) — Docker is managed automatically
+uv run pytest -v
+
+# Unit tests only (no Docker needed)
+uv run pytest tests/test_version_compat.py -v
+
+# Integration tests only
+uv run pytest tests/test_tools_integration.py -v
+```
+
+#### Option B — Manual control via helper script
+
+```bash
+# Full run: docker up → wait → pytest → docker down
+uv run python scripts/run-tests.py
+
+# Pass pytest options directly
+uv run python scripts/run-tests.py -v --tb=short
+
+# Keep containers running after tests (for debugging)
+uv run python scripts/run-tests.py --no-cleanup
+```
+
+> **Note**: Docker must be running. The test stack uses ports 5412–5418 (PG 12–18).
 ```
 
 ### Version Compatibility Testing

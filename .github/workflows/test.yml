@@ -33,7 +33,6 @@ jobs:
 
       - name: Run unit tests
         run: uv run pytest tests/test_version_compat.py -v --tb=short
-
   integration-tests:
     name: Integration Tests (PG 12-18)
     runs-on: ubuntu-latest
@@ -77,7 +76,6 @@ jobs:
 
       - name: Run integration tests
         run: uv run pytest tests/test_tools_integration.py -v --tb=short
-
       - name: Tear down PostgreSQL instances
         if: always()
         run: docker compose -f tests/docker/docker-compose.test.yml down -v
