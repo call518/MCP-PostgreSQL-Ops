@@ -10,6 +10,7 @@ dependencies = [
     "asyncpg>=0.29.0",
     "psycopg2-binary>=2.9.7",
     "setuptools-scm>=10.0.5",
+    "pre-commit>=4.6.0",
 ]
 
 [project.optional-dependencies]
