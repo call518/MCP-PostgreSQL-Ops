@@ -969,7 +969,6 @@ uv run python scripts/run-tests.py --no-cleanup
 ```
 
 > **Note**: Docker must be running. The test stack uses ports 5412–5418 (PG 12–18).
-```
 
 ### Version Compatibility Testing
 
