@@ -39,8 +39,3 @@ where = ["src"]
 
 [tool.setuptools.package-dir]
 "" = "src"
-
-[dependency-groups]
-dev = [
-    "pip>=26.0.1",
-]
