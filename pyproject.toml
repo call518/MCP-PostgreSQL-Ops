@@ -31,8 +31,17 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 
 [tool.setuptools_scm]
-version_scheme = "no-guess-dev"
-local_scheme = "no-local-version"
+### version_scheme options:
+###   uncommented: raises LookupError (uses fallback_version) when not on a tag
+###   commented-out (default guess-next-dev): auto-generates e.g. 1.0.1.dev2+gabcdef for commits after a tag
+# version_scheme = "no-guess-dev"
+### local_scheme options:
+###   node-and-date      (default)  e.g. 1.0.1.dev2+gabcdef.d20260430
+###   node-and-timestamp            e.g. 1.0.1.dev2+gabcdef.1746000000
+###   dirty-tag                     e.g. 1.0.1.dev2+dirty (only when working tree is dirty)
+###   no-local-version              e.g. 1.0.1.dev2 (omits local part entirely; only this option allows non-tagged commits to be uploaded to PyPI)
+local_scheme = "node-and-date"
+fallback_version = "0.0.0"
 
 [tool.setuptools.packages.find]
 where = ["src"]
