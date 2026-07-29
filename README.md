@@ -1,5 +1,7 @@
 # MCP Server for PostgreSQL Operations and Monitoring
 
+[![MCP Toplist](https://mcptoplist.com/badge/smithery%2Fcall518%2Fmcp-postgresql-ops.svg)](https://mcptoplist.com/server/smithery%2Fcall518%2Fmcp-postgresql-ops)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)
 ![Docker Pulls](https://img.shields.io/docker/pulls/call518/mcp-server-postgresql-ops)
