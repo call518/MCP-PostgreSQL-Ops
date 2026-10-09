@@ -32,7 +32,7 @@ jobs:
         run: uv sync --extra dev
 
       - name: Run unit tests
-        run: uv run pytest tests/test_version_compat.py -v --tb=short
+        run: uv run pytest tests/test_version_compat.py tests/test_tool_schema_null_defaults.py -v --tb=short
   integration-tests:
     name: Integration Tests (PG 12-18)
     runs-on: ubuntu-latest

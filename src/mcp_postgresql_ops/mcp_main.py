@@ -97,12 +97,12 @@ PROMPT_TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "prompt_template.
 
 @mcp.tool()
 async def get_lock_monitoring(
-    database_name: str = None,
-    granted: str = None, 
-    state: str = None,
-    mode: str = None,
-    locktype: str = None,
-    username: str = None
+    database_name: Optional[str] = None,
+    granted: Optional[str] = None, 
+    state: Optional[str] = None,
+    mode: Optional[str] = None,
+    locktype: Optional[str] = None,
+    username: Optional[str] = None
 ) -> str:
     """
     [Tool Purpose]: Monitor current locks and potential deadlocks in PostgreSQL
@@ -492,7 +492,7 @@ async def get_server_info() -> str:
 
 
 @mcp.tool()
-async def get_current_database_info(database_name: str = None) -> str:
+async def get_current_database_info(database_name: Optional[str] = None) -> str:
     """
     [Tool Purpose]: Get information about the current database connection
     
@@ -613,7 +613,7 @@ async def get_database_list() -> str:
 
 
 @mcp.tool()
-async def get_table_list(database_name: str = None) -> str:
+async def get_table_list(database_name: Optional[str] = None) -> str:
     """
     [Tool Purpose]: Retrieve list of all tables and their information from specified database (or current DB)
     
@@ -713,7 +713,7 @@ async def get_user_list() -> str:
 
 
 @mcp.tool()
-async def get_table_schema_info(database_name: str, table_name: str = None, schema_name: str = "public") -> str:
+async def get_table_schema_info(database_name: str, table_name: Optional[str] = None, schema_name: str = "public") -> str:
     """
     [Tool Purpose]: Retrieve detailed schema information for specific table or all tables in a database
     
@@ -971,7 +971,7 @@ async def get_table_schema_info(database_name: str, table_name: str = None, sche
 
 
 @mcp.tool()
-async def get_database_schema_info(database_name: str, schema_name: str = None) -> str:
+async def get_database_schema_info(database_name: str, schema_name: Optional[str] = None) -> str:
     """
     [Tool Purpose]: Retrieve detailed information about database schemas (namespaces) and their contents
     
@@ -1178,7 +1178,7 @@ async def get_database_schema_info(database_name: str, schema_name: str = None) 
 
 
 @mcp.tool()
-async def get_table_relationships(database_name: str, table_name: str = None, schema_name: str = "public", relationship_type: str = "all") -> str:
+async def get_table_relationships(database_name: str, table_name: Optional[str] = None, schema_name: str = "public", relationship_type: str = "all") -> str:
     """
     [Tool Purpose]: Analyze table relationships including foreign keys, dependencies, and inheritance
     
@@ -1557,7 +1557,7 @@ async def get_active_connections() -> str:
 
 
 @mcp.tool()
-async def get_pg_stat_statements_top_queries(limit: int = 20, database_name: str = None) -> str:
+async def get_pg_stat_statements_top_queries(limit: int = 20, database_name: Optional[str] = None) -> str:
     """
     [Tool Purpose]: Analyze top queries that consumed the most time using pg_stat_statements extension
     
@@ -1605,7 +1605,7 @@ async def get_pg_stat_statements_top_queries(limit: int = 20, database_name: str
 
 
 @mcp.tool()
-async def get_pg_stat_monitor_recent_queries(limit: int = 20, database_name: str = None) -> str:
+async def get_pg_stat_monitor_recent_queries(limit: int = 20, database_name: Optional[str] = None) -> str:
     """
     [Tool Purpose]: Analyze recently executed queries and detailed monitoring information using pg_stat_monitor extension
     
@@ -1708,7 +1708,7 @@ async def get_database_size_info() -> str:
 
 
 @mcp.tool()
-async def get_table_size_info(schema_name: str = "public", database_name: str = None) -> str:
+async def get_table_size_info(schema_name: str = "public", database_name: Optional[str] = None) -> str:
     """
     [Tool Purpose]: Analyze size information and index usage of all tables in specified schema
     
@@ -1778,7 +1778,7 @@ async def get_table_size_info(schema_name: str = "public", database_name: str = 
 
 
 @mcp.tool()
-async def get_postgresql_config(config_name: str = None, filter_text: str = None) -> str:
+async def get_postgresql_config(config_name: Optional[str] = None, filter_text: Optional[str] = None) -> str:
     """
     [Tool Purpose]: Retrieve and analyze PostgreSQL server configuration parameter values
     
@@ -1879,7 +1879,7 @@ async def get_postgresql_config(config_name: str = None, filter_text: str = None
 
 
 @mcp.tool()
-async def get_index_usage_stats(database_name: str = None) -> str:
+async def get_index_usage_stats(database_name: Optional[str] = None) -> str:
     """
     [Tool Purpose]: Analyze usage rate and performance statistics of all indexes in database
     
@@ -1937,7 +1937,7 @@ async def get_index_usage_stats(database_name: str = None) -> str:
 
 
 @mcp.tool()
-async def get_vacuum_analyze_stats(database_name: str = None) -> str:
+async def get_vacuum_analyze_stats(database_name: Optional[str] = None) -> str:
     """
     [Tool Purpose]: Analyze VACUUM and ANALYZE execution history and statistics per table
     
@@ -2007,7 +2007,7 @@ async def get_vacuum_analyze_stats(database_name: str = None) -> str:
 
 
 @mcp.tool()
-async def get_table_bloat_analysis(database_name: str = None, schema_name: str = None, table_pattern: str = None, min_dead_tuples: int = 1, limit: int = 20) -> str:
+async def get_table_bloat_analysis(database_name: Optional[str] = None, schema_name: Optional[str] = None, table_pattern: Optional[str] = None, min_dead_tuples: int = 1, limit: int = 20) -> str:
     """
     [Tool Purpose]: Analyze table bloat based on dead tuple statistics and size information
     
@@ -2160,7 +2160,7 @@ async def get_table_bloat_analysis(database_name: str = None, schema_name: str =
 
 
 @mcp.tool()
-async def get_database_bloat_overview(database_name: str = None, limit: int = 20) -> str:
+async def get_database_bloat_overview(database_name: Optional[str] = None, limit: int = 20) -> str:
     """
     [Tool Purpose]: Provide database-wide bloat overview and summary statistics
     
@@ -2247,7 +2247,7 @@ async def get_database_bloat_overview(database_name: str = None, limit: int = 20
 
 
 @mcp.tool()
-async def get_autovacuum_status(database_name: str = None, schema_name: str = None, table_pattern: str = None, limit: int = 50) -> str:
+async def get_autovacuum_status(database_name: Optional[str] = None, schema_name: Optional[str] = None, table_pattern: Optional[str] = None, limit: int = 50) -> str:
     """
     [Tool Purpose]: Analyze autovacuum configuration and current maintenance status for tables
     
@@ -2395,7 +2395,7 @@ async def get_autovacuum_status(database_name: str = None, schema_name: str = No
 
 
 @mcp.tool()
-async def get_autovacuum_activity(database_name: str = None, schema_name: str = None, hours_back: int = 24, limit: int = 50) -> str:
+async def get_autovacuum_activity(database_name: Optional[str] = None, schema_name: Optional[str] = None, hours_back: int = 24, limit: int = 50) -> str:
     """
     [Tool Purpose]: Monitor recent autovacuum and autoanalyze activity patterns and execution history
     
@@ -2544,7 +2544,7 @@ async def get_autovacuum_activity(database_name: str = None, schema_name: str = 
 
 
 @mcp.tool()
-async def get_running_vacuum_operations(database_name: str = None) -> str:
+async def get_running_vacuum_operations(database_name: Optional[str] = None) -> str:
     """
     [Tool Purpose]: Monitor currently running VACUUM and ANALYZE operations in real-time
     
@@ -2650,7 +2650,7 @@ async def get_running_vacuum_operations(database_name: str = None) -> str:
 
 
 @mcp.tool()
-async def get_vacuum_effectiveness_analysis(database_name: str = None, schema_name: str = None, limit: int = 30) -> str:
+async def get_vacuum_effectiveness_analysis(database_name: Optional[str] = None, schema_name: Optional[str] = None, limit: int = 30) -> str:
     """
     [Tool Purpose]: Analyze VACUUM effectiveness and maintenance patterns using existing statistics
     
@@ -3012,7 +3012,7 @@ async def get_bgwriter_stats() -> str:
 
 
 @mcp.tool()
-async def get_io_stats(limit: int = 20, database_name: str = None) -> str:
+async def get_io_stats(limit: int = 20, database_name: Optional[str] = None) -> str:
     """
     [Tool Purpose]: Analyze comprehensive I/O statistics across all database operations with version compatibility
     
@@ -3151,7 +3151,7 @@ async def get_io_stats(limit: int = 20, database_name: str = None) -> str:
 
 
 @mcp.tool()
-async def get_table_io_stats(database_name: str = None, schema_name: str = "public") -> str:
+async def get_table_io_stats(database_name: Optional[str] = None, schema_name: str = "public") -> str:
     """
     [Tool Purpose]: Analyze I/O performance statistics for tables (disk reads vs buffer cache hits)
     
@@ -3248,7 +3248,7 @@ async def get_table_io_stats(database_name: str = None, schema_name: str = "publ
 
 
 @mcp.tool()
-async def get_index_io_stats(database_name: str = None, schema_name: str = "public") -> str:
+async def get_index_io_stats(database_name: Optional[str] = None, schema_name: str = "public") -> str:
     """
     [Tool Purpose]: Analyze I/O performance statistics for indexes (disk reads vs buffer cache hits)
     
@@ -3335,7 +3335,7 @@ async def get_index_io_stats(database_name: str = None, schema_name: str = "publ
 
 
 @mcp.tool()
-async def get_all_tables_stats(database_name: str = None, include_system: bool = False) -> str:
+async def get_all_tables_stats(database_name: Optional[str] = None, include_system: bool = False) -> str:
     """
     [Tool Purpose]: Get comprehensive statistics for all tables (including system tables if requested)
     
@@ -3382,7 +3382,7 @@ async def get_all_tables_stats(database_name: str = None, include_system: bool =
 
 
 @mcp.tool()
-async def get_user_functions_stats(database_name: str = None) -> str:
+async def get_user_functions_stats(database_name: Optional[str] = None) -> str:
     """
     [Tool Purpose]: Analyze performance statistics for user-defined functions
     
@@ -3457,7 +3457,7 @@ async def get_user_functions_stats(database_name: str = None) -> str:
 
 
 @mcp.tool()
-async def get_database_conflicts_stats(database_name: str = None) -> str:
+async def get_database_conflicts_stats(database_name: Optional[str] = None) -> str:
     """
     [Tool Purpose]: Analyze query conflicts in standby/replica database environments
     
@@ -3530,7 +3530,7 @@ async def get_database_conflicts_stats(database_name: str = None) -> str:
 # =============================================================================
 
 @mcp.tool()
-async def get_wait_events(database_name: str = None, wait_event_type: str = None) -> str:
+async def get_wait_events(database_name: Optional[str] = None, wait_event_type: Optional[str] = None) -> str:
     """
     [Tool Purpose]: List available wait event types and their descriptions (PostgreSQL 17+)
 
@@ -3636,7 +3636,7 @@ async def get_wait_events(database_name: str = None, wait_event_type: str = None
 
 
 @mcp.tool()
-async def get_wal_summarizer_status(database_name: str = None) -> str:
+async def get_wal_summarizer_status(database_name: Optional[str] = None) -> str:
     """
     [Tool Purpose]: Monitor WAL summarizer status for incremental backup support (PostgreSQL 17+)
 
@@ -3710,7 +3710,7 @@ async def get_wal_summarizer_status(database_name: str = None) -> str:
 
 
 @mcp.tool()
-async def get_async_io_status(database_name: str = None) -> str:
+async def get_async_io_status(database_name: Optional[str] = None) -> str:
     """
     [Tool Purpose]: Monitor asynchronous I/O subsystem status (PostgreSQL 18+)
 
@@ -3772,7 +3772,7 @@ async def get_async_io_status(database_name: str = None) -> str:
 
 
 @mcp.tool()
-async def get_per_backend_io_stats(database_name: str = None, limit: int = 20) -> str:
+async def get_per_backend_io_stats(database_name: Optional[str] = None, limit: int = 20) -> str:
     """
     [Tool Purpose]: Analyze per-backend I/O and WAL statistics (PostgreSQL 18+)
 
