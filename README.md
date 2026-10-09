@@ -129,7 +129,8 @@ docker-compose logs -f
 docker-compose ps
 
 # Verify PostgreSQL is ready
-docker-compose logs postgres | grep "ready to accept connections"
+docker compose exec -T postgres sh -c \
+  'pg_isready -h 127.0.0.1 -p 5432 -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
 ```
 
 ### 3. Access to OpenWebUI
@@ -934,11 +935,12 @@ mcp-postgresql-ops --log-level DEBUG
 
 ### Running Tests
 
-Two test suites are available:
+The following test suites are available:
 
 | Suite | File | Requires Docker |
 |-------|------|----------------|
 | Unit tests (version compatibility logic) | `tests/test_version_compat.py` | No |
+| Unit tests (null-default tool argument schemas) | `tests/test_tool_schema_null_defaults.py` | No |
 | Integration tests (all tools × PG 12–18) | `tests/test_tools_integration.py` | Yes |
 
 `uv run pytest` automatically starts the Docker test containers (PG 12–18), waits for them to be fully initialized, runs all tests, then tears everything down.
@@ -947,14 +949,17 @@ Two test suites are available:
 # Run all tests (unit + integration) — Docker is managed automatically
 uv run pytest -v
 
-# Unit tests only (no Docker needed)
-uv run pytest tests/test_version_compat.py -v
+# Unit tests only (no Docker or PostgreSQL needed)
+uv run pytest tests/test_version_compat.py tests/test_tool_schema_null_defaults.py -v
+
+# Tool argument schema tests only (no Docker or PostgreSQL needed)
+uv run pytest tests/test_tool_schema_null_defaults.py -v
 
 # Integration tests only
 uv run pytest tests/test_tools_integration.py -v
 ```
 
-> **Note**: Docker must be running. The test stack uses ports 5412–5418 (PG 12–18).
+> **Note**: Docker must be running for integration tests. The test stack uses ports 5412–5418 (PG 12–18).
 
 ### Version Compatibility Testing
 

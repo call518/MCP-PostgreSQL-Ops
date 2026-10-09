@@ -52,7 +52,7 @@ get_async_io_status = _fn("get_async_io_status")
 get_per_backend_io_stats = _fn("get_per_backend_io_stats")
 
 
-pytestmark = pytest.mark.asyncio
+pytestmark = [pytest.mark.asyncio, pytest.mark.usefixtures("docker_compose_pg")]
 
 
 def assert_tool_result(result, tool_name):

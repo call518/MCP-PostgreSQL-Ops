@@ -94,7 +94,7 @@ def _wait_for_all_pg(timeout: int = WAIT_TIMEOUT_SEC) -> None:
         )
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session")
 def docker_compose_pg():
     """Start test PostgreSQL containers and tear them down after the session.
 
