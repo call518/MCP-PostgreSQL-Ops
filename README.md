@@ -53,7 +53,7 @@
 
 ## Tool Usage Examples
 
-### 📸 **[More Examples with Screenshots →](https://github.com/call518/MCP-PostgreSQL-Ops/wiki/Tool-Usage-Example)**
+### 📸 **[More Examples with Screenshots →](https://github.com/call518/MCP-PostgreSQL-Ops/wiki)**
 
 ---
 
@@ -163,7 +163,7 @@ http://localhost:3003/
 
 #### 📖 **Next Steps:**
 - Browse the **[Example Queries section](#usage-examples)** below for more query examples
-- Check out **[Tool Usage Examples with Screenshots](https://github.com/call518/MCP-PostgreSQL-Ops/wiki/Tool-Usage-Example)** for visual guides
+- Check out **[Tool Usage Examples with Screenshots](https://github.com/call518/MCP-PostgreSQL-Ops/wiki)** for visual guides
 - Explore the **[Tool Compatibility Matrix](#tool-compatibility-matrix)** to understand available features
 
 ---
