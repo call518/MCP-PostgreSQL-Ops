@@ -1,5 +1,7 @@
 # MCP Server for PostgreSQL Operations and Monitoring
 
+[![MCPVault: claimed](https://mcpvault.io/badge/mcp-postgresql-ops.svg?theme=dark)](https://mcpvault.io/servers/mcp-postgresql-ops/health?utm_source=external_badge&utm_medium=referral&utm_campaign=mcp_health_report)
+
 [![MCP Toplist](https://mcptoplist.com/badge/smithery%2Fcall518%2Fmcp-postgresql-ops.svg)](https://mcptoplist.com/server/smithery%2Fcall518%2Fmcp-postgresql-ops)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
