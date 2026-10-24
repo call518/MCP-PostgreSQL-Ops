@@ -10,13 +10,10 @@ from pathlib import Path
 
 def release_version(tag: str) -> str:
     """Validate a canonical release tag and return its package version."""
-    version = tag.removeprefix("v")
     number = r"(?:0|[1-9][0-9]*)"
-    if not re.fullmatch(
-        rf"{number}\.{number}\.{number}(?:(?:a|b|rc){number})?", version
-    ):
-        raise ValueError("Use a tag such as 0.5.7, v0.5.7, or 0.5.7rc1")
-    return version
+    if not re.fullmatch(rf"{number}\.{number}\.{number}", tag):
+        raise ValueError("Use a numeric major.minor.patch tag such as 0.5.7")
+    return tag
 
 
 def check_release(tag: str, directory: Path) -> None:

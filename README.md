@@ -293,17 +293,18 @@ The `create-test-data.sql` script is executed by the `postgres-init-extensions` 
 
 ## Tagged Releases
 
-The GitHub Actions workflow publishes a pushed version tag (for example,
-`v1.2.3`, `1.2.3`, or `1.2.3rc1`) to TestPyPI, then PyPI, and finally creates
-a GitHub Release with the tag as its title. Both distribution versions must match
-the tag. The existing `testpypi` and `pypi` GitHub environments must have Trusted
-Publishing configured on their respective package indexes.
+The GitHub Actions workflow publishes a pushed version tag to TestPyPI, then PyPI,
+and finally creates a GitHub Release with the tag as its title. Both distribution
+versions must match the tag. Tags must use `major.minor.patch` (for example, `1.2.3`), containing only
+digits and dots, with no leading zeros in each component. Prefixes and prerelease
+suffixes are not supported. The existing `testpypi` and `pypi` GitHub environments
+must have Trusted Publishing configured on their respective package indexes.
 
 Release notes include full commit messages since the most recently published
 GitHub Release, or all commits for the first release. The previous release tag
-must be an ancestor of the new tag. Alpha, beta, and release candidate tags create
-prereleases. Existing published releases are preserved; an existing draft requires
-manual review. A failed publication prevents subsequent publication jobs.
+must be an ancestor of the new tag. Existing published releases are preserved;
+an existing draft requires manual review. A failed publication prevents subsequent
+publication jobs.
 
 ## Installation
 

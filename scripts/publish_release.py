@@ -69,7 +69,7 @@ def release_notes(repository: str, tag: str, previous: str | None) -> str:
 
 def publish_release(repository: str, tag: str) -> None:
     """Create a release once, using the last published release as the baseline."""
-    version = release_version(tag)
+    release_version(tag)
     current = command("git", "rev-parse", "--verify", f"refs/tags/{tag}^{{commit}}")
     remote = command("gh", "api", f"repos/{repository}/commits/{tag}", "--jq", ".sha")
     if current != remote or current != command("git", "rev-parse", "HEAD"):
@@ -117,8 +117,6 @@ def publish_release(repository: str, tag: str) -> None:
             "--notes-file",
             str(path),
         ]
-        if re.search(r"(?:a|b|rc)\d+$", version):
-            args.extend(["--prerelease", "--latest=false"])
         command(*args)
     print(f"Published GitHub Release {tag} (previous release: {previous or 'none'}).")
 

@@ -16,12 +16,18 @@ from scripts.check_release import check_release, release_version
 from scripts.publish_release import publish_release, release_notes
 
 
-@pytest.mark.parametrize("tag", ["1.2.3", "v1.2.3", "1.2.3rc1"])
+@pytest.mark.parametrize("tag", ["0.0.0", "1.2.3", "10.20.30"])
 def test_release_version(tag):
-    assert release_version(tag) == tag.removeprefix("v")
+    assert release_version(tag) == tag
 
 
-@pytest.mark.parametrize("tag", ["latest", "1.2", "v01.2.3", "1.2.3+local"])
+@pytest.mark.parametrize(
+    "tag",
+    [
+        "latest", "1.2", "1.2.3.4", "v1.2.3", "01.2.3", "1.02.3", "1.2.03",
+        "1.2.3a1", "1.2.3b1", "1.2.3rc1", "1.2.3+local", "1..3", "１.2.3",
+    ],
+)
 def test_invalid_release_version(tag):
     with pytest.raises(ValueError):
         release_version(tag)
@@ -37,20 +43,20 @@ def test_distribution_versions(tmp_path, version):
         info.size = len(metadata)
         archive.addfile(info, io.BytesIO(metadata))
     if version == "1.2.3":
-        check_release("v1.2.3", tmp_path)
+        check_release("1.2.3", tmp_path)
     else:
         with pytest.raises(ValueError, match="expected"):
-            check_release("v1.2.3", tmp_path)
+            check_release("1.2.3", tmp_path)
 
 
 def test_notes_use_previous_release_and_preserve_messages():
     message = "Fix issue\n\n```\n$(touch unwanted)\n```"
     with patch("scripts.publish_release.command") as command:
         command.side_effect = ["new", "old", "", f"abcdef123\0{message}\0"]
-        notes = release_notes("owner/repo", "v1.2.3", "v1.2.2")
+        notes = release_notes("owner/repo", "1.2.3", "1.2.2")
     assert message in notes
     assert "````text" in notes
-    assert "compare/v1.2.2...v1.2.3" in notes
+    assert "compare/1.2.2...1.2.3" in notes
     assert command.call_args.args[-2:] == ("old..new", "--")
 
 
@@ -59,28 +65,38 @@ def test_existing_release_is_not_overwritten(draft):
     with patch("scripts.publish_release.command") as command:
         command.side_effect = [
             "sha", "sha", "sha",
-            json.dumps([[{"tag_name": "v1.2.3", "draft": draft}]]),
+            json.dumps([[{"tag_name": "1.2.3", "draft": draft}]]),
         ]
         if draft:
             with pytest.raises(ValueError, match="draft"):
-                publish_release("owner/repo", "v1.2.3")
+                publish_release("owner/repo", "1.2.3")
         else:
-            publish_release("owner/repo", "v1.2.3")
+            publish_release("owner/repo", "1.2.3")
     assert command.call_count == 4
 
 
-def test_first_prerelease_creation():
+def test_first_release_creation():
     with patch("scripts.publish_release.command") as command:
         command.side_effect = ["sha", "sha", "sha", "[[]]", "sha", "", ""]
-        publish_release("owner/repo", "v1.2.3rc1")
+        publish_release("owner/repo", "1.2.3")
     args = command.call_args.args
     assert args[:3] == ("gh", "release", "create")
-    assert args[-2:] == ("--prerelease", "--latest=false")
+    assert args[3] == "1.2.3"
+    assert "--prerelease" not in args
+    assert "--latest=false" not in args
 
 
 def test_remote_tag_mismatch_stops_publication():
     with patch("scripts.publish_release.command") as command:
         command.side_effect = ["local", "remote"]
         with pytest.raises(ValueError, match="must match"):
-            publish_release("owner/repo", "v1.2.3")
+            publish_release("owner/repo", "1.2.3")
     assert command.call_count == 2
+
+
+@pytest.mark.parametrize("tag", ["v1.2.3", "1.2.3rc1"])
+def test_invalid_tag_stops_publication(tag):
+    with patch("scripts.publish_release.command") as command:
+        with pytest.raises(ValueError):
+            publish_release("owner/repo", tag)
+    command.assert_not_called()
