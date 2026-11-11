@@ -124,24 +124,32 @@ This starts OpenWebUI at `http://localhost:3003`, the MCP server at
 demo includes ecommerce, analytics, inventory, and HR data plus intentional
 bloat and index patterns for realistic monitoring questions.
 
-**3. Connect OpenWebUI directly to MCP**
+**3. Connect OpenWebUI to the MCP server**
 
 1. Open `http://localhost:3003`, create the administrator account, and add a
-   model provider under **Settings → Admin → Connections**.
-2. The Quick Start enables tool calling through Chat Completions by default
-   with this setting already present in `.env.example`:
+   model provider under **Settings → Admin → Connections**:
+   - **OpenAI:** add an OpenAI API connection with URL
+     `https://api.openai.com/v1`, enter your OpenAI API key (Auth **Bearer**),
+     set **API Type** to **Chat Completions**, and save it.
+   - **Ollama on the Docker host:** the Compose file already points OpenWebUI
+     to `http://host.docker.internal:11434`; ensure Ollama is reachable from
+     Docker and pull a tool-capable model.
+
+   Confirm that the model appears in a new chat before continuing.
+2. The Quick Start calls tools through Chat Completions with model reasoning
+   turned off, using this default already present in `.env.example`:
 
    ```dotenv
    DEFAULT_MODEL_PARAMS={"reasoning_effort":"none"}
    ```
 
-   This applies to every model and disables model reasoning. If the
-   `open-webui-data` volume already exists, its saved database value takes
-   precedence over `.env`; set **Reasoning Effort** to `none` under **Settings
-   → Admin → Models → Model Defaults → Model Parameters** instead. To retain
-   reasoning with a provider configured for the Responses API, set
-   `DEFAULT_MODEL_PARAMS={}` before the first start and leave **Reasoning
-   Effort** at **Default**.
+   This value requires **API Type: Chat Completions**. With **Responses**,
+   OpenWebUI 0.13.0 still sends `reasoning_effort`, and every request fails with
+   `Unsupported parameter: 'reasoning_effort'`. If the `open-webui-data` volume
+   already exists, set the same value under **Settings → Admin → Models → Model
+   Defaults → Model Parameters** because its saved database value takes
+   precedence. To keep model reasoning through **Responses** instead, see
+   [OpenAI reasoning models](#openai-reasoning-models).
 3. Under **Settings → Admin → Tools → Integrations → External Tool Servers**,
    add a connection of type **MCP (Streamable HTTP)** with URL
    `http://mcp-server:8000/mcp` and authentication **None**. This matches the
@@ -867,6 +875,49 @@ SET track_io_timing = 'on';
    > Models or providers that do not support this parameter may reject the
    > request. In that case, remove the line from `.env` and set Reasoning
    > Effort per model instead.
+2. **`Unsupported parameter: 'reasoning_effort' ... moved to
+   'reasoning.effort'`**: OpenWebUI 0.13.0 sent the Chat Completions parameter
+   `reasoning_effort` (even `none`) through an OpenAI connection with **API
+   Type: Responses**. Set **API Type** to **Chat Completions** under **Settings
+   → Admin → Connections → edit the OpenAI connection** (Quick Start default),
+   or keep **Responses** and set Reasoning Effort to **Default** in every scope
+   as described in [OpenAI reasoning models](#openai-reasoning-models). Then
+   start a new chat.
+
+### OpenAI reasoning models
+
+For OpenAI reasoning models, the connection's **API Type** and the **Reasoning
+Effort** parameter must match. Set **API Type** under **Settings → Admin →
+Connections → edit the OpenAI connection**, and use one of these combinations:
+
+| Setup | API Type | Reasoning Effort | Result |
+| --- | --- | --- | --- |
+| Quick Start default | **Chat Completions** | `none` (from `DEFAULT_MODEL_PARAMS`) | Tools work; model reasoning is off |
+| Reasoning with tools | **Responses** | **Default** in every scope | Tools work; the model uses its default reasoning effort |
+
+Other combinations fail with OpenWebUI 0.13.0:
+
+- **Responses** with any `reasoning_effort` value, including `none`: OpenWebUI
+  sends the Chat Completions parameter `reasoning_effort` unchanged, and the
+  Responses API rejects it with `Unsupported parameter: 'reasoning_effort'`.
+- **Chat Completions** with a reasoning effort other than `none`: the API
+  rejects the request with `Function tools with reasoning_effort are not
+  supported`.
+
+To use model reasoning instead, set `DEFAULT_MODEL_PARAMS={}` before the first
+start, set the connection's **API Type** to **Responses**, and leave
+**Reasoning Effort** at **Default** under **Settings → Admin → Models → Model
+Defaults** and **Settings → Admin → Models → _model_ → Advanced Params**.
+Remove any `reasoning_effort` or `reasoning` override from the chat's
+**Controls → Advanced Params** and **Settings → General → Advanced
+Parameters**, then start a new chat. OpenWebUI can merge parameters from these
+scopes, so an old override can still make the request fail. If the
+`open-webui-data` volume already exists, clear `reasoning_effort` under
+**Model Defaults** in the administrator UI, because the saved database value
+takes precedence over `.env`.
+
+Models and providers without this constraint may keep their normal API type
+and reasoning settings.
 
 ### Configuration Issues
 1. **"No data found" for function statistics**: Check `track_functions` setting
