@@ -2,6 +2,7 @@
 
 import io
 import json
+import re
 import sys
 import tarfile
 import zipfile
@@ -86,6 +87,24 @@ def test_first_release_creation():
     assert "--latest=false" not in args
 
 
+def test_release_creation_attaches_assets(tmp_path):
+    bundle = tmp_path / "mcp-postgresql-ops-1.2.3.mcpb"
+    bundle.write_bytes(b"bundle")
+    with patch("scripts.publish_release.command") as command:
+        command.side_effect = ["sha", "sha", "sha", "[[]]", "sha", "", ""]
+        publish_release("owner/repo", "1.2.3", (str(bundle),))
+    assert command.call_args.args[-1] == str(bundle)
+
+
+def test_missing_release_asset_stops_publication(tmp_path):
+    with patch("scripts.publish_release.command") as command:
+        with pytest.raises(ValueError, match="assets not found"):
+            publish_release(
+                "owner/repo", "1.2.3", (str(tmp_path / "missing.mcpb"),)
+            )
+    command.assert_not_called()
+
+
 def test_remote_tag_mismatch_stops_publication():
     with patch("scripts.publish_release.command") as command:
         command.side_effect = ["local", "remote"]
@@ -100,3 +119,35 @@ def test_invalid_tag_stops_publication(tag):
         with pytest.raises(ValueError):
             publish_release("owner/repo", tag)
     command.assert_not_called()
+
+
+def test_mcpb_manifest_matches_server_configuration():
+    root = Path(__file__).resolve().parents[1]
+    manifest = json.loads((root / "mcpb" / "manifest.json").read_text())
+    server = manifest["server"]
+    env = server["mcp_config"]["env"]
+    config = manifest["user_config"]
+
+    used = {
+        match
+        for value in env.values()
+        for match in re.findall(r"\$\{user_config\.(\w+)\}", value)
+    }
+    assert used == set(config)
+    assert config["postgres_password"]["sensitive"] is True
+    assert server["type"] == "uv"
+    assert server["entry_point"] == "server.py"
+    assert server["mcp_config"]["args"][-1] == "server.py"
+    assert (root / "mcpb" / "server.py").is_file()
+
+
+def test_release_workflow_builds_and_attaches_mcpb():
+    root = Path(__file__).resolve().parents[1]
+    workflow = (root / ".github/workflows/pypi-publish.yml").read_text()
+    assert 'scripts/build-mcpb.sh "$RELEASE_TAG" mcpb-dist' in workflow
+    assert "python -m pytest -q tests/test_release.py" in workflow
+    assert "name: mcpb" in workflow
+    assert (
+        'python -m scripts.publish_release "$RELEASE_TAG" mcpb-dist/*.mcpb'
+        in workflow
+    )

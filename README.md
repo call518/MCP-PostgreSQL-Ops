@@ -265,7 +265,20 @@ The `create-test-data.sql` script is executed by the `postgres-init-extensions` 
 ## Usage Examples
 
 ### Claude Desktop Integration
-(Recommended) Add to your Claude Desktop configuration file:
+
+#### Desktop extension bundle (recommended)
+
+1. Download `mcp-postgresql-ops-<version>.mcpb` from the latest
+   [GitHub Release](https://github.com/call518/MCP-PostgreSQL-Ops/releases).
+2. In Claude Desktop, open **Settings > Extensions > Advanced settings >
+   Install Extension…** and select the downloaded file.
+3. Enter the PostgreSQL host, port, user, password, and default database in the
+   extension settings.
+
+#### PyPI package with uvx
+
+Alternatively, add the following entry to your Claude Desktop configuration
+file:
 
 ```json
 {

@@ -18,8 +18,10 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12.x"
-      - name: Install build tool
-        run: pip install --upgrade build
+      - name: Install build and release test tools
+        run: pip install --upgrade build pytest
+      - name: Test release automation
+        run: python -m pytest -q tests/test_release.py
       - name: Build distributions
         run: python -m build
       - name: Verify tag and distribution versions
@@ -30,6 +32,15 @@ jobs:
         with:
           name: dist
           path: dist/
+          if-no-files-found: error
+      - name: Build Claude Desktop bundle
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: scripts/build-mcpb.sh "$RELEASE_TAG" mcpb-dist
+      - uses: actions/upload-artifact@v7
+        with:
+          name: mcpb
+          path: mcpb-dist/
           if-no-files-found: error
 
   publish-to-testpypi:
@@ -94,5 +105,9 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12.x"
+      - uses: actions/download-artifact@v8
+        with:
+          name: mcpb
+          path: mcpb-dist/
       - name: Publish release with commit messages
-        run: python -m scripts.publish_release "$RELEASE_TAG"
+        run: python -m scripts.publish_release "$RELEASE_TAG" mcpb-dist/*.mcpb

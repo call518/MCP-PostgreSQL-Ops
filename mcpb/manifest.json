@@ -1,0 +1,93 @@
+{
+  "manifest_version": "0.4",
+  "name": "mcp-postgresql-ops",
+  "display_name": "PostgreSQL Ops",
+  "version": "0.0.0",
+  "description": "Monitor and operate a PostgreSQL server with MCP tools.",
+  "long_description": "Runs MCP-PostgreSQL-Ops locally over stdio. Claude Desktop installs Python and the locked dependencies with uv.",
+  "author": {
+    "name": "JungJungIn",
+    "url": "https://github.com/call518"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/call518/MCP-PostgreSQL-Ops"
+  },
+  "homepage": "https://github.com/call518/MCP-PostgreSQL-Ops",
+  "documentation": "https://github.com/call518/MCP-PostgreSQL-Ops#claude-desktop-integration",
+  "support": "https://github.com/call518/MCP-PostgreSQL-Ops/issues",
+  "license": "MIT",
+  "keywords": [
+    "postgresql",
+    "database",
+    "operations",
+    "monitoring"
+  ],
+  "server": {
+    "type": "uv",
+    "entry_point": "server.py",
+    "mcp_config": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "${__dirname}",
+        "server.py"
+      ],
+      "env": {
+        "SETUPTOOLS_SCM_PRETEND_VERSION": "0.0.0",
+        "POSTGRES_HOST": "${user_config.postgres_host}",
+        "POSTGRES_PORT": "${user_config.postgres_port}",
+        "POSTGRES_USER": "${user_config.postgres_user}",
+        "POSTGRES_PASSWORD": "${user_config.postgres_password}",
+        "POSTGRES_DB": "${user_config.postgres_db}"
+      }
+    }
+  },
+  "user_config": {
+    "postgres_host": {
+      "type": "string",
+      "title": "PostgreSQL host (POSTGRES_HOST)",
+      "description": "Host name or IP address of the PostgreSQL server",
+      "required": true
+    },
+    "postgres_port": {
+      "type": "string",
+      "title": "PostgreSQL port (POSTGRES_PORT)",
+      "description": "PostgreSQL server port",
+      "default": "5432",
+      "required": true
+    },
+    "postgres_user": {
+      "type": "string",
+      "title": "PostgreSQL user (POSTGRES_USER)",
+      "description": "PostgreSQL connection user",
+      "default": "postgres",
+      "required": true
+    },
+    "postgres_password": {
+      "type": "string",
+      "title": "PostgreSQL password (POSTGRES_PASSWORD)",
+      "description": "PostgreSQL password, stored securely by Claude Desktop",
+      "sensitive": true,
+      "required": true
+    },
+    "postgres_db": {
+      "type": "string",
+      "title": "Default database (POSTGRES_DB)",
+      "description": "Default database for PostgreSQL operations",
+      "default": "postgres",
+      "required": true
+    }
+  },
+  "compatibility": {
+    "platforms": [
+      "darwin",
+      "win32",
+      "linux"
+    ],
+    "runtimes": {
+      "python": ">=3.12"
+    }
+  }
+}
