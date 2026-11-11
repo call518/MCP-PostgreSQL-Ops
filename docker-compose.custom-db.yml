@@ -2,12 +2,13 @@ services:
   open-webui:
     env_file: .env
     container_name: mcp-postgresql-ops-open-webui
-    # image: ghcr.io/open-webui/open-webui:main
-    image: ghcr.io/open-webui/open-webui:0.6.22
+    # image: ghcr.io/open-webui/open-webui:latest
+    image: ghcr.io/open-webui/open-webui:v0.13.0
     ports:
-      - "${DOCKER_EXTERNAL_PORT_OPENWEBUI}:8080"
+      - "${DOCKER_BIND_ADDRESS:-127.0.0.1}:${DOCKER_EXTERNAL_PORT_OPENWEBUI}:8080"
     environment:
       - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      # - DEFAULT_MODEL_PARAMS={"reasoning_effort":"none"}
     volumes:
       - open-webui-data:/app/backend/data
     extra_hosts:
@@ -17,9 +18,9 @@ services:
   mcp-server:
     env_file: .env
     container_name: mcp-postgresql-ops-mcp-server
-    image: call518/mcp-server-postgresql-ops:1.0.1
+    image: call518/mcp-server-postgresql-ops:1.0.2
     ports:
-      - "${DOCKER_EXTERNAL_PORT_MCP_SERVER}:8000" ### (WARNING) Must be same with port number of 'FASTMCP_PORT', 'mcp-config.json' and 'mcp-config.json.http'
+      - "${DOCKER_BIND_ADDRESS:-127.0.0.1}:${DOCKER_EXTERNAL_PORT_MCP_SERVER}:8000"
     volumes:
       - ./src:/app/src
       - ./scripts:/app/scripts
@@ -36,15 +37,15 @@ services:
 
   mcpo-proxy:
     env_file: .env
-    image: call518/mcpo-proxy-postgresql-ops:1.0.3
+    image: call518/mcpo-proxy-postgresql-ops:1.0.4
     container_name: mcp-postgresql-ops-mcpo-proxy
     depends_on:
       mcp-server:
         condition: service_healthy
     ports:
-      - "${DOCKER_EXTERNAL_PORT_MCPO_PROXY}:8000"
+      - "${DOCKER_BIND_ADDRESS:-127.0.0.1}:${DOCKER_EXTERNAL_PORT_MCPO_PROXY}:8000"
     volumes:
-      - ./mcp-config.json.http:/app/config/mcp-config.json
+      - ./${MCPO_CONFIG_FILE:-mcp-config.json.http.local}:/app/config/mcp-config.json:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped

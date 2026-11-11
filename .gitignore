@@ -9,11 +9,19 @@ wheels/
 # Virtual environments
 .venv
 
+# Environment and local MCP configuration files
+.env
+.env.*
+!.env.example
+mcp-config.json.*.local
+
 **/__pycache__/
 **/.pytest_cache/
 
 .vscode*
 #.github/copilot-instructions.md
 
-.env
 *.swp
+
+# Windows download metadata
+*:Zone.Identifier

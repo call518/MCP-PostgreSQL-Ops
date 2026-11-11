@@ -1,4 +1,7 @@
-# MCP Server for PostgreSQL Operations and Monitoring
+# MCP-PostgreSQL-Ops
+
+> Give Claude and other AI assistants read-only PostgreSQL observability for
+> slow queries, locks, bloat, VACUUM, indexes, replication, WAL, and capacity.
 
 [![MCPVault: claimed](https://mcpvault.io/badge/mcp-postgresql-ops.svg?theme=dark)](https://mcpvault.io/servers/mcp-postgresql-ops/health?utm_source=external_badge&utm_medium=referral&utm_campaign=mcp_health_report)
 
@@ -7,8 +10,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)
 ![Docker Pulls](https://img.shields.io/docker/pulls/call518/mcp-server-postgresql-ops)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat&logo=postgresql&logoColor=white)
-[![BuyMeACoffee](https://raw.githubusercontent.com/pachadotdev/buymeacoffee-badges/main/bmc-donate-yellow.svg)](https://www.buymeacoffee.com/call518)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-12--18-4169E1?style=flat&logo=postgresql&logoColor=white)
 
 [![Deploy to PyPI with tag](https://github.com/call518/MCP-PostgreSQL-Ops/actions/workflows/pypi-publish.yml/badge.svg)](https://github.com/call518/MCP-PostgreSQL-Ops/actions/workflows/pypi-publish.yml)
 ![PyPI](https://img.shields.io/pypi/v/MCP-PostgreSQL-Ops?label=pypi%20package)
@@ -16,178 +18,174 @@
 
 ---
 
-## Architecture & Internal (DeepWiki)
+## What is MCP-PostgreSQL-Ops?
 
-[![Ask DeepWiki](https://img.shields.io/badge/Ask-DeepWiki-blue)](https://deepwiki.com/call518/MCP-PostgreSQL-Ops)
+MCP-PostgreSQL-Ops lets Claude, OpenWebUI, and other MCP clients inspect a
+PostgreSQL server through natural-language questions. It turns requests such as
+“Which tables need VACUUM now?” into predefined, read-only SQL queries and
+returns the evidence needed to diagnose the database.
 
----
+- **Read-only tools:** no arbitrary SQL execution or data-changing operations.
+- **PostgreSQL 12–18:** version-specific views and columns are detected
+  automatically.
+- **Useful without extensions:** core monitoring works immediately;
+  `pg_stat_statements` and `pg_stat_monitor` add query analytics.
+- **Deployment choice:** install a Claude Desktop extension, run with `uvx`, or
+  connect OpenWebUI directly to the HTTP MCP server.
 
-## Overview
+For an AI-generated code walkthrough, use
+[![Ask DeepWiki](https://img.shields.io/badge/Ask-DeepWiki-blue)](https://deepwiki.com/call518/MCP-PostgreSQL-Ops).
 
-**MCP-PostgreSQL-Ops** is a professional MCP server for PostgreSQL database operations, monitoring, and management. Supports PostgreSQL 12-18 with comprehensive database analysis, performance monitoring, and intelligent maintenance recommendations through natural language queries. Most features work independently, but advanced query analysis capabilities are enhanced when `pg_stat_statements` and (optionally) `pg_stat_monitor` extensions are installed.
+## What can you ask?
 
----
+```text
+Show the current active connections and blocked sessions
+Which queries consume the most execution time?
+Find bloated tables and explain what needs attention first
+Which tables need VACUUM or autovacuum tuning?
+Show unused or inefficient indexes
+Check replication, WAL, checkpoints, and background processes
+Summarize database size, growth, and I/O activity
+Draw the relationships for the ecommerce schema
+```
 
-## Features
+Core tools work with normal catalog access. Broader cross-database visibility
+depends on the PostgreSQL role; use a least-privilege monitoring account in
+production.
 
-- ✅ **Zero Configuration**: Works with PostgreSQL 12-18 out-of-the-box with automatic version detection.
-- ✅ **Natural Language**: Ask questions like "Show me slow queries" or "Analyze table bloat."
-- ✅ **Production Safe**: Read-only operations, RDS/Aurora compatible with regular user permissions.
-- ✅ **Extension Enhanced**: Optional `pg_stat_statements` and `pg_stat_monitor` for advanced query analytics.
-- ✅ **Comprehensive Database Monitoring**: Performance analysis, bloat detection, and maintenance recommendations.
-- ✅ **Smart Query Analysis**: Slow query identification with `pg_stat_statements` and `pg_stat_monitor` integration.
-- ✅ **Schema & Relationship Discovery**: Database structure exploration with detailed relationship mapping.
-- ✅ **VACUUM & Autovacuum Intelligence**: Real-time maintenance monitoring and effectiveness analysis.
-- ✅ **Multi-Database Operations**: Seamless cross-database analysis and monitoring.
-- ✅ **Enterprise-Ready**: Safe read-only operations with RDS/Aurora compatibility.
-- ✅ **Developer-Friendly**: Simple codebase for easy customization and tool extension.
+**Example: slow-query evidence and recommendations**
 
-### 🔧 **Advanced Capabilities**
-- Version-aware I/O statistics (enhanced on PostgreSQL 16+, byte columns on PG 18+).
-- Real-time connection and lock monitoring.
-- Background process and checkpoint analysis.
-- Replication status and WAL monitoring.
-- Database capacity and bloat analysis.
-- Wait event catalog with descriptions (PG 17+).
-- WAL summarizer monitoring for incremental backups (PG 17+).
-- Async I/O subsystem monitoring (PG 18+).
-- Per-backend I/O and WAL statistics (PG 18+).
+![Slow-query analysis](img/screenshot-000.png)
 
-## Tool Usage Examples
+More examples are available in the
+[screenshots and usage wiki](https://github.com/call518/MCP-PostgreSQL-Ops/wiki).
 
-### 📸 **[More Examples with Screenshots →](https://github.com/call518/MCP-PostgreSQL-Ops/wiki)**
+## Quick Start
 
----
+Choose one path. If you already have PostgreSQL and Claude Desktop, Option A
+is the shortest. Option B provides a complete local demonstration with sample
+databases and OpenWebUI.
 
-![MCP-PostgreSQL-Ops Usage Screenshot](img/screenshot-000.png)
+<a id="claude-desktop-integration"></a>
 
----
+### Option A: Claude Desktop extension (fastest)
 
-![MCP-PostgreSQL-Ops Usage Screenshot](img/screenshot-005.png)
+Requirements: Claude Desktop with extension support and a PostgreSQL server
+reachable from the computer running Claude Desktop.
 
----
+1. Open the latest
+   [GitHub Release](https://github.com/call518/MCP-PostgreSQL-Ops/releases)
+   and download `mcp-postgresql-ops-<version>.mcpb`.
+2. In Claude Desktop, open **Settings → Extensions → Advanced settings →
+   Install Extension…** and select the downloaded file.
+3. Enter the PostgreSQL host, port, user, password, and default database.
+4. Ask Claude: `Show the current active PostgreSQL connections.`
 
-## ⭐ Quickstart (5 minutes)
+The password field is marked sensitive and is stored by Claude Desktop. The
+extension runs the server locally over `stdio`; it does not expose an HTTP
+port.
 
-> **Note:** The `postgresql` container included in `docker-compose.yml` is intended for quickstart testing purposes only. You can connect to your own PostgreSQL instance by adjusting the environment variables as needed.
+### Option B: OpenWebUI 0.13 with the included demo database
 
-> **If you want to use your own PostgreSQL instance instead of the built-in test container:**
-> - Update the target PostgreSQL connection information in your `.env` file (see POSTGRES_HOST, POSTGRES_PORT, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB).
-> - In `docker-compose.yml`, comment out (disable) the `postgres` and `postgres-init-extensions` containers to avoid starting the built-in test database.
+Requirements: Git, Docker with the Compose plugin, and an OpenWebUI model
+provider whose model supports tool calling.
 
-### Flow Diagram of Quickstart/Tutorial
-
-![Flow Diagram of Quickstart/Tutorial](img/MCP-Workflow-of-Quickstart-Tutorial.png)
-### 1. Environment Setup
-
-> **Note**: While superuser privileges provide access to all databases and system information, the MCP server also works with regular user permissions for basic monitoring tasks.
+**1. Configure and start**
 
 ```bash
 git clone https://github.com/call518/MCP-PostgreSQL-Ops.git
 cd MCP-PostgreSQL-Ops
-
-### Check and modify .env file
 cp .env.example .env
-vim .env
+cp mcp-config.json.http mcp-config.json.http.local
+chmod 600 mcp-config.json.http.local
+openssl rand -hex 32  # set the output as WEBUI_SECRET_KEY in .env
+docker compose up -d
+docker compose ps     # wait for postgres-init-extensions to finish
 ```
+
+`mcp-config.json.http.local` is ignored by Git and is mounted only into MCPO.
+If `REMOTE_AUTH_ENABLE=true`, replace `<REMOTE_SECRET_KEY>` in that local file
+with the same secret configured in `.env`. Leave the tracked
+`mcp-config.json.http` file as a credential-free template.
+
+This starts OpenWebUI at `http://localhost:3003`, the MCP server at
+`http://localhost:18003/mcp`, optional MCPO/OpenAPI compatibility at
+`http://localhost:8003`, and a disposable PostgreSQL demo environment. The
+demo includes ecommerce, analytics, inventory, and HR data plus intentional
+bloat and index patterns for realistic monitoring questions.
+
+**2. Connect OpenWebUI directly to MCP**
+
+1. Open `http://localhost:3003`, create the administrator account, and add a
+   model provider under **Settings → Admin → Connections**.
+2. Under **Settings → Admin → Tools → Integrations → External Tool Servers**,
+   add a connection of type **MCP (Streamable HTTP)** with URL
+   `http://mcp-server:8000/mcp` and authentication **None**.
+3. Under **Settings → Admin → System → Interface → Chat**, enable **Tool
+   Search** and **Defer Built-in Tools**, then set **Deferral Threshold** to `0`.
+4. In a new chat, enable the connection under **Integrations → Tools** and ask:
+   `Use mcp-postgresql-ops to show tables that need VACUUM.`
+
+> `.env.example` sets `DEFAULT_MODEL_PARAMS={"reasoning_effort":"none"}` so
+> OpenAI reasoning models can call MCP tools. If the chat still fails with
+> `Function tools with reasoning_effort are not supported ...`, see
+> [OpenWebUI Issues](#openwebui-issues).
+
+> **MCPO is optional.** OpenWebUI 0.13 connects to the MCP server directly and
+> does not require the MCPO proxy. To expose the tools as an OpenAPI/Swagger
+> service for a legacy client, use MCPO at `http://localhost:8003`. The Compose
+> file starts it so every project keeps the same deployment layout. To run
+> without it, use `docker compose up -d mcp-server open-webui`.
+
+To connect the Docker stack to an existing PostgreSQL server instead, update
+the `POSTGRES_*` values in `.env` and run:
 
 ```bash
-### No need to modify defaults, but if using your own PostgreSQL server, edit below:
-POSTGRES_HOST=host.docker.internal
-POSTGRES_PORT=15432  # External port for host access (mapped to internal 5432)
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=changeme!@34
-POSTGRES_DB=ecommerce # Default connection DB. Superusers can access all DBs.
+docker compose -f docker-compose.custom-db.yml up -d
 ```
 
-> **Note**: `PGDATA=/data/db` is preconfigured for the Percona PostgreSQL Docker image, which requires this specific path for proper write permissions.
+## Why this project?
 
-### 2. Start Demo Containers
+- **Operational evidence, not arbitrary SQL:** every tool uses a predefined
+  monitoring query and returns inspectable PostgreSQL statistics.
+- **Automatic version adaptation:** one server supports PostgreSQL 12 through
+  18, including newer I/O, wait-event, checkpointer, and WAL views.
+- **Maintenance intelligence:** bloat, VACUUM, autovacuum, indexes, locks,
+  capacity, replication, and query performance are covered together.
+- **Managed-service friendly:** core tools work on RDS/Aurora and with regular
+  monitoring roles; advanced visibility still follows provider permissions.
+- **Multiple clients:** Claude Desktop, OpenWebUI, any Streamable HTTP MCP
+  client, and optional OpenAPI clients through MCPO.
 
-```bash
-# Start all containers including built-in PostgreSQL for testing
-docker-compose up -d
+## How it works
 
-# Alternative: If using your own PostgreSQL instance
-# Comment out postgres and postgres-init-extensions services in docker-compose.yml
-# Then use the custom configuration:
-# docker-compose -f docker-compose.custom-db.yml up -d
+```text
+Claude Desktop ── stdio ───────────────┐
+                                       │
+OpenWebUI 0.13 ─ Streamable HTTP ──────┼─> MCP-PostgreSQL-Ops
+                                       │      │
+OpenAPI client ─ optional MCPO proxy ──┘      └─> read-only SQL ─> PostgreSQL
 ```
 
-> **⏰ Wait for Environment Setup**: The initial environment setup takes a few minutes as containers are started in sequence:
-> 1. **PostgreSQL** container starts first with database initialization
-> 2. **PostgreSQL Extensions** container installs extensions and creates comprehensive test data (~83K records)
-> 3. **MCP Server** and **MCPO Proxy** containers start after PostgreSQL is ready
-> 4. **OpenWebUI** container starts last and may take additional time to load the web interface
-> 
-> **💡 Tip**: Wait 2-3 minutes after running `docker-compose up -d` before accessing OpenWebUI to ensure all services are fully initialized.
+The MCP server is the required component. OpenWebUI can call it directly;
+MCPO is only an optional protocol adapter. The
+[DeepWiki architecture](https://deepwiki.com/call518/MCP-PostgreSQL-Ops)
+provides a code-level walkthrough.
 
-**🔍 Check Container Status** (Optional):
-```bash
-# Monitor container startup progress
-docker-compose logs -f
+## Installation options
 
-# Check if all containers are running
-docker-compose ps
+| Setup | Best for | Requirements |
+| --- | --- | --- |
+| MCPB extension | Fastest Claude Desktop setup | Claude Desktop |
+| `uvx --python 3.12 mcp-postgresql-ops` | Explicit local configuration | `uv` |
+| Docker Compose | OpenWebUI and HTTP MCP clients | Docker Compose |
+| Source checkout | Development and customization | Git, `uv` |
 
-# Verify PostgreSQL is ready
-docker compose exec -T postgres sh -c \
-  'pg_isready -h 127.0.0.1 -p 5432 -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
-```
+All methods run the same server. Choose one; they are not cumulative.
 
-### 3. Access to OpenWebUI
+## Features and compatibility
 
-http://localhost:3003/
-
-- The list of MCP tool features provided by `swagger` can be found in the MCPO API Docs URL.
-  - e.g: `http://localhost:8003/docs`
-
-### 4. Registering the Tool in OpenWebUI
-
-> 📌 **Note**: Web-UI configuration instructions are based on OpenWebUI **v0.6.22**. Menu locations and settings may differ in newer versions.
-
-1. logging in to OpenWebUI with an admin account
-1. go to "Settings" → "Tools" from the top menu.
-1. Enter the `postgresql-ops` Tool address (e.g., `http://localhost:8003/postgresql-ops`) to connect MCP Tools.
-1. Setup Ollama or OpenAI.
-
-### 5. Complete!
-
-**Congratulations!** Your MCP PostgreSQL Operations server is now ready for use. You can start exploring your databases with natural language queries.
-
-#### 🚀 **Try These Example Queries:**
-
-- **"Show me the current active connections"**
-- **"What are the slowest queries in the system?"** 
-- **"Analyze table bloat across all databases"**
-- **"Show me database size information"**
-- **"What tables need VACUUM maintenance?"**
-
-#### 📖 **Next Steps:**
-- Browse the **[Example Queries section](#usage-examples)** below for more query examples
-- Check out **[Tool Usage Examples with Screenshots](https://github.com/call518/MCP-PostgreSQL-Ops/wiki)** for visual guides
-- Explore the **[Tool Compatibility Matrix](#tool-compatibility-matrix)** to understand available features
-
----
-
-## (NOTE) Sample Test Data Overview
-
-The `create-test-data.sql` script is executed by the `postgres-init-extensions` container (defined in docker-compose.yml) on first startup, automatically generating comprehensive test databases for MCP tool testing:
-
-| Database | Purpose | Schema & Tables | Scale |
-|----------|---------|-----------------|-------|
-| **ecommerce** | E-commerce system | **public**: categories, products, customers, orders, order_items | 10 categories, 500 products, 100 customers, 200 orders, 400 order items |
-| **analytics** | Analytics & reporting | **public**: page_views, sales_summary | 1,000 page views, 30 sales summaries |
-| **inventory** | Warehouse management | **public**: suppliers, inventory_items, purchase_orders | 10 suppliers, 100 items, 50 purchase orders |
-| **hr_system** | HR management | **public**: departments, employees, payroll | 5 departments, 50 employees, 150 payroll records |
-
-**Test users created:** `app_readonly`, `app_readwrite`, `analytics_user`, `backup_user`
-
-**Optimized for testing:** Intentional table bloat, various indexes (used/unused), time-series data, complex relationships
-
----
-
-## Tool Compatibility Matrix
+### Tool Compatibility Matrix
 
 > **Automatic Adaptation:** All tools work transparently across supported versions - no configuration needed!
 
@@ -262,84 +260,33 @@ The `create-test-data.sql` script is executed by the `postgres-init-extensions` 
 
 ---
 
-## Usage Examples
+## Other local setups
 
-### Claude Desktop Integration
-
-#### Desktop extension bundle (recommended)
-
-1. Download `mcp-postgresql-ops-<version>.mcpb` from the latest
-   [GitHub Release](https://github.com/call518/MCP-PostgreSQL-Ops/releases).
-2. In Claude Desktop, open **Settings > Extensions > Advanced settings >
-   Install Extension…** and select the downloaded file.
-3. Enter the PostgreSQL host, port, user, password, and default database in the
-   extension settings.
-
-#### PyPI package with uvx
-
-Alternatively, add the following entry to your Claude Desktop configuration
-file:
-
-```json
-{
-  "mcpServers": {
-    "mcp-postgresql-ops": {
-      "command": "uvx",
-      "args": ["--python", "3.12", "mcp-postgresql-ops"],
-      "env": {
-        "POSTGRES_HOST": "127.0.0.1",
-        "POSTGRES_PORT": "15432",
-        "POSTGRES_USER": "postgres",
-        "POSTGRES_PASSWORD": "changeme!@34",
-        "POSTGRES_DB": "ecommerce"
-      }
-    }
-  }
-}
-```
-
-"Show all active connections in a clear and readable html table format."
-![Claude Desktop Integration](img/screenshot-claude-desktop-airflow-connections-html.png)
-
-"Show all relationships for customers table in ecommerce database as a Mermaid diagram."
-![Claude Desktop Integration](img/screenshot-claude-desktop-mermaid-diagram.png)
-
----
-
-## Installation
-
-### From PyPI (Recommended)
+### Run from PyPI with uvx
 
 ```bash
-# Install the package
-pip install mcp-postgresql-ops
+# Local stdio transport
+uvx --python 3.12 mcp-postgresql-ops --type stdio
 
-# Or with uv (faster)
-uv add mcp-postgresql-ops
-
-# Verify installation
-mcp-postgresql-ops --help
+# Streamable HTTP transport
+uvx --python 3.12 mcp-postgresql-ops \
+  --type streamable-http \
+  --host 127.0.0.1 \
+  --port 8000
 ```
 
-### From Source
+### Run from source
 
 ```bash
-# Clone the repository
 git clone https://github.com/call518/MCP-PostgreSQL-Ops.git
 cd MCP-PostgreSQL-Ops
-
-# Install with uv (recommended)
 uv sync
 uv run mcp-postgresql-ops --help
-
-# Or with pip
-pip install -e .
-mcp-postgresql-ops --help
 ```
 
----
+The package is also available through `pip install mcp-postgresql-ops`.
 
-## MCP Configuration
+## Advanced configuration
 
 ### Claude Desktop Configuration
 
@@ -363,9 +310,9 @@ mcp-postgresql-ops --help
 }
 ```
 
-### Run MCP-Server as Standalon
+### Run the MCP server standalone
 
-#### /w Pypi and uvx (Recommended)
+#### With PyPI and uvx
 
 ```bash
 # Stdio mode
@@ -373,7 +320,7 @@ uvx --python 3.12 mcp-postgresql-ops \
   --type stdio
 
 # HTTP mode
-uvx --python 3.12 mcp-postgresql-ops
+uvx --python 3.12 mcp-postgresql-ops \
   --type streamable-http \
   --host 127.0.0.1 \
   --port 8000 \
@@ -462,13 +409,14 @@ mcp-postgresql-ops \
 | Variable | Description | Default | Project Default |
 |----------|-------------|---------|-----------------|
 | `PYTHONPATH` | Python module search path (only needed for development mode) | - | `/app/src` |
+| `MCPO_CONFIG_FILE` | Ignored local MCPO configuration mounted by Docker Compose | `mcp-config.json.http.local` | `mcp-config.json.http.local` |
 | `MCP_LOG_LEVEL` | Server logging verbosity (DEBUG, INFO, WARNING, ERROR) | `INFO` | `INFO` |
 | `FASTMCP_TYPE` | MCP transport protocol (stdio for CLI, streamable-http for web) | `stdio` | `streamable-http` |
 | `FASTMCP_HOST` | HTTP server bind address (0.0.0.0 for all interfaces) | `127.0.0.1` | `0.0.0.0` |
 | `FASTMCP_PORT` | HTTP server port for MCP communication | `8000` | `8000` |
 | `REMOTE_AUTH_ENABLE` | Enable Bearer token authentication for streamable-http mode (Default: `false` if undefined/null/empty) | `false` | `false` |
-| `REMOTE_SECRET_KEY` | Secret key for Bearer token authentication (required when auth enabled) | - | `your-secret-key-here` |
-| `PGSQL_VERSION` | PostgreSQL major version for Docker image selection | `17` | `17` |
+| `REMOTE_SECRET_KEY` | Secret key for Bearer token authentication (required when auth enabled) | - | empty |
+| `PGSQL_VERSION` | PostgreSQL major version for Docker image selection | `16` | `16` |
 | `PGDATA` | PostgreSQL data directory inside Docker container (**Do not modify**) | `/var/lib/postgresql/data` | `/data/db` |
 | `POSTGRES_HOST` | PostgreSQL server hostname or IP address | `127.0.0.1` | `host.docker.internal` |
 | `POSTGRES_PORT` | PostgreSQL server port number | `5432` | `15432` |
@@ -476,6 +424,7 @@ mcp-postgresql-ops \
 | `POSTGRES_PASSWORD` | PostgreSQL user password (supports special characters) | `changeme!@34` | `changeme!@34` |
 | `POSTGRES_DB` | Default database name for connections | `testdb` | `ecommerce` |
 | `POSTGRES_MAX_CONNECTIONS` | PostgreSQL max_connections configuration parameter | `200` | `200` |
+| `DOCKER_BIND_ADDRESS` | Host address for published Docker ports | `127.0.0.1` | `127.0.0.1` |
 | `DOCKER_EXTERNAL_PORT_OPENWEBUI` | Host port mapping for Open WebUI container | `8080` | `3003` |
 | `DOCKER_EXTERNAL_PORT_MCP_SERVER` | Host port mapping for MCP server container | `8080` | `18003` |
 | `DOCKER_EXTERNAL_PORT_MCPO_PROXY` | Host port mapping for MCPO proxy container | `8000` | `8003` |
@@ -864,6 +813,35 @@ SET track_io_timing = 'on';
    ```
 3. Restart PostgreSQL if needed
 
+### OpenWebUI Issues
+1. **`Function tools with reasoning_effort are not supported for <model> in
+   /v1/chat/completions`**: Some OpenAI reasoning models reject requests that
+   combine tool calling (required for MCP tools) with a `reasoning_effort`
+   value on the Chat Completions API.
+
+   **Enabled by default**: `.env.example` sets this OpenWebUI global default,
+   which applies `reasoning_effort=none` to every model:
+   ```dotenv
+   DEFAULT_MODEL_PARAMS={"reasoning_effort":"none"}
+   ```
+   OpenWebUI merges global default model params first, then per-model params,
+   then per-chat params (later values win). If you still see the error, check:
+   - **`.env` created before this setting was added**: Add the line above to
+     `.env`.
+   - **Existing `open-webui-data` volume**: The value is stored in the
+     OpenWebUI database only on first startup, and the stored value takes
+     precedence afterward. Set it in the Admin UI instead: in **Settings →
+     Admin → Models**, open the default model settings and set **Reasoning
+     Effort** to `none` under Advanced Params.
+   - **Per-model or per-chat override**: Set **Reasoning Effort** to `none`
+     in **Settings → Admin → Models → \<model\> → Advanced Params** or in the
+     chat's **Controls → Advanced Params**.
+
+   > **Note:** The global default sends `reasoning_effort` to every model.
+   > Models or providers that do not support this parameter may reject the
+   > request. In that case, remove the line from `.env` and set Reasoning
+   > Effort per model instead.
+
 ### Configuration Issues
 1. **"No data found" for function statistics**: Check `track_functions` setting
    ```sql
@@ -1013,9 +991,25 @@ We're always excited to welcome new contributors! Whether you're fixing a typo, 
 
 ---
 
-## MCPO Swagger Docs
+## Optional MCPO/OpenAPI endpoint
 
-> [MCPO Swagger URL] http://localhost:8003/postgresql-ops/docs
+OpenWebUI 0.13 uses the MCP server directly; MCPO is not required for that
+connection. The standard Compose deployment still starts MCPO to preserve the
+same deployment layout across this project's sibling MCP repositories. Open
+the [MCPO Swagger endpoint](http://localhost:8003/mcp-postgresql-ops/docs), or
+omit MCPO with `docker compose up -d mcp-server open-webui`.
+
+MCPO reads the ignored file selected by `MCPO_CONFIG_FILE`. Create it from the
+tracked template before starting Compose:
+
+```bash
+cp mcp-config.json.http mcp-config.json.http.local
+chmod 600 mcp-config.json.http.local
+```
+
+When Bearer authentication is enabled, put the same `REMOTE_SECRET_KEY` in
+`.env` and in the local file's `Authorization` header. Never place the secret
+in the tracked template.
 
 ![MCPO Swagger APIs](img/screenshot-swagger-api.png)
 
@@ -1036,17 +1030,19 @@ For `streamable-http` mode, this MCP server supports Bearer token authentication
 ```bash
 # In .env file
 REMOTE_AUTH_ENABLE=true
-REMOTE_SECRET_KEY=my-test-secret-key-12345
+REMOTE_SECRET_KEY=replace-with-a-strong-random-secret
 ```
 
 **Or via CLI:**
 
 ```bash
 # Module method
-python -m mcp_postgresql_ops --type streamable-http --auth-enable --secret-key my-test-secret-key-12345
+python -m mcp_postgresql_ops --type streamable-http --auth-enable \
+  --secret-key replace-with-a-strong-random-secret
 
 # Script method
-mcp-postgresql-ops --type streamable-http --auth-enable --secret-key my-test-secret-key-12345
+mcp-postgresql-ops --type streamable-http --auth-enable \
+  --secret-key replace-with-a-strong-random-secret
 ```
 
 #### Security Levels
@@ -1066,7 +1062,7 @@ When authentication is enabled, MCP clients must include the Bearer token in the
       "type": "streamable-http",
       "url": "http://your-server:8000/mcp",
       "headers": {
-        "Authorization": "Bearer my-test-secret-key-12345"
+        "Authorization": "Bearer replace-with-a-strong-random-secret"
       }
     }
   }
@@ -1217,8 +1213,8 @@ Add your tool description to `src/mcp_postgresql_ops/prompt_template.md` for bet
 ./run-mcp-inspector-local.sh
 
 # Or test with Docker stack
-docker-compose up -d
-docker-compose logs -f mcp-server
+docker compose up -d
+docker compose logs -f mcp-server
 
 # Test with natural language queries:
 # "Show me your custom analysis"

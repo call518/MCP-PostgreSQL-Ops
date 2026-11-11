@@ -11,10 +11,11 @@ RUN dnf install -y epel-release \
         && dnf clean all \
         && update-alternatives --install /usr/bin/python python /usr/bin/python${PYTHON_VERSION} 1000 --slave /usr/bin/pip pip /usr/bin/pip${PYTHON_VERSION}
 
-RUN pip install \
-        'uv>=0.8.5' \
-        'mcpo>=0.0.17' \
-        'fastmcp>=2.12.3' \
-        'aiohttp>=3.12.0'
+# MCPO is an optional OpenAPI compatibility proxy and does not run this
+# project's code. Keep its MCP client on 1.x until MCPO supports MCP 2.x.
+RUN pip install --no-cache-dir \
+        'mcpo==0.0.20' \
+        'mcp==1.30.0' \
+        'fastapi==0.128.0'
 
 CMD ["mcpo", "--host", "0.0.0.0", "--port", "8000", "--config", "/app/config/mcp-config.json", "--hot-reload"]

@@ -6,7 +6,7 @@ IMAGE_NAME="call518/mcp-server-postgresql-ops"
 
 echo "=== Building Docker image Name: ${IMAGE_NAME} ==="
 
-VERSION="1.0.1"
+VERSION="1.0.2"
 TAGs="latest"
 
 # Build once with version tag

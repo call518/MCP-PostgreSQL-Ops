@@ -13,7 +13,7 @@ else
   return 1 2>/dev/null || exit 1
 fi
 
-echo "Starting OpenStack MCP server with environment variables from .env:"
+echo "Starting PostgreSQL MCP server with environment variables from .env:"
 echo "================================"
 
 # Read and display all environment variables from .env file
@@ -37,4 +37,7 @@ done < "$env_file"
 
 echo "================================"
 
-python -m mcp_postgresql_ops --type ${FASTMCP_TYPE} --host ${FASTMCP_HOST} --port ${FASTMCP_PORT}
+python -m mcp_postgresql_ops \
+  --type "${FASTMCP_TYPE}" \
+  --host "${FASTMCP_HOST}" \
+  --port "${FASTMCP_PORT}"
