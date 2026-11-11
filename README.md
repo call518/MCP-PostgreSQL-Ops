@@ -328,7 +328,7 @@ The package is also available through `pip install mcp-postgresql-ops`.
         "POSTGRES_HOST": "127.0.0.1",
         "POSTGRES_PORT": "15432",
         "POSTGRES_USER": "postgres",
-        "POSTGRES_PASSWORD": "changeme!@34",
+        "POSTGRES_PASSWORD": "changeme",
         "POSTGRES_DB": "ecommerce"
       }
     }
@@ -447,7 +447,7 @@ mcp-postgresql-ops \
 | `POSTGRES_HOST` | PostgreSQL server hostname or IP address | `127.0.0.1` | `host.docker.internal` |
 | `POSTGRES_PORT` | PostgreSQL server port number | `5432` | `15432` |
 | `POSTGRES_USER` | PostgreSQL connection username (needs read permissions) | `postgres` | `postgres` |
-| `POSTGRES_PASSWORD` | PostgreSQL user password (supports special characters) | `changeme!@34` | `changeme!@34` |
+| `POSTGRES_PASSWORD` | PostgreSQL user password (supports special characters) | `changeme` | `changeme` |
 | `POSTGRES_DB` | Default database name for connections | `testdb` | `ecommerce` |
 | `POSTGRES_MAX_CONNECTIONS` | PostgreSQL max_connections configuration parameter | `200` | `200` |
 | `DOCKER_BIND_ADDRESS` | Host address for published Docker ports | `127.0.0.1` | `127.0.0.1` |

@@ -8,7 +8,7 @@
         "POSTGRES_HOST": "host.docker.internal",
         "POSTGRES_PORT": "15432",
         "POSTGRES_USER": "postgres",
-        "POSTGRES_PASSWORD": "changeme!@34"
+        "POSTGRES_PASSWORD": "changeme"
       }
     }
   }
