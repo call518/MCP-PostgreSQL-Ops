@@ -3,12 +3,11 @@ services:
     env_file: .env
     container_name: mcp-postgresql-ops-open-webui
     # image: ghcr.io/open-webui/open-webui:latest
-    image: ghcr.io/open-webui/open-webui:v0.13.0
+    image: ghcr.io/open-webui/open-webui:v0.13.2
     ports:
       - "${DOCKER_BIND_ADDRESS:-127.0.0.1}:${DOCKER_EXTERNAL_PORT_OPENWEBUI}:8080"
     environment:
       - OLLAMA_BASE_URL=http://host.docker.internal:11434
-      # - DEFAULT_MODEL_PARAMS={"reasoning_effort":"none"}
     volumes:
       - open-webui-data:/app/backend/data
     extra_hosts:
