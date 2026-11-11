@@ -30,6 +30,8 @@
       "command": "uv",
       "args": [
         "run",
+        "--python",
+        "3.12",
         "--directory",
         "${__dirname}",
         "server.py"
@@ -87,7 +89,7 @@
       "linux"
     ],
     "runtimes": {
-      "python": ">=3.12"
+      "python": ">=3.12,<3.13"
     }
   }
 }

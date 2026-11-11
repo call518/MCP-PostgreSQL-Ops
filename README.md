@@ -90,7 +90,7 @@ port.
 Requirements: Git, Docker with the Compose plugin, and an OpenWebUI model
 provider whose model supports tool calling.
 
-**1. Configure and start**
+**1. Configure**
 
 ```bash
 git clone https://github.com/call518/MCP-PostgreSQL-Ops.git
@@ -98,9 +98,8 @@ cd MCP-PostgreSQL-Ops
 cp .env.example .env
 cp mcp-config.json.http mcp-config.json.http.local
 chmod 600 mcp-config.json.http.local
-openssl rand -hex 32  # set the output as WEBUI_SECRET_KEY in .env
-docker compose up -d
-docker compose ps     # wait for postgres-init-extensions to finish
+openssl rand -hex 32   # use the output as WEBUI_SECRET_KEY
+vi .env                # set WEBUI_SECRET_KEY; adjust ports if needed
 ```
 
 `mcp-config.json.http.local` is ignored by Git and is mounted only into MCPO.
@@ -108,28 +107,55 @@ If `REMOTE_AUTH_ENABLE=true`, replace `<REMOTE_SECRET_KEY>` in that local file
 with the same secret configured in `.env`. Leave the tracked
 `mcp-config.json.http` file as a credential-free template.
 
+The default `.env.example` credentials are only for the included disposable
+PostgreSQL demo. Do not reuse them for an existing or externally reachable
+database.
+
+**2. Start**
+
+```bash
+docker compose up -d
+docker compose ps --all  # wait for mcp-server to be healthy and init to exit 0
+```
+
 This starts OpenWebUI at `http://localhost:3003`, the MCP server at
 `http://localhost:18003/mcp`, optional MCPO/OpenAPI compatibility at
 `http://localhost:8003`, and a disposable PostgreSQL demo environment. The
 demo includes ecommerce, analytics, inventory, and HR data plus intentional
 bloat and index patterns for realistic monitoring questions.
 
-**2. Connect OpenWebUI directly to MCP**
+**3. Connect OpenWebUI directly to MCP**
 
 1. Open `http://localhost:3003`, create the administrator account, and add a
    model provider under **Settings → Admin → Connections**.
-2. Under **Settings → Admin → Tools → Integrations → External Tool Servers**,
+2. The Quick Start enables tool calling through Chat Completions by default
+   with this setting already present in `.env.example`:
+
+   ```dotenv
+   DEFAULT_MODEL_PARAMS={"reasoning_effort":"none"}
+   ```
+
+   This applies to every model and disables model reasoning. If the
+   `open-webui-data` volume already exists, its saved database value takes
+   precedence over `.env`; set **Reasoning Effort** to `none` under **Settings
+   → Admin → Models → Model Defaults → Model Parameters** instead. To retain
+   reasoning with a provider configured for the Responses API, set
+   `DEFAULT_MODEL_PARAMS={}` before the first start and leave **Reasoning
+   Effort** at **Default**.
+3. Under **Settings → Admin → Tools → Integrations → External Tool Servers**,
    add a connection of type **MCP (Streamable HTTP)** with URL
-   `http://mcp-server:8000/mcp` and authentication **None**.
-3. Under **Settings → Admin → System → Interface → Chat**, enable **Tool
+   `http://mcp-server:8000/mcp` and authentication **None**. This matches the
+   Quick Start default `REMOTE_AUTH_ENABLE=false`; enable and configure Bearer
+   authentication before exposing the server outside the local Docker host.
+4. Under **Settings → Admin → System → Interface → Chat**, enable **Tool
    Search** and **Defer Built-in Tools**, then set **Deferral Threshold** to `0`.
-4. In a new chat, enable the connection under **Integrations → Tools** and ask:
+   This keeps the full PostgreSQL tool list within the model's tool limits.
+5. In a new chat, enable the connection under **Integrations → Tools** and ask:
    `Use mcp-postgresql-ops to show tables that need VACUUM.`
 
-> `.env.example` sets `DEFAULT_MODEL_PARAMS={"reasoning_effort":"none"}` so
-> OpenAI reasoning models can call MCP tools. If the chat still fails with
-> `Function tools with reasoning_effort are not supported ...`, see
-> [OpenWebUI Issues](#openwebui-issues).
+If setup or tool calls fail, see [OpenWebUI Issues](#openwebui-issues) for
+existing-volume precedence, per-model and per-chat overrides, and provider
+compatibility notes.
 
 > **MCPO is optional.** OpenWebUI 0.13 connects to the MCP server directly and
 > does not require the MCPO proxy. To expose the tools as an OpenAPI/Swagger

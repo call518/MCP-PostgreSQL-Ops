@@ -5,6 +5,7 @@ import json
 import re
 import sys
 import tarfile
+import tomllib
 import zipfile
 from pathlib import Path
 from unittest.mock import patch
@@ -124,6 +125,7 @@ def test_invalid_tag_stops_publication(tag):
 def test_mcpb_manifest_matches_server_configuration():
     root = Path(__file__).resolve().parents[1]
     manifest = json.loads((root / "mcpb" / "manifest.json").read_text())
+    project = tomllib.loads((root / "pyproject.toml").read_text())
     server = manifest["server"]
     env = server["mcp_config"]["env"]
     config = manifest["user_config"]
@@ -137,7 +139,11 @@ def test_mcpb_manifest_matches_server_configuration():
     assert config["postgres_password"]["sensitive"] is True
     assert server["type"] == "uv"
     assert server["entry_point"] == "server.py"
+    assert server["mcp_config"]["args"][1:3] == ["--python", "3.12"]
     assert server["mcp_config"]["args"][-1] == "server.py"
+    python_requirement = ">=3.12,<3.13"
+    assert project["project"]["requires-python"] == python_requirement
+    assert manifest["compatibility"]["runtimes"]["python"] == python_requirement
     assert (root / "mcpb" / "server.py").is_file()
 
 
