@@ -3,7 +3,7 @@ services:
     env_file: .env
     container_name: mcp-postgresql-ops-open-webui
     # image: ghcr.io/open-webui/open-webui:latest
-    image: ghcr.io/open-webui/open-webui:v0.13.2
+    image: ghcr.io/open-webui/open-webui:v0.13.3
     ports:
       - "${DOCKER_BIND_ADDRESS:-127.0.0.1}:${DOCKER_EXTERNAL_PORT_OPENWEBUI}:8080"
     environment:
