@@ -63,6 +63,41 @@ def assert_tool_result(result, tool_name):
     assert "Traceback" not in result, f"{tool_name} returned a traceback: {result[:500]}"
 
 
+FK_SCOPE_DDL = """
+DROP SCHEMA IF EXISTS fkscope_a CASCADE;
+DROP SCHEMA IF EXISTS fkscope_b CASCADE;
+CREATE SCHEMA fkscope_a;
+CREATE SCHEMA fkscope_b;
+CREATE TABLE fkscope_a.p (id int PRIMARY KEY);
+CREATE TABLE fkscope_b.p (id int PRIMARY KEY);
+-- same FK name on two tables of one schema and on a table in another schema
+CREATE TABLE fkscope_a.t (id int PRIMARY KEY, pid int,
+    CONSTRAINT fk_p FOREIGN KEY (pid) REFERENCES fkscope_a.p(id));
+CREATE TABLE fkscope_a.u (id int PRIMARY KEY, pid int,
+    CONSTRAINT fk_p FOREIGN KEY (pid) REFERENCES fkscope_a.p(id));
+CREATE TABLE fkscope_b.t (id int PRIMARY KEY, pid int,
+    CONSTRAINT fk_p FOREIGN KEY (pid) REFERENCES fkscope_b.p(id));
+-- composite FK with reordered columns, and one column in two FKs (cross-schema)
+CREATE TABLE fkscope_a.cp (x int, y int, PRIMARY KEY (x, y));
+CREATE TABLE fkscope_a.c (id int PRIMARY KEY, cy int, cx int, pid int,
+    CONSTRAINT fk_c FOREIGN KEY (cy, cx) REFERENCES fkscope_a.cp (y, x),
+    CONSTRAINT fk_c_p FOREIGN KEY (pid) REFERENCES fkscope_a.p(id),
+    CONSTRAINT fk_c_p2 FOREIGN KEY (pid) REFERENCES fkscope_b.p(id));
+-- FK to a partitioned table: PostgreSQL adds per-partition clone constraints
+CREATE TABLE fkscope_a.pp (id int PRIMARY KEY) PARTITION BY RANGE (id);
+CREATE TABLE fkscope_a.pp1 PARTITION OF fkscope_a.pp FOR VALUES FROM (0) TO (100);
+CREATE TABLE fkscope_a.pp2 PARTITION OF fkscope_a.pp FOR VALUES FROM (100) TO (200);
+CREATE TABLE fkscope_a.r (id int PRIMARY KEY, ppid int,
+    CONSTRAINT fk_r_pp FOREIGN KEY (ppid) REFERENCES fkscope_a.pp(id)
+    ON DELETE CASCADE ON UPDATE SET NULL);
+"""
+
+
+def _rows(result, prefix):
+    """Return output lines of one section, e.g. 'FK_OUTBOUND'."""
+    return [line for line in result.splitlines() if line.startswith(prefix + " |")]
+
+
 # ============================================================
 # Core tools (PG 12+) — should work on all versions
 # ============================================================
@@ -215,6 +250,75 @@ class TestCoreTools:
     async def test_get_database_conflicts_stats(self, setup_env):
         result = await get_database_conflicts_stats()
         assert_tool_result(result, "get_database_conflicts_stats")
+
+
+# ============================================================
+# Foreign key lookups must not mix same-named constraints (#85)
+# ============================================================
+
+class TestForeignKeyScoping:
+
+    @pytest.fixture
+    async def fk_schema(self, setup_env):
+        import asyncpg
+
+        import mcp_postgresql_ops.functions as fn
+
+        conn = await asyncpg.connect(**fn.POSTGRES_CONFIG)
+        try:
+            await conn.execute(FK_SCOPE_DDL)
+            yield
+        finally:
+            await conn.execute("DROP SCHEMA IF EXISTS fkscope_a, fkscope_b CASCADE")
+            await conn.close()
+
+    async def test_relationships_outbound_is_scoped_to_table(self, fk_schema):
+        result = await get_table_relationships(database_name="testdb", table_name="t", schema_name="fkscope_a")
+        assert_tool_result(result, "get_table_relationships")
+        rows = _rows(result, "FK_OUTBOUND")
+        assert len(rows) == 1, result
+        assert "pid → fkscope_a.p" in rows[0]
+
+    async def test_relationships_inbound_lists_each_fk_once(self, fk_schema):
+        result = await get_table_relationships(database_name="testdb", table_name="p", schema_name="fkscope_a")
+        rows = _rows(result, "FK_INBOUND")
+        sources = sorted(row.split(" | ")[3] for row in rows)
+        assert sources == ["fkscope_a.c → pid", "fkscope_a.t → pid", "fkscope_a.u → pid"], result
+
+    async def test_relationships_skip_partition_clones(self, fk_schema):
+        result = await get_table_relationships(database_name="testdb", table_name="r", schema_name="fkscope_a")
+        rows = _rows(result, "FK_OUTBOUND")
+        assert len(rows) == 1, result
+        assert "FK: fk_r_pp" in rows[0] and "ppid → fkscope_a.pp |" in rows[0]
+        assert "Update: SET NULL, Delete: CASCADE" in rows[0]
+
+    async def test_relationships_overview_pairs_are_correct(self, fk_schema):
+        result = await get_table_relationships(database_name="testdb")
+        rows = [r for r in _rows(result, "RELATIONSHIP") if "fkscope_" in r]
+        pairs = sorted(row.split(" | ")[1] + " " + row.split(" | ")[2] for row in rows)
+        assert pairs == [
+            "fk_c fkscope_a.c → fkscope_a.cp",
+            "fk_c fkscope_a.c → fkscope_a.cp",
+            "fk_c_p fkscope_a.c → fkscope_a.p",
+            "fk_c_p2 fkscope_a.c → fkscope_b.p",
+            "fk_p fkscope_a.t → fkscope_a.p",
+            "fk_p fkscope_a.u → fkscope_a.p",
+            "fk_p fkscope_b.t → fkscope_b.p",
+            "fk_r_pp fkscope_a.r → fkscope_a.pp",
+        ], result
+
+    async def test_schema_info_one_row_per_fk_column_with_schema(self, fk_schema):
+        result = await get_table_schema_info(database_name="testdb", table_name="c", schema_name="fkscope_a")
+        pid_rows = [r for r in _rows(result, "COLUMN") if r.startswith("COLUMN | pid |")]
+        assert len(pid_rows) == 1, result
+        assert "| fkscope_a.p, fkscope_b.p | id, id |" in pid_rows[0]
+        assert "| fkscope_a.cp(y, x) |" in result
+
+    async def test_schema_info_skips_partition_clones(self, fk_schema):
+        result = await get_table_schema_info(database_name="testdb", table_name="r", schema_name="fkscope_a")
+        fk_rows = [r for r in _rows(result, "CONSTRAINT") if "FOREIGN KEY" in r]
+        assert len(fk_rows) == 1, result
+        assert "| fkscope_a.pp(id) |" in fk_rows[0]
 
 
 # ============================================================
