@@ -1011,8 +1011,7 @@ The following test suites are available:
 
 | Suite | File | Requires Docker |
 |-------|------|----------------|
-| Unit tests (version compatibility logic) | `tests/test_version_compat.py` | No |
-| Unit tests (null-default tool argument schemas) | `tests/test_tool_schema_null_defaults.py` | No |
+| Unit tests (version logic, tool schemas, generated SQL, release scripts) | every `tests/test_*.py` except `test_tools_integration.py` | No |
 | Integration tests (all tools × PG 12–18) | `tests/test_tools_integration.py` | Yes |
 
 `uv run pytest` automatically starts the Docker test containers (PG 12–18), waits for them to be fully initialized, runs all tests, then tears everything down.
@@ -1021,8 +1020,8 @@ The following test suites are available:
 # Run all tests (unit + integration) — Docker is managed automatically
 uv run pytest -v
 
-# Unit tests only (no Docker or PostgreSQL needed)
-uv run pytest tests/test_version_compat.py tests/test_tool_schema_null_defaults.py -v
+# Unit tests only (no Docker or PostgreSQL needed; same command as CI)
+uv run pytest tests --ignore=tests/test_tools_integration.py -v
 
 # Tool argument schema tests only (no Docker or PostgreSQL needed)
 uv run pytest tests/test_tool_schema_null_defaults.py -v

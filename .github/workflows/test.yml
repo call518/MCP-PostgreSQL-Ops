@@ -32,7 +32,9 @@ jobs:
         run: uv sync --extra dev
 
       - name: Run unit tests
-        run: uv run pytest tests/test_version_compat.py tests/test_tool_schema_null_defaults.py tests/test_release.py -v --tb=short
+        # Run every test module except the Docker-based integration suite, so new
+        # unit test files are picked up without editing this list.
+        run: uv run pytest tests --ignore=tests/test_tools_integration.py -v --tb=short
   integration-tests:
     name: Integration Tests (PG 12-18)
     runs-on: ubuntu-latest
