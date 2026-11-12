@@ -3597,17 +3597,22 @@ async def get_wait_events(database_name: Optional[str] = None, wait_event_type: 
 
             events = await execute_query(query, params, database=database_name)
 
-            summary_query = """
+            summary_where = ""
+            if wait_event_type:
+                summary_where = "AND wait_event_type ILIKE $1"
+
+            summary_query = f"""
             SELECT
                 wait_event_type,
                 wait_event,
                 COUNT(*) as session_count
             FROM pg_stat_activity
             WHERE wait_event IS NOT NULL AND pid <> pg_backend_pid()
+            {summary_where}
             GROUP BY wait_event_type, wait_event
             ORDER BY COUNT(*) DESC
             """
-            summary = await execute_query(summary_query, database=database_name)
+            summary = await execute_query(summary_query, params, database=database_name)
 
             result = []
             title = "Wait Event Catalog (pg_wait_events)"
