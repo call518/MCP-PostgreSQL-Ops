@@ -753,8 +753,8 @@ async def get_table_schema_info(database_name: str, table_name: Optional[str] = 
                     pg_stat_get_tuples_inserted(c.oid) + pg_stat_get_tuples_updated(c.oid) + pg_stat_get_tuples_deleted(c.oid) as total_writes,
                     pg_stat_get_live_tuples(c.oid) as estimated_rows
                 FROM information_schema.tables t
-                LEFT JOIN pg_class c ON c.relname = t.table_name
-                LEFT JOIN pg_namespace n ON n.nspname = t.table_schema AND n.oid = c.relnamespace
+                LEFT JOIN pg_namespace n ON n.nspname = t.table_schema
+                LEFT JOIN pg_class c ON c.relname = t.table_name AND c.relnamespace = n.oid
                 WHERE t.table_name = $1 AND t.table_schema = $2
             ),
             column_info AS (
@@ -835,7 +835,8 @@ async def get_table_schema_info(database_name: str, table_name: Optional[str] = 
                     i.indexdef as index_definition,
                     CASE WHEN idx.indisunique THEN 'UNIQUE' ELSE 'REGULAR' END as index_type
                 FROM pg_indexes i
-                JOIN pg_class c ON c.relname = i.indexname
+                JOIN pg_namespace n ON n.nspname = i.schemaname
+                JOIN pg_class c ON c.relname = i.indexname AND c.relnamespace = n.oid
                 JOIN pg_index idx ON idx.indexrelid = c.oid
                 WHERE i.tablename = $11 AND i.schemaname = $12
                 ORDER BY i.indexname
