@@ -779,29 +779,34 @@ async def get_table_schema_info(database_name: str, table_name: Optional[str] = 
                     SELECT kcu.column_name, kcu.table_name, kcu.table_schema
                     FROM information_schema.table_constraints tc
                     JOIN information_schema.key_column_usage kcu 
-                        ON tc.constraint_name = kcu.constraint_name
+                        ON tc.constraint_schema = kcu.constraint_schema
+                        AND tc.constraint_name = kcu.constraint_name
                         AND tc.table_schema = kcu.table_schema
+                        AND tc.table_name = kcu.table_name
                     WHERE tc.constraint_type = 'PRIMARY KEY'
                         AND tc.table_name = $3 AND tc.table_schema = $4
                 ) pk ON c.column_name = pk.column_name 
                     AND c.table_name = pk.table_name 
                     AND c.table_schema = pk.table_schema
                 LEFT JOIN (
+                    -- pg_constraint is used for foreign keys: the information_schema view of
+                    -- referenced columns does not say which table owns the constraint, so same-named
+                    -- FKs on other tables in the same schema would be mixed in.
                     SELECT 
-                        kcu.column_name, 
-                        kcu.table_name, 
-                        kcu.table_schema,
-                        ccu.table_name AS referenced_table_name,
-                        ccu.column_name AS referenced_column_name
-                    FROM information_schema.table_constraints tc
-                    JOIN information_schema.key_column_usage kcu 
-                        ON tc.constraint_name = kcu.constraint_name
-                        AND tc.table_schema = kcu.table_schema
-                    JOIN information_schema.constraint_column_usage ccu 
-                        ON ccu.constraint_name = tc.constraint_name
-                        AND ccu.table_schema = tc.table_schema
-                    WHERE tc.constraint_type = 'FOREIGN KEY'
-                        AND tc.table_name = $5 AND tc.table_schema = $6
+                        a.attname::text AS column_name, 
+                        cl.relname::text AS table_name, 
+                        n.nspname::text AS table_schema,
+                        rc.relname::text AS referenced_table_name,
+                        ra.attname::text AS referenced_column_name
+                    FROM pg_constraint con
+                    JOIN pg_class cl ON cl.oid = con.conrelid
+                    JOIN pg_namespace n ON n.oid = cl.relnamespace
+                    JOIN pg_class rc ON rc.oid = con.confrelid
+                    CROSS JOIN LATERAL unnest(con.conkey, con.confkey) AS k(attnum, refattnum)
+                    JOIN pg_attribute a ON a.attrelid = con.conrelid AND a.attnum = k.attnum
+                    JOIN pg_attribute ra ON ra.attrelid = con.confrelid AND ra.attnum = k.refattnum
+                    WHERE con.contype = 'f'
+                        AND cl.relname = $5 AND n.nspname = $6
                 ) fk ON c.column_name = fk.column_name 
                     AND c.table_name = fk.table_name 
                     AND c.table_schema = fk.table_schema
@@ -812,21 +817,34 @@ async def get_table_schema_info(database_name: str, table_name: Optional[str] = 
                 SELECT 
                     tc.constraint_name,
                     tc.constraint_type,
-                    string_agg(kcu.column_name, ', ' ORDER BY kcu.ordinal_position) as columns,
+                    (
+                        SELECT string_agg(kcu.column_name, ', ' ORDER BY kcu.ordinal_position)
+                        FROM information_schema.key_column_usage kcu
+                        WHERE kcu.constraint_schema = tc.constraint_schema
+                            AND kcu.constraint_name = tc.constraint_name
+                            AND kcu.table_schema = tc.table_schema
+                            AND kcu.table_name = tc.table_name
+                    ) as columns,
                     CASE 
                         WHEN tc.constraint_type = 'FOREIGN KEY' THEN
-                            ccu.table_name || '(' || ccu.column_name || ')'
+                            (
+                                SELECT rc.relname || '(' || string_agg(ra.attname, ', ' ORDER BY k.ord) || ')'
+                                FROM pg_constraint con
+                                JOIN pg_class cl ON cl.oid = con.conrelid
+                                JOIN pg_namespace n ON n.oid = cl.relnamespace
+                                JOIN pg_class rc ON rc.oid = con.confrelid
+                                CROSS JOIN LATERAL unnest(con.conkey, con.confkey) WITH ORDINALITY AS k(attnum, refattnum, ord)
+                                JOIN pg_attribute ra ON ra.attrelid = con.confrelid AND ra.attnum = k.refattnum
+                                WHERE con.contype = 'f'
+                                    AND con.conname = tc.constraint_name
+                                    AND cl.relname = tc.table_name
+                                    AND n.nspname = tc.table_schema
+                                GROUP BY rc.relname
+                            )
                         ELSE ''
                     END as references
                 FROM information_schema.table_constraints tc
-                LEFT JOIN information_schema.key_column_usage kcu 
-                    ON tc.constraint_name = kcu.constraint_name
-                    AND tc.table_schema = kcu.table_schema
-                LEFT JOIN information_schema.constraint_column_usage ccu 
-                    ON ccu.constraint_name = tc.constraint_name
-                    AND ccu.table_schema = tc.table_schema
                 WHERE tc.table_name = $9 AND tc.table_schema = $10
-                GROUP BY tc.constraint_name, tc.constraint_type, ccu.table_name, ccu.column_name
                 ORDER BY tc.constraint_type, tc.constraint_name
             ),
             index_info AS (
