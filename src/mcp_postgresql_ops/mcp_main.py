@@ -792,21 +792,30 @@ async def get_table_schema_info(database_name: str, table_name: Optional[str] = 
                     -- pg_constraint is used for foreign keys: the information_schema view of
                     -- referenced columns does not say which table owns the constraint, so same-named
                     -- FKs on other tables in the same schema would be mixed in.
-                    SELECT 
-                        a.attname::text AS column_name, 
-                        cl.relname::text AS table_name, 
+                    -- One row per column: a column in several FKs lists their targets
+                    -- comma-separated, in the same constraint-name order in both fields.
+                    SELECT
+                        a.attname::text AS column_name,
+                        cl.relname::text AS table_name,
                         n.nspname::text AS table_schema,
-                        rc.relname::text AS referenced_table_name,
-                        ra.attname::text AS referenced_column_name
+                        string_agg(rn.nspname || '.' || rc.relname, ', ' ORDER BY con.conname) AS referenced_table_name,
+                        string_agg(ra.attname::text, ', ' ORDER BY con.conname) AS referenced_column_name
                     FROM pg_constraint con
                     JOIN pg_class cl ON cl.oid = con.conrelid
                     JOIN pg_namespace n ON n.oid = cl.relnamespace
                     JOIN pg_class rc ON rc.oid = con.confrelid
+                    JOIN pg_namespace rn ON rn.oid = rc.relnamespace
                     CROSS JOIN LATERAL unnest(con.conkey, con.confkey) AS k(attnum, refattnum)
                     JOIN pg_attribute a ON a.attrelid = con.conrelid AND a.attnum = k.attnum
                     JOIN pg_attribute ra ON ra.attrelid = con.confrelid AND ra.attnum = k.refattnum
                     WHERE con.contype = 'f'
                         AND cl.relname = $5 AND n.nspname = $6
+                        -- skip per-partition clones of an FK that references a partitioned table
+                        AND NOT EXISTS (
+                            SELECT 1 FROM pg_constraint pc
+                            WHERE pc.oid = con.conparentid AND pc.conrelid = con.conrelid
+                        )
+                    GROUP BY a.attname, cl.relname, n.nspname
                 ) fk ON c.column_name = fk.column_name 
                     AND c.table_name = fk.table_name 
                     AND c.table_schema = fk.table_schema
@@ -828,23 +837,36 @@ async def get_table_schema_info(database_name: str, table_name: Optional[str] = 
                     CASE 
                         WHEN tc.constraint_type = 'FOREIGN KEY' THEN
                             (
-                                SELECT rc.relname || '(' || string_agg(ra.attname, ', ' ORDER BY k.ord) || ')'
+                                SELECT rn.nspname || '.' || rc.relname || '(' || string_agg(ra.attname, ', ' ORDER BY k.ord) || ')'
                                 FROM pg_constraint con
                                 JOIN pg_class cl ON cl.oid = con.conrelid
                                 JOIN pg_namespace n ON n.oid = cl.relnamespace
                                 JOIN pg_class rc ON rc.oid = con.confrelid
+                                JOIN pg_namespace rn ON rn.oid = rc.relnamespace
                                 CROSS JOIN LATERAL unnest(con.conkey, con.confkey) WITH ORDINALITY AS k(attnum, refattnum, ord)
                                 JOIN pg_attribute ra ON ra.attrelid = con.confrelid AND ra.attnum = k.refattnum
                                 WHERE con.contype = 'f'
                                     AND con.conname = tc.constraint_name
                                     AND cl.relname = tc.table_name
                                     AND n.nspname = tc.table_schema
-                                GROUP BY rc.relname
+                                GROUP BY rn.nspname, rc.relname
                             )
                         ELSE ''
                     END as references
                 FROM information_schema.table_constraints tc
                 WHERE tc.table_name = $9 AND tc.table_schema = $10
+                    -- skip per-partition clones of an FK that references a partitioned table
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM pg_constraint con
+                        JOIN pg_class cl ON cl.oid = con.conrelid
+                        JOIN pg_namespace n ON n.oid = cl.relnamespace
+                        JOIN pg_constraint pc ON pc.oid = con.conparentid AND pc.conrelid = con.conrelid
+                        WHERE con.contype = 'f'
+                            AND con.conname = tc.constraint_name
+                            AND cl.relname = tc.table_name
+                            AND n.nspname = tc.table_schema
+                    )
                 ORDER BY tc.constraint_type, tc.constraint_name
             ),
             index_info AS (
@@ -1196,6 +1218,68 @@ async def get_database_schema_info(database_name: str, schema_name: Optional[str
         return f"Error retrieving database schema information: {str(e)}"
 
 
+def _fk_ctes(constraint_filter: str = "") -> str:
+    """Return the fk_constraints and fk_columns CTEs built from pg_constraint.
+
+    information_schema matches foreign keys by constraint name only, so same-named
+    FKs on other tables or schemas get mixed in. pg_constraint identifies the owning
+    and referenced tables by OID. Clones that PostgreSQL creates on the referencing
+    table for each partition of a referenced partitioned table are skipped, so each
+    FK appears once.
+
+    Args:
+        constraint_filter: Optional SQL condition appended to the fk_constraints WHERE
+            clause (may reference con for the constraint, sc/sn for the source table
+            and tc/tn for the target table).
+    """
+    extra = f"AND ({constraint_filter})" if constraint_filter else ""
+    rule = """CASE con.{col}
+                        WHEN 'a' THEN 'NO ACTION' WHEN 'r' THEN 'RESTRICT' WHEN 'c' THEN 'CASCADE'
+                        WHEN 'n' THEN 'SET NULL' WHEN 'd' THEN 'SET DEFAULT'
+                    END"""
+    return f"""
+            fk_constraints AS (
+                SELECT
+                    con.conname::text AS constraint_name,
+                    con.conrelid,
+                    con.confrelid,
+                    con.conkey,
+                    con.confkey,
+                    sn.nspname || '.' || sc.relname AS source_table,
+                    tn.nspname || '.' || tc.relname AS target_table,
+                    {rule.format(col="confupdtype")} AS update_rule,
+                    {rule.format(col="confdeltype")} AS delete_rule
+                FROM pg_constraint con
+                JOIN pg_class sc ON sc.oid = con.conrelid
+                JOIN pg_namespace sn ON sn.oid = sc.relnamespace
+                JOIN pg_class tc ON tc.oid = con.confrelid
+                JOIN pg_namespace tn ON tn.oid = tc.relnamespace
+                WHERE con.contype = 'f'
+                  AND NOT EXISTS (
+                      SELECT 1 FROM pg_constraint pc
+                      WHERE pc.oid = con.conparentid AND pc.conrelid = con.conrelid
+                  )
+                  {extra}
+            ),
+            fk_columns AS (
+                SELECT
+                    fc.constraint_name,
+                    fc.conrelid,
+                    fc.confrelid,
+                    fc.source_table,
+                    fc.target_table,
+                    fc.update_rule,
+                    fc.delete_rule,
+                    sa.attname::text AS source_column,
+                    ta.attname::text AS target_column,
+                    k.ord
+                FROM fk_constraints fc
+                CROSS JOIN LATERAL unnest(fc.conkey, fc.confkey) WITH ORDINALITY AS k(attnum, refattnum, ord)
+                JOIN pg_attribute sa ON sa.attrelid = fc.conrelid AND sa.attnum = k.attnum
+                JOIN pg_attribute ta ON ta.attrelid = fc.confrelid AND ta.attnum = k.refattnum
+            ),"""
+
+
 @mcp.tool()
 async def get_table_relationships(database_name: str, table_name: Optional[str] = None, schema_name: str = "public", relationship_type: str = "all") -> str:
     """
@@ -1231,7 +1315,7 @@ async def get_table_relationships(database_name: str, table_name: Optional[str] 
             # Specific table relationship analysis
             query = """
             WITH table_info AS (
-                SELECT 
+                SELECT
                     t.table_schema,
                     t.table_name,
                     t.table_type
@@ -1239,49 +1323,40 @@ async def get_table_relationships(database_name: str, table_name: Optional[str] 
                 WHERE t.table_name = $1 AND t.table_schema = $2
                   AND t.table_type IN ('BASE TABLE', 'VIEW')
             ),
+            target_rel AS (
+                SELECT c.oid
+                FROM pg_class c
+                JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE c.relname = $1 AND n.nspname = $2
+            ),""" + _fk_ctes(
+                "con.conrelid IN (SELECT oid FROM target_rel)"
+                " OR con.confrelid IN (SELECT oid FROM target_rel)"
+            ) + """
             foreign_keys_out AS (
-                SELECT 
-                    tc.constraint_name,
-                    tc.table_schema || '.' || tc.table_name as source_table,
-                    kcu.column_name as source_column,
-                    ccu.table_schema || '.' || ccu.table_name AS target_table,
-                    ccu.column_name AS target_column,
-                    rc.match_option,
-                    rc.update_rule,
-                    rc.delete_rule,
+                SELECT
+                    fkc.constraint_name,
+                    fkc.source_table,
+                    fkc.source_column,
+                    fkc.target_table,
+                    fkc.target_column,
+                    fkc.update_rule,
+                    fkc.delete_rule,
                     'OUTBOUND' as direction
-                FROM information_schema.table_constraints AS tc 
-                JOIN information_schema.key_column_usage AS kcu
-                    ON tc.constraint_name = kcu.constraint_name
-                JOIN information_schema.constraint_column_usage AS ccu
-                    ON ccu.constraint_name = tc.constraint_name
-                JOIN information_schema.referential_constraints AS rc
-                    ON tc.constraint_name = rc.constraint_name
-                WHERE tc.constraint_type = 'FOREIGN KEY'
-                  AND tc.table_name = $1 AND tc.table_schema = $2
-                ORDER BY tc.constraint_name, kcu.ordinal_position
+                FROM fk_columns fkc
+                WHERE fkc.conrelid IN (SELECT oid FROM target_rel)
             ),
             foreign_keys_in AS (
-                SELECT 
-                    tc.constraint_name,
-                    tc.table_schema || '.' || tc.table_name as source_table,
-                    kcu.column_name as source_column,
-                    ccu.table_schema || '.' || ccu.table_name AS target_table,
-                    ccu.column_name AS target_column,
-                    rc.match_option,
-                    rc.update_rule,
-                    rc.delete_rule,
+                SELECT
+                    fkc.constraint_name,
+                    fkc.source_table,
+                    fkc.source_column,
+                    fkc.target_table,
+                    fkc.target_column,
+                    fkc.update_rule,
+                    fkc.delete_rule,
                     'INBOUND' as direction
-                FROM information_schema.table_constraints AS tc 
-                JOIN information_schema.key_column_usage AS kcu
-                    ON tc.constraint_name = kcu.constraint_name
-                JOIN information_schema.constraint_column_usage AS ccu
-                    ON ccu.constraint_name = tc.constraint_name
-                JOIN information_schema.referential_constraints AS rc
-                    ON tc.constraint_name = rc.constraint_name
-                WHERE tc.constraint_type = 'FOREIGN KEY'
-                  AND ccu.table_name = $1 AND ccu.table_schema = $2
-                ORDER BY tc.constraint_name, kcu.ordinal_position
+                FROM fk_columns fkc
+                WHERE fkc.confrelid IN (SELECT oid FROM target_rel)
             ),
             view_dependencies AS (
                 SELECT DISTINCT
@@ -1386,88 +1461,66 @@ async def get_table_relationships(database_name: str, table_name: Optional[str] 
                 title += f" (Database: {database_name})"
         else:
             # Database-wide relationship overview
-            query = """
-            WITH relationship_stats AS (
-                SELECT 
+            query = "WITH" + _fk_ctes() + """
+            relationship_stats AS (
+                SELECT
                     'Foreign Key Relationships' as category,
                     COUNT(*) as count,
                     'Total FK constraints in database' as description
-                FROM information_schema.table_constraints 
-                WHERE constraint_type = 'FOREIGN KEY'
-            
+                FROM fk_constraints
+
                 UNION ALL
-                
-                SELECT 
+
+                SELECT
                     'Referenced Tables' as category,
-                    COUNT(DISTINCT ccu.table_schema || '.' || ccu.table_name) as count,
+                    COUNT(DISTINCT confrelid) as count,
                     'Tables being referenced by foreign keys' as description
-                FROM information_schema.table_constraints AS tc 
-                JOIN information_schema.constraint_column_usage AS ccu
-                    ON ccu.constraint_name = tc.constraint_name
-                WHERE tc.constraint_type = 'FOREIGN KEY'
-                
+                FROM fk_constraints
+
                 UNION ALL
-                
-                SELECT 
+
+                SELECT
                     'Referencing Tables' as category,
-                    COUNT(DISTINCT tc.table_schema || '.' || tc.table_name) as count,
+                    COUNT(DISTINCT conrelid) as count,
                     'Tables that reference other tables' as description
-                FROM information_schema.table_constraints AS tc 
-                WHERE tc.constraint_type = 'FOREIGN KEY'
-                
+                FROM fk_constraints
+
                 UNION ALL
-                
-                SELECT 
+
+                SELECT
                     'Orphaned Tables' as category,
                     COUNT(*) as count,
                     'Tables with no foreign key relationships' as description
-                FROM information_schema.tables t
-                WHERE t.table_type = 'BASE TABLE'
-                  AND t.table_schema NOT IN ('information_schema', 'pg_catalog')
-                  AND t.table_schema NOT LIKE 'pg_%'
+                FROM pg_class c
+                JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE c.relkind IN ('r', 'p')
+                  AND n.nspname NOT IN ('information_schema', 'pg_catalog')
+                  AND n.nspname NOT LIKE 'pg_%'
                   AND NOT EXISTS (
-                      SELECT 1 FROM information_schema.table_constraints tc
-                      WHERE tc.table_name = t.table_name 
-                        AND tc.table_schema = t.table_schema
-                        AND tc.constraint_type = 'FOREIGN KEY'
-                  )
-                  AND NOT EXISTS (
-                      SELECT 1 FROM information_schema.constraint_column_usage ccu
-                      WHERE ccu.table_name = t.table_name 
-                        AND ccu.table_schema = t.table_schema
+                      SELECT 1 FROM fk_constraints fc
+                      WHERE fc.conrelid = c.oid OR fc.confrelid = c.oid
                   )
             ),
             top_referenced_tables AS (
-                SELECT 
-                    ccu.table_schema || '.' || ccu.table_name as table_name,
+                SELECT
+                    target_table as table_name,
                     COUNT(*) as reference_count,
                     'Most referenced table' as category
-                FROM information_schema.table_constraints AS tc 
-                JOIN information_schema.constraint_column_usage AS ccu
-                    ON ccu.constraint_name = tc.constraint_name
-                WHERE tc.constraint_type = 'FOREIGN KEY'
-                GROUP BY ccu.table_schema, ccu.table_name
-                ORDER BY COUNT(*) DESC
+                FROM fk_constraints
+                GROUP BY target_table
+                ORDER BY COUNT(*) DESC, target_table
                 LIMIT 5
             ),
             relationship_details AS (
-                SELECT 
-                    tc.table_schema || '.' || tc.table_name as referencing_table,
-                    kcu.column_name as referencing_column,
-                    ccu.table_schema || '.' || ccu.table_name AS referenced_table,
-                    ccu.column_name AS referenced_column,
-                    rc.update_rule,
-                    rc.delete_rule,
-                    tc.constraint_name
-                FROM information_schema.table_constraints AS tc 
-                JOIN information_schema.key_column_usage AS kcu
-                    ON tc.constraint_name = kcu.constraint_name
-                JOIN information_schema.constraint_column_usage AS ccu
-                    ON ccu.constraint_name = tc.constraint_name
-                JOIN information_schema.referential_constraints AS rc
-                    ON tc.constraint_name = rc.constraint_name
-                WHERE tc.constraint_type = 'FOREIGN KEY'
-                ORDER BY tc.table_schema, tc.table_name, kcu.ordinal_position
+                SELECT
+                    source_table as referencing_table,
+                    source_column as referencing_column,
+                    target_table AS referenced_table,
+                    target_column AS referenced_column,
+                    update_rule,
+                    delete_rule,
+                    constraint_name
+                FROM fk_columns
             )
             SELECT * FROM (
                 SELECT 
