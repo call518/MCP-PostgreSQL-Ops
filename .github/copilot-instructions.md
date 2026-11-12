@@ -8,7 +8,7 @@ This is a **Model Context Protocol (MCP) server** built with **FastMCP** that pr
 - **`mcp_main.py`**: Main MCP server with 24+ `@mcp.tool()` decorated functions
 - **`functions.py`**: Database connection layer using `asyncpg` with multi-database support
 - **`version_compat.py`**: PostgreSQL 12-17 version detection and adaptive feature handling
-- **`prompt_template.md`**: Comprehensive prompt definitions loaded via `@mcp.prompt()` decorators
+- **`server_instructions.md`**: Short cross-tool rules passed to `FastMCP(instructions=...)`; keep under 4,096 characters (Claude Code truncates beyond that)
 - **Docker stack**: PostgreSQL + MCP server + MCPO proxy + Open WebUI integration
 
 ### Key Patterns
@@ -107,11 +107,11 @@ When adding new tools, **must** update the compatibility matrix in `README.md`:
 
 ## Project-Specific Integrations
 
-### Prompt Template System
-The server loads prompts from `prompt_template.md` using a custom parsing system:
-- `@mcp.prompt("prompt_template_full")` - complete template
-- `@mcp.prompt("prompt_template_headings")` - section list only
-- `get_prompt_template(section="specific_section")` - targeted content
+### Server Instructions and Tool Documentation
+The server registers no MCP prompts. When adding or changing tools:
+- Write a complete tool docstring; it is what the model reads when choosing tools
+- Add sample requests to the `## Example Queries` section of `README.md`
+- Edit `src/mcp_postgresql_ops/server_instructions.md` only when a rule spanning several tools changes; keep it under 4,096 characters and do not repeat tool descriptions
 
 ### Docker Multi-Service Architecture
 - **postgres**: Percona PostgreSQL (version from `PGSQL_VERSION` env var, default 13)

@@ -49,6 +49,10 @@ Summarize database size, growth, and I/O activity
 Draw the relationships for the ecommerce schema
 ```
 
+**More requests to try:** see [Example Queries](#example-queries) for requests
+by area (performance, health checks, capacity and VACUUM, structure,
+troubleshooting, multi-step workflows) and per-tool examples.
+
 Core tools work with normal catalog access. Broader cross-database visibility
 depends on the PostgreSQL role; use a least-privilege monitoring account in
 production.
@@ -617,28 +621,145 @@ SET track_io_timing = 'on';
 
 ## Example Queries
 
+Requests are grouped first by task area, then by tool. Each tool runs read-only
+queries; results depend on the PostgreSQL version, installed extensions, and
+the connected role's privileges.
+
+### 🧭 Requests by Area
+
+**📈 Database Performance Analysis**
+- "Show database-wide performance statistics"
+- "Analyze transaction commit ratios and I/O patterns"
+- "Check buffer cache hit ratios for all databases"
+- "Monitor temporary file usage and deadlock counts"
+
+**🔧 Background Writer & Checkpoints**
+- "Analyze checkpoint performance and timing"
+- "Show background writer efficiency statistics"
+- "Check buffer allocation and writing patterns"
+- "Monitor checkpoint scheduling vs requested ratios"
+
+**🔍 Server Health Check**
+- "Check PostgreSQL server status."
+- "What database am I connected to?"
+- "Show current database connection details."
+- "Verify if extensions are installed."
+- "Show current active connection count."
+- "Display PostgreSQL version and configuration."
+
+**📊 Performance Analysis**
+- "Show top 20 slowest queries."
+- "Find unused indexes."
+- "Analyze recent query activity."
+- "Identify performance bottlenecks."
+- "Show cache hit ratios for queries."
+
+**💾 Capacity Management**
+- "Check database sizes."
+- "Find largest tables."
+- "Show tables that need VACUUM."
+- "Analyze disk usage by database."
+- "Display table and index sizes."
+- "Analyze table bloat and dead tuples."
+- "Show database-wide bloat summary."
+- "Check autovacuum status and trigger conditions."
+- "Monitor recent autovacuum activity patterns."
+- "Show currently running VACUUM operations."
+- "Analyze VACUUM effectiveness and maintenance patterns."
+
+**🗄️ Structure Analysis**
+- "List all databases with owners."
+- "Show tables in public schema."
+- "Display user accounts and permissions."
+- "Explore database structure."
+
+**📈 Advanced Monitoring**
+- "Monitor active sessions and queries."
+- "Analyze index usage efficiency."
+- "Check VACUUM and ANALYZE history."
+- "Review PostgreSQL configuration settings."
+- "Find memory-related configuration parameters."
+- "Show all logging configuration options."
+- "Search for connection-related settings."
+- "Identify connection patterns."
+
+### 🩺 Troubleshooting Requests
+
+**Connection Issues**
+- "Check PostgreSQL server connectivity."
+- "Verify connection parameters."
+- "Test database access permissions."
+
+**Extension Problems**
+- "Check if pg_stat_statements is installed."
+- "Verify pg_stat_monitor availability."
+- "Show installed extensions status."
+
+**Performance Issues**
+- "Analyze slow query performance."
+- "Check database load and connections."
+- "Review index usage efficiency."
+- "Monitor recent query patterns."
+
+### 🔁 Multi-Step Workflows
+
+Send these requests in order to run a routine review.
+
+**Regular Health Checks**
+1. "Check server status and active connections."
+2. "Show top 10 slowest queries from last hour."
+3. "Verify all databases are accessible."
+4. "Check if any tables need maintenance."
+
+**Capacity Planning**
+1. "Analyze database sizes and growth trends."
+2. "Identify largest tables and indexes."
+3. "Review disk usage by schema."
+4. "Plan storage capacity requirements."
+
+**Performance Optimization**
+1. "Find queries consuming most resources."
+2. "Identify unused or inefficient indexes."
+3. "Analyze cache hit ratios."
+4. "Monitor query execution patterns."
+
 ### 🟢 Extension-Independent Tools (Always Available)
 
 - **get_server_info**
   - "Show PostgreSQL server version and extension status."
   - "Check if pg_stat_statements is installed."
+  - "Check server compatibility."
+  - "Show server version and compatibility features."
+  - "Check what MCP tools are available on this PostgreSQL version."
+  - "Displays feature availability matrix and upgrade recommendations."
 - **get_active_connections**
   - "Show all active connections."
   - "List current sessions with database and user."
+  - "Monitor current sessions and their running queries."
 - **get_postgresql_config**
   - "Show all PostgreSQL configuration parameters."
   - "Find all memory-related configuration settings."
+  - "Show PostgreSQL configuration parameter for shared_buffers."
+  - "Search for connection-related settings."
+  - "Find logging configuration."
+  - "Check specific parameter."
 - **get_database_list**
   - "List all databases and their sizes."
   - "Show database list with owner information."
+  - "List all databases with their owners and sizes."
+  - "Show database encoding and connection limits."
 - **get_table_list**
   - "List all tables in the ecommerce database."
   - "Show table sizes in the public schema."
+  - "List all tables in the default database."
+  - "Show tables in specific database."
 - **get_table_schema_info**
   - "Show detailed schema information for the customers table in ecommerce database."
   - "Get column details and constraints for products table in ecommerce database."
   - "Analyze table structure with indexes and foreign keys for orders table in sales schema of ecommerce database."
   - "Show schema overview for all tables in public schema of inventory database."
+  - "Get complete table structure including constraints and indexes for employees table in hr_system database."
+  - "Display column information with data types and constraints for inventory_items table in inventory database."
   - 📋 **Features**: Column types, constraints, indexes, foreign keys, table metadata
   - ⚠️ **Required**: `database_name` parameter must be specified
   - 🔄 **Output change (3.5.0+)**: Referenced tables are schema-qualified (`b.p(id)` instead of `p(id)`). A column in several foreign keys is shown in one COLUMN row, with its targets comma-separated in matching order (`a.p, b.p` / `id, id`). Per-partition FK clones that PostgreSQL creates for a partitioned referenced table are no longer listed.
@@ -647,6 +768,8 @@ SET track_io_timing = 'on';
   - "Get detailed information about sales schema in ecommerce database."
   - "Analyze schema structure and permissions for inventory database."
   - "Show schema overview with table counts and sizes for hr_system database."
+  - "Display schema owners and access privileges for all schemas in ecommerce database."
+  - "Get comprehensive schema statistics including object counts and sizes."
   - 📋 **Features**: Schema owners, permissions, object counts, sizes, contents
   - ⚠️ **Required**: `database_name` parameter must be specified
 - **get_table_relationships**
@@ -655,6 +778,9 @@ SET track_io_timing = 'on';
   - "Get database-wide relationship overview for ecommerce database."
   - "Find all tables that reference products table in ecommerce database."
   - "Show cross-schema relationships in inventory database."
+  - "Display all foreign key dependencies in hr_system database."
+  - "Analyze table relationships including inbound and outbound foreign keys."
+  - "Get complete relationship mapping for specific table with constraint details."
   - 📋 **Features**: Foreign key relationships (inbound/outbound), cross-schema dependencies, constraint details
   - ⚠️ **Required**: `database_name` parameter must be specified
   - 💡 **Usage**: Leave `table_name` empty for database-wide relationship analysis
@@ -662,22 +788,38 @@ SET track_io_timing = 'on';
 - **get_user_list**
   - "List all database users and their roles."
   - "Show user permissions for a specific database."
+  - "Display all database users with their permissions."
+  - "Show superuser status and account limitations for all users."
 - **get_index_usage_stats**
   - "Analyze index usage efficiency."
   - "Find unused indexes in the current database."
+  - "Analyze index usage in default database."
+  - "Check index efficiency in specific database."
+  - "Identify unused indexes with zero scans (look for 'Never used' entries)."
 - **get_database_size_info**
   - "Show database capacity analysis."
   - "Find the largest databases by size."
+  - "Show disk usage for all databases sorted by size."
+  - "Calculate total storage consumption across all databases."
 - **get_table_size_info**
   - "Show table and index size analysis."
   - "Find largest tables in a specific schema."
+  - "Analyze table sizes in public schema."
+  - "Check table sizes in specific database schema."
 - **get_vacuum_analyze_stats**
   - "Show recent VACUUM and ANALYZE operations."
   - "List tables needing VACUUM."
+  - "Review VACUUM and ANALYZE history for all tables."
+  - "Check maintenance status in specific database."
+  - "Find tables needing maintenance (check last_vacuum dates)."
 - **get_current_database_info**
   - "What database am I connected to?"
   - "Show current database information and connection details."
   - "Display database encoding, collation, and size information."
+  - "Show current database information and properties."
+  - "Display database encoding, collation, and connection limits."
+  - "Get current database size and configuration details."
+  - "Show connection context and database properties."
   - 📋 **Features**: Database name, encoding, collation, size, connection limits
   - 🔧 **PostgreSQL 12-18**: Fully compatible, no extensions required
 - **get_table_bloat_analysis**
@@ -685,6 +827,12 @@ SET track_io_timing = 'on';
   - "Show dead tuple ratios and bloat estimates for user_logs table pattern."
   - "Find tables with high bloat that need VACUUM maintenance."
   - "Analyze bloat in specific schema with minimum 100 dead tuples."
+  - "Analyze table bloat in the public schema."
+  - "Show tables with high dead tuple ratios in ecommerce database."
+  - "Find tables requiring VACUUM maintenance."
+  - "Check bloat for tables with more than 5000 dead tuples."
+  - "Identify bloated tables in inventory database public schema."
+  - "Show estimated bloat sizes and VACUUM recommendations."
   - 📋 **Features**: Dead tuple ratios, bloat size estimates, VACUUM recommendations, pattern filtering
   - 🔧 **PostgreSQL 12-18**: Fully compatible, no extensions required
   - 💡 **Usage**: Extension-Independent approach using pg_stat_user_tables
@@ -692,6 +840,11 @@ SET track_io_timing = 'on';
   - "Show database-wide bloat summary by schema."
   - "Get high-level view of storage efficiency across all schemas."
   - "Identify schemas requiring maintenance attention."
+  - "Get bloat overview for inventory database."
+  - "Identify schemas with highest bloat ratios."
+  - "Database maintenance planning with bloat statistics."
+  - "Compare bloat across all schemas in ecommerce database."
+  - "Show total estimated bloat and schema sizes."
   - 📋 **Features**: Schema-level aggregation, total bloat estimates, maintenance status
   - 🔧 **PostgreSQL 12-18**: Fully compatible, no extensions required
 - **get_autovacuum_status**
@@ -699,6 +852,11 @@ SET track_io_timing = 'on';
   - "Show tables needing immediate autovacuum attention."
   - "Analyze autovacuum threshold percentages for public schema."
   - "Find tables approaching autovacuum trigger points."
+  - "Analyze autovacuum threshold percentages for all tables."
+  - "Find tables approaching autovacuum trigger points in public schema."
+  - "Check autovacuum status for log tables pattern."
+  - "Show autovacuum urgency analysis for ecommerce database."
+  - "Monitor tables with dead tuple ratios near autovacuum thresholds."
   - 📋 **Features**: Trigger threshold analysis, urgency classification, configuration status
   - 🔧 **PostgreSQL 12-18**: Fully compatible, no extensions required
   - 💡 **Usage**: Extension-Independent autovacuum monitoring using pg_stat_user_tables
@@ -707,6 +865,10 @@ SET track_io_timing = 'on';
   - "Monitor autovacuum execution frequency and timing."
   - "Find tables with irregular autovacuum patterns."
   - "Analyze recent autovacuum and autoanalyze history."
+  - "Check autovacuum activity in public schema for last 7 days."
+  - "Show tables with no recent autovacuum activity."
+  - "Monitor autovacuum workload distribution across schemas."
+  - "Identify tables with very high autovacuum frequency."
   - 📋 **Features**: Activity patterns, execution frequency, timing analysis
   - 🔧 **PostgreSQL 12-18**: Fully compatible, no extensions required
   - 💡 **Usage**: Historical autovacuum pattern analysis
@@ -715,6 +877,9 @@ SET track_io_timing = 'on';
   - "Monitor active maintenance operations and their progress."
   - "Check if any VACUUM operations are blocking queries."
   - "Find long-running maintenance operations."
+  - "Find long-running maintenance operations in ecommerce database."
+  - "Show real-time status of all running maintenance operations."
+  - "Monitor VACUUM FULL operations and their impact level."
   - 📋 **Features**: Real-time operation status, elapsed time, impact level, process details
   - 🔧 **PostgreSQL 12-18**: Fully compatible, no extensions required
   - 💡 **Usage**: Real-time maintenance monitoring using pg_stat_activity
@@ -723,6 +888,10 @@ SET track_io_timing = 'on';
   - "Compare manual VACUUM vs autovacuum efficiency."
   - "Find tables with suboptimal maintenance patterns."
   - "Check VACUUM frequency vs table activity ratios."
+  - "Find tables with suboptimal maintenance patterns in public schema."
+  - "Identify tables with poor maintenance effectiveness."
+  - "Show maintenance pattern analysis for all schemas."
+  - "Find tables that need better VACUUM scheduling."
   - 📋 **Features**: Maintenance pattern analysis, effectiveness assessment, DML-to-VACUUM ratios
   - 🔧 **PostgreSQL 12-18**: Fully compatible, no extensions required
   - 💡 **Usage**: Strategic VACUUM analysis using existing statistics
@@ -737,35 +906,51 @@ SET track_io_timing = 'on';
 - **get_replication_status**
   - "Check replication connections and lag status."
   - "Monitor replication slots and WAL receiver status."
+  - "Show replication status (version-compatible for PG12-18)."
+  - "Check if replication is active or standby servers are connected."
 - **get_database_stats**
   - "Show comprehensive database performance metrics."
   - "Analyze transaction commit ratios and I/O statistics."
   - "Monitor buffer cache hit ratios and temporary file usage."
+  - "Show database-wide performance statistics."
+  - "Analyze transaction commit ratios across all databases."
+  - "Check buffer cache hit ratios and I/O statistics."
+  - "Monitor temporary file usage and deadlock counts."
 - **get_bgwriter_stats**
   - "Analyze checkpoint performance and timing."
   - "Show me checkpoint performance."
   - "Show background writer efficiency statistics."
   - "Monitor buffer allocation and fsync patterns."
+  - "Show background writer efficiency and buffer statistics."
+  - "Monitor checkpoint scheduling patterns."
+  - "Check buffer allocation and fsync performance."
+  - "Monitor checkpoint scheduling vs requested ratios."
 - **get_user_functions_stats**
   - "Analyze user-defined function performance."
   - "Show function call counts and execution times."
   - "Identify performance bottlenecks in custom functions."
+  - "Identify slow or frequently called functions."
+  - "Monitor function performance bottlenecks."
   - ⚠️ **Requires**: `track_functions = pl` in postgresql.conf
 - **get_table_io_stats**
   - "Analyze table I/O performance and buffer hit ratios."
   - "Identify tables with poor buffer cache performance."
   - "Monitor TOAST table I/O statistics."
+  - "Show disk reads vs buffer cache hits for tables in public schema."
   - 💡 **Enhanced with**: `track_io_timing = on` for accurate timing
 - **get_index_io_stats**
   - "Show index I/O performance and buffer efficiency."
   - "Identify indexes causing excessive disk I/O."
   - "Monitor index cache-friendliness patterns."
+  - "Analyze index buffer hit ratios in specific schema."
   - 💡 **Enhanced with**: `track_io_timing = on` for accurate timing
 - **get_database_conflicts_stats**
   - "Check replication conflicts on standby servers."
   - "Analyze conflict types and resolution statistics."
   - "Monitor standby server query cancellation patterns."
   - "Monitor WAL generation and current LSN position."
+  - "Check replication conflicts on standby server."
+  - "Monitor replication slots and WAL receiver status."
 - **get_replication_status**
   - "Check replication connections and lag status."
   - "Monitor replication slots and WAL receiver status."
@@ -779,10 +964,12 @@ SET track_io_timing = 'on';
   - "Monitor I/O patterns by backend type and context."
   - 📈 **PG16+**: Full pg_stat_io with timing, backend types, and contexts
   - 📊 **PG12-15**: Basic pg_statio_* fallback with buffer hit ratios
+  - 📈 **PG18+**: Additional byte-level I/O columns (`read_bytes`, `write_bytes`, `extend_bytes`) for precise I/O size tracking
 - **get_bgwriter_stats** (Enhanced!)
   - "Show background writer and checkpoint performance."
   - 📈 **PG17+**: Separate checkpointer and bgwriter statistics via `pg_stat_checkpointer`
   - 📊 **PG12-16**: Combined bgwriter stats (includes checkpointer data)
+  - 📈 **PG18+**: Additional completed_checkpoints and slru_buffers_written columns
 - **get_server_info** (Enhanced!)
   - "Show server version and compatibility features."
   - "Check server compatibility."
@@ -792,21 +979,32 @@ SET track_io_timing = 'on';
   - "Show comprehensive statistics for all tables." (version-compatible for PG12-18)
   - "Include system tables with include_system=true parameter."
   - "Analyze table access patterns and maintenance needs."
+  - "Show comprehensive statistics for all user tables (version-compatible for PG12-18)."
+  - "Include system tables in statistics analysis with include_system=true."
+  - "Monitor dead tuple ratios and table activity."
+  - "Show insertions since vacuum statistics (PG13+ only)."
   - 📈 **PG13+**: Tracks insertions since vacuum (`n_ins_since_vacuum`) for optimal maintenance scheduling
   - 📊 **PG12**: Compatible mode with NULL for unsupported columns
+  - 📈 **PG18+**: VACUUM time columns (`total_vacuum_time`, `total_autovacuum_time`, `total_analyze_time`, `total_autoanalyze_time`) for maintenance duration tracking
 - **get_wait_events** (New!)
   - "Show wait event types and descriptions."
   - "What wait events are available on this PostgreSQL version?"
+  - "List available wait event types and their descriptions."
+  - "Show wait events filtered by Lock type."
   - 📈 **PG17+**: Native `pg_wait_events` catalog with full descriptions
   - 📊 **PG12-16**: Fallback to `pg_stat_activity` current waits grouped by type
 - **get_wal_summarizer_status** (New! PG 17+)
   - "Show WAL summarizer status for incremental backups."
   - "Monitor WAL summarization progress."
+  - "Monitor WAL summarizer status for incremental backups."
+  - "Check WAL summarizer progress and configuration."
   - 📈 **PG17+**: WAL summarizer monitoring via `pg_get_wal_summarizer_state()`
   - ❌ **PG12-16**: Not available (returns informational message)
 - **get_async_io_status** (New! PG 18+)
   - "Show async I/O subsystem status."
   - "Monitor pg_aios for async I/O operations."
+  - "Monitor async I/O subsystem status."
+  - "Show pg_aios view for I/O operation monitoring."
   - 📈 **PG18+**: `pg_aios` view for async I/O monitoring
   - ❌ **PG12-17**: Not available (returns informational message)
 - **get_per_backend_io_stats** (New! PG 18+)
@@ -820,13 +1018,55 @@ SET track_io_timing = 'on';
 - **get_pg_stat_statements_top_queries** (Requires `pg_stat_statements`)
   - "Show top 10 slowest queries."
   - "Analyze slow queries in the inventory database."
+  - "Analyze slow queries in the ecommerce database."
+  - "Show top 20 slowest queries."
+  - "Find queries consuming most resources."
+  - "Monitor query execution patterns."
+  - "Show cache hit ratios for queries."
   - 📈 **Version-Compatible**: PG12 uses `total_time` → `total_exec_time` mapping; PG13+ uses native columns
   - 💡 **Cross-Version**: Automatically adapts query structure for PostgreSQL 12-18 compatibility
+  - 📈 **PG17+ / PG18+**: Adds `stats_since` (PG17+) and `parallel_workers` (PG18+)
 - **get_pg_stat_monitor_recent_queries** (Optional, uses `pg_stat_monitor`)
   - "Show recent queries in real time."
   - "Monitor query activity for the last 5 minutes."
+  - "Monitor recent 15 queries with detailed stats."
+  - "Track recent queries in ecommerce database."
   - 📈 **Version-Compatible**: PG12 uses `total_time` → `total_exec_time` mapping; PG13+ uses native columns
   - 💡 **Cross-Version**: Automatically adapts query structure for PostgreSQL 12-18 compatibility
+
+### 🔧 Advanced Usage Examples
+
+**Multi-Database Analysis**
+- "Compare table sizes across databases."
+- "Monitor performance across multiple databases using database_name parameter."
+- "Analyze slow queries in specific database."
+- "Check index efficiency in specific database."
+
+**Schema Analysis**
+- "Show detailed schema for products table with all constraints in ecommerce database."
+- "Analyze table relationships and foreign key dependencies for sales.orders table in ecommerce database."
+- "Get complete column information with data types for inventory_items table in inventory database."
+- "Show all indexes and constraints for employees table in hr_system database."
+- "Review schema structure for all tables in sales schema of ecommerce database."
+- "Compare table schemas across different databases."
+
+**Performance Deep Dive**
+- "Find unused indexes."
+- "Analyze recent query activity."
+- "Identify performance bottlenecks."
+- "Analyze cache hit ratios."
+- "Monitor query execution patterns."
+
+**Capacity Planning**
+- "Analyze database sizes and growth trends."
+- "Identify largest tables and indexes."
+- "Review disk usage by schema."
+- "Plan storage capacity requirements."
+
+**Configuration Troubleshooting**
+- "Search for connection-related settings."
+- "Find logging configuration."
+- "Check specific parameter."
 
 **💡 Pro Tip**: All tools support multi-database operations using the `database_name` parameter. This allows PostgreSQL superusers to analyze and monitor multiple databases from a single MCP server instance.
 
@@ -1261,28 +1501,17 @@ from .functions import (
     get_pg_stat_statements_data,
     get_pg_stat_monitor_data,
     sanitize_connection_info,
-    read_prompt_template,
-    parse_prompt_sections,
     get_current_database_name,
     POSTGRES_CONFIG,
     get_your_custom_data,  # Add your new function here
 )
 ```
 
-#### 4. **Update Prompt Template (Recommended)**
+#### 4. **Document Your Tool**
 
-Add your tool description to `src/mcp_postgresql_ops/prompt_template.md` for better natural language recognition:
-
-```markdown
-### **Your Custom Analysis Tool**
-
-### X. **get_your_custom_analysis**
-**Purpose**: Brief description of what your tool does
-**Usage**: "Show me your custom analysis" or "Get custom analysis for database_name"
-**Features**: Data aggregation, database monitoring, performance metrics
-**Optional**: `database_name` parameter for specific database analysis
-**Limit**: Results limited to 1-100 records for performance
-```
+- **Docstring**: The tool docstring is what the model reads when choosing tools. Describe its purpose, arguments, and when to use or not use it.
+- **Example requests**: Add sample requests for the tool to [Example Queries](#example-queries).
+- **Server instructions**: Edit `src/mcp_postgresql_ops/server_instructions.md` only when a rule that spans several tools changes. Clients inject it into the model context, and Claude Code truncates it beyond 4,096 characters, so keep it short and do not repeat tool descriptions.
 
 #### 5. **Test Your Tool**
 
