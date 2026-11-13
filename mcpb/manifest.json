@@ -1,7 +1,7 @@
 {
   "manifest_version": "0.4",
   "name": "mcp-postgresql-ops",
-  "display_name": "PostgreSQL Ops",
+  "display_name": "MCP-PostgreSQL-Ops",
   "version": "0.0.0",
   "description": "Monitor and operate a PostgreSQL server with MCP tools.",
   "long_description": "Runs MCP-PostgreSQL-Ops locally over stdio. Claude Desktop installs Python and the locked dependencies with uv.",
@@ -17,6 +17,7 @@
   "documentation": "https://github.com/call518/MCP-PostgreSQL-Ops#claude-desktop-integration",
   "support": "https://github.com/call518/MCP-PostgreSQL-Ops/issues",
   "license": "MIT",
+  "icon": "icon.png",
   "keywords": [
     "postgresql",
     "database",

@@ -12,6 +12,7 @@ trap 'rm -rf "$STAGE"' EXIT
 
 cp "$ROOT/mcpb/server.py" "$ROOT/pyproject.toml" "$ROOT/uv.lock" \
    "$ROOT/README.md" "$ROOT/LICENSE" "$STAGE/"
+cp "$ROOT/img/icon-postgresql.png" "$STAGE/icon.png"
 mkdir -p "$STAGE/src"
 cp -R "$ROOT/src/mcp_postgresql_ops" "$STAGE/src/"
 find "$STAGE/src" -name '__pycache__' -type d -prune -exec rm -rf {} +

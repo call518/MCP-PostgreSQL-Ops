@@ -145,6 +145,8 @@ def test_mcpb_manifest_matches_server_configuration():
     assert project["project"]["requires-python"] == python_requirement
     assert manifest["compatibility"]["runtimes"]["python"] == python_requirement
     assert (root / "mcpb" / "server.py").is_file()
+    assert manifest["icon"] == "icon.png"
+    assert (root / "img" / "icon-postgresql.png").is_file()
 
 
 def test_release_workflow_builds_and_attaches_mcpb():
